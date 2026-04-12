@@ -49,7 +49,7 @@ export default function AskPage() {
 
   const { uploadFile, isUploading, progress } = useUpload({
     onSuccess: (response) => {
-      const servingUrl = `/api/storage${response.objectPath}`;
+      const servingUrl = `${window.location.origin}/api/storage${response.objectPath}`;
       setImageUrls(prev => [...prev, servingUrl]);
       toast({ title: "Image uploaded successfully" });
     },
