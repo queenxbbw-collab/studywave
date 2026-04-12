@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useUpdateSettings, useUploadAvatar } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
-import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin } from "lucide-react";
+import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users } from "lucide-react";
+import { getAuthHeaders } from "@/lib/auth";
+
+interface Referral {
+  id: number;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  points: number;
+  joinedAt: string;
+}
 
 const NAV_ITEMS = [
   { id: "profile", icon: User, label: "Profile" },
@@ -39,6 +49,17 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
   const [previewUrl, setPreviewUrl] = useState(user?.avatarUrl || "");
   const [saving, setSaving] = useState(false);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [referralsLoaded, setReferralsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "referral" && !referralsLoaded && user) {
+      fetch("/api/referrals", { headers: getAuthHeaders() })
+        .then(r => r.json())
+        .then(d => { setReferrals(d.referrals ?? []); setReferralsLoaded(true); })
+        .catch(() => setReferralsLoaded(true));
+    }
+  }, [activeTab, referralsLoaded, user]);
 
   if (authLoading) return null;
   if (!user) { navigate("/login"); return null; }
@@ -453,15 +474,63 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="p-4 bg-primary/6 border border-primary/15 rounded-xl text-center">
                     <p className="text-2xl font-extrabold text-primary">{user.points.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Total points earned</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total points</p>
                   </div>
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
                     <p className="text-2xl font-extrabold text-amber-600">+25</p>
-                    <p className="text-xs text-muted-foreground mt-1">Points per referral</p>
+                    <p className="text-xs text-muted-foreground mt-1">Per referral</p>
                   </div>
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                    <p className="text-2xl font-extrabold text-emerald-600">{referrals.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total referrals</p>
+                  </div>
+                </div>
+
+                {/* Referrals list */}
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4 text-primary" />
+                    People you referred
+                    <span className="text-xs font-normal text-muted-foreground">({referrals.length})</span>
+                  </h3>
+                  {!referralsLoaded ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground">Loading...</div>
+                  ) : referrals.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-border/50">
+                      <Gift className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground font-medium">No referrals yet</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Share your link above to start earning!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                      {referrals.map((r, i) => (
+                        <Link key={r.id} href={`/profile/${r.id}`}>
+                          <div className="flex items-center gap-3 p-3 rounded-xl border border-border/50 hover:bg-gray-50 transition-colors cursor-pointer">
+                            <span className="text-xs font-bold text-muted-foreground/60 w-5 text-center">#{i + 1}</span>
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={r.avatarUrl || ""} />
+                              <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">
+                                {r.displayName?.[0]?.toUpperCase() ?? r.username?.[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold truncate">{r.displayName || r.username}</p>
+                              <p className="text-xs text-muted-foreground">@{r.username}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-xs font-bold text-primary">{r.points.toLocaleString()} pts</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {new Date(r.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

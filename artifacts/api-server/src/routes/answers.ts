@@ -177,6 +177,19 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
   const [updated] = await db.select().from(answersTable).where(eq(answersTable.id, id));
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));
 
+  // Notify on upvote milestones (new vote only, upvotes going to 1/5/10/25/50/100)
+  const UPVOTE_MILESTONES = [1, 5, 10, 25, 50, 100];
+  if (!existingVote && type === "up" && answer.authorId !== req.userId && UPVOTE_MILESTONES.includes(updated.upvotes)) {
+    const [q] = await db.select({ title: questionsTable.title }).from(questionsTable).where(eq(questionsTable.id, updated.questionId));
+    await createNotification(
+      answer.authorId,
+      "answer_upvote",
+      `Your answer reached ${updated.upvotes} upvote${updated.upvotes === 1 ? "" : "s"}!`,
+      `Your answer on "${q?.title?.slice(0, 60) ?? "a question"}" just hit ${updated.upvotes} upvote${updated.upvotes === 1 ? "" : "s"}.`,
+      updated.questionId
+    );
+  }
+
   res.json({
     id: updated.id, content: updated.content, questionId: updated.questionId, authorId: updated.authorId,
     authorUsername: author.username, authorDisplayName: author.displayName, authorAvatarUrl: author.avatarUrl,

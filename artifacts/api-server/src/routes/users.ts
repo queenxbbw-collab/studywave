@@ -4,6 +4,7 @@ import { eq, count, sql, and } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { hashPassword, comparePassword } from "../lib/auth";
 import { UpdateSettingsBody, UploadAvatarBody } from "@workspace/api-zod";
+import { createNotification } from "./notifications";
 
 const router = Router();
 
@@ -231,6 +232,14 @@ router.post("/users/:id/follow", authenticate, async (req, res): Promise<void> =
     .where(and(eq(userFollowsTable.followerId, req.userId!), eq(userFollowsTable.followingId, targetId)));
   if (existing) { res.json({ message: "Already following" }); return; }
   await db.insert(userFollowsTable).values({ followerId: req.userId!, followingId: targetId });
+  // Notify the person being followed
+  const [follower] = await db.select({ displayName: usersTable.displayName, username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await createNotification(
+    targetId,
+    "new_follower",
+    "You have a new follower!",
+    `${follower?.displayName || follower?.username || "Someone"} started following you.`
+  );
   res.json({ message: "Now following" });
 });
 

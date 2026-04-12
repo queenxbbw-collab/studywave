@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
+import { createNotification } from "./notifications";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,19 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
   `);
   const comment = result.rows[0] as any;
   const [user] = (await db.execute(sql`SELECT id, display_name, username, avatar_url FROM users WHERE id = ${req.userId}`)).rows as any[];
+
+  // Notify answer author (unless they are the commenter)
+  const [answerRow] = (await db.execute(sql`SELECT author_id, question_id FROM answers WHERE id = ${answerId}`)).rows as any[];
+  if (answerRow && answerRow.author_id !== req.userId) {
+    await createNotification(
+      answerRow.author_id,
+      "new_comment",
+      "New comment on your answer",
+      `${user?.display_name || user?.username || "Someone"} commented: "${content.trim().slice(0, 80)}"`,
+      answerRow.question_id
+    );
+  }
+
   res.status(201).json({ comment: {
     id: comment.id, content: comment.content, createdAt: comment.created_at,
     authorId: user.id, authorDisplayName: user.display_name, authorUsername: user.username, authorAvatarUrl: user.avatar_url,
@@ -68,6 +82,18 @@ router.post("/comments/answer/:answerId", authenticate, async (req, res): Promis
   const comment = result.rows[0] as any;
 
   const [user] = (await db.execute(sql`SELECT id, display_name, username, avatar_url FROM users WHERE id = ${req.userId}`)).rows as any[];
+
+  // Notify answer author (unless they are the commenter)
+  const [answerRow2] = (await db.execute(sql`SELECT author_id, question_id FROM answers WHERE id = ${answerId}`)).rows as any[];
+  if (answerRow2 && answerRow2.author_id !== req.userId) {
+    await createNotification(
+      answerRow2.author_id,
+      "new_comment",
+      "New comment on your answer",
+      `${user?.display_name || user?.username || "Someone"} commented: "${content.trim().slice(0, 80)}"`,
+      answerRow2.question_id
+    );
+  }
 
   res.status(201).json({
     id: comment.id,

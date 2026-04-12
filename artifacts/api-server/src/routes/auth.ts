@@ -5,6 +5,7 @@ import { hashPassword, comparePassword, signToken } from "../lib/auth";
 import { authenticate } from "../middlewares/authenticate";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import crypto from "crypto";
+import { createNotification } from "./notifications";
 
 const router = Router();
 
@@ -90,6 +91,12 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       .update(usersTable)
       .set({ points: sql`${usersTable.points} + 25` })
       .where(eq(usersTable.id, referrerId));
+    await createNotification(
+      referrerId,
+      "referral_signup",
+      "🎉 Someone joined using your referral!",
+      `${displayName || username} just registered with your referral code. You earned +25 points!`
+    );
   }
 
   const token = signToken(user.id, user.role);

@@ -4,6 +4,7 @@ import { eq, count, sql, and, desc, asc, ilike, or, gte } from "drizzle-orm";
 import { authenticate, optionalAuthenticate } from "../middlewares/authenticate";
 import { CreateQuestionBody, UpdateQuestionBody, VoteQuestionBody, ListQuestionsQueryParams } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
+import { createNotification } from "./notifications";
 
 const router = Router();
 
@@ -307,6 +308,18 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
   const [updated] = await db.select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
     .from(questionsTable).innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id)).where(eq(questionsTable.id, id));
   const [answerCount] = await db.select({ cnt: count() }).from(answersTable).where(eq(answersTable.questionId, id));
+
+  // Notify on upvote milestones
+  const Q_UPVOTE_MILESTONES = [1, 5, 10, 25, 50, 100];
+  if (!existingVote && type === "up" && question.authorId !== req.userId && Q_UPVOTE_MILESTONES.includes(updated.q.upvotes)) {
+    await createNotification(
+      question.authorId,
+      "question_upvote",
+      `Your question reached ${updated.q.upvotes} upvote${updated.q.upvotes === 1 ? "" : "s"}!`,
+      `"${question.title.slice(0, 70)}" just hit ${updated.q.upvotes} upvote${updated.q.upvotes === 1 ? "" : "s"}.`,
+      id
+    );
+  }
 
   res.json({
     id: updated.q.id, title: updated.q.title, content: updated.q.content, subject: updated.q.subject,
