@@ -131,13 +131,14 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
       gte(questionsTable.createdAt, todayStart),
     ));
 
-  const [userRow] = await db.select({ bonusPool: usersTable.questionBonusPool }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  const [userRow] = await db.select({ bonusPool: usersTable.questionBonusPool, isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
   const bonusPool = userRow?.bonusPool ?? 0;
+  const isPremium = userRow?.isPremium ?? false;
 
-  if (Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
+  if (!isPremium && Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
     if (bonusPool <= 0) {
       res.status(429).json({
-        error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Buy extra slots or come back tomorrow!`,
+        error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Upgrade to Premium for unlimited questions!`,
         code: "DAILY_LIMIT_REACHED",
       });
       return;
@@ -338,18 +339,21 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
     .where(and(eq(questionsTable.authorId, req.userId!), gte(questionsTable.createdAt, todayStart)));
   const [aCount] = await db.select({ cnt: count() }).from(answersTable)
     .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
-  const [userRow] = await db.select({ points: usersTable.points, bonusPool: usersTable.questionBonusPool })
+  const [userRow] = await db.select({ points: usersTable.points, bonusPool: usersTable.questionBonusPool, isPremium: usersTable.isPremium })
     .from(usersTable).where(eq(usersTable.id, req.userId!));
+
+  const premium = userRow?.isPremium ?? false;
 
   res.json({
     questionsToday: Number(qCount.cnt),
     questionLimit: DAILY_QUESTION_LIMIT,
-    questionsRemaining: Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt) + (userRow?.bonusPool ?? 0)),
+    questionsRemaining: premium ? 999 : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt) + (userRow?.bonusPool ?? 0)),
     questionBonusPool: userRow?.bonusPool ?? 0,
     answersToday: Number(aCount.cnt),
     answerLimit: 15,
     answersRemaining: Math.max(0, 15 - Number(aCount.cnt)),
     points: userRow?.points ?? 0,
+    isPremium: premium,
   });
 });
 
