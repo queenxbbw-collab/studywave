@@ -36,9 +36,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Markdown editor + renderer for questions/answers
 - View count on questions (auto-incremented on GET)
 
+## Premium Subscription
+
+- **`isPremium`** field on users table (boolean, default false)
+- **$4.99/month** via Stripe Subscriptions (`POST /api/payments/subscribe`)
+- Premium users bypass the 5 questions/day limit entirely (unlimited)
+- Premium badge (Crown icon) shown on profile next to display name
+- Stripe webhook sets `isPremium: true` on `checkout.session.completed` (type=premium_subscription)
+- Stripe webhook sets `isPremium: false` on `customer.subscription.deleted`
+
 ## Anti-Abuse Rules
 
-- **Daily question limit**: 5 questions/day per user (HTTP 429 if exceeded)
+- **Daily question limit**: 5 questions/day per user (HTTP 429 if exceeded); bypassed for Premium
 - **Daily answer limit**: 15 answers/day per user (HTTP 429 if exceeded)
 - **Min title length**: 15 characters
 - **Min content length**: 50 characters

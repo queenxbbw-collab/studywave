@@ -183,6 +183,11 @@ export default function ProfilePage() {
 
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h1 className="text-xl font-extrabold text-foreground tracking-tight">{profile.displayName}</h1>
+            {(profile as any).isPremium && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                <Crown className="h-3 w-3" /> Premium
+              </span>
+            )}
             {profile.role === "admin" && (
               <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">
                 <Shield className="h-3 w-3" /> Admin

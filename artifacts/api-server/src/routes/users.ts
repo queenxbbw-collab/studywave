@@ -68,6 +68,7 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     longestStreak: user.longestStreak ?? 0,
     followersCount: Number(followersCount.count),
     followingCount: Number(followingCount.count),
+    isPremium: user.isPremium ?? false,
     badges,
   });
 });

@@ -131,19 +131,15 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
       gte(questionsTable.createdAt, todayStart),
     ));
 
-  const [userRow] = await db.select({ bonusPool: usersTable.questionBonusPool, isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
-  const bonusPool = userRow?.bonusPool ?? 0;
+  const [userRow] = await db.select({ isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
   const isPremium = userRow?.isPremium ?? false;
 
   if (!isPremium && Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
-    if (bonusPool <= 0) {
-      res.status(429).json({
-        error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Upgrade to Premium for unlimited questions!`,
-        code: "DAILY_LIMIT_REACHED",
-      });
-      return;
-    }
-    await db.update(usersTable).set({ questionBonusPool: sql`${usersTable.questionBonusPool} - 1` }).where(eq(usersTable.id, req.userId!));
+    res.status(429).json({
+      error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Upgrade to Premium for unlimited questions!`,
+      code: "DAILY_LIMIT_REACHED",
+    });
+    return;
   }
   const [question] = await db.insert(questionsTable).values({
     ...rest,
@@ -339,7 +335,7 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
     .where(and(eq(questionsTable.authorId, req.userId!), gte(questionsTable.createdAt, todayStart)));
   const [aCount] = await db.select({ cnt: count() }).from(answersTable)
     .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
-  const [userRow] = await db.select({ points: usersTable.points, bonusPool: usersTable.questionBonusPool, isPremium: usersTable.isPremium })
+  const [userRow] = await db.select({ points: usersTable.points, isPremium: usersTable.isPremium })
     .from(usersTable).where(eq(usersTable.id, req.userId!));
 
   const premium = userRow?.isPremium ?? false;
@@ -347,8 +343,8 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
   res.json({
     questionsToday: Number(qCount.cnt),
     questionLimit: DAILY_QUESTION_LIMIT,
-    questionsRemaining: premium ? 999 : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt) + (userRow?.bonusPool ?? 0)),
-    questionBonusPool: userRow?.bonusPool ?? 0,
+    questionsRemaining: premium ? 999 : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt)),
+    questionBonusPool: 0,
     answersToday: Number(aCount.cnt),
     answerLimit: 15,
     answersRemaining: Math.max(0, 15 - Number(aCount.cnt)),
@@ -357,36 +353,6 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
   });
 });
 
-// Buy extra question slots (costs 50 points for 5 extra questions)
-router.post("/questions/buy-extra", authenticate, async (req, res): Promise<void> => {
-  const COST = 50;
-  const EXTRA = 5;
-
-  // Atomic conditional update: only deduct points if user actually has enough
-  // This prevents race conditions from simultaneous requests
-  const rows = await db
-    .update(usersTable)
-    .set({
-      points: sql`${usersTable.points} - ${COST}`,
-      questionBonusPool: sql`${usersTable.questionBonusPool} + ${EXTRA}`,
-    })
-    .where(and(eq(usersTable.id, req.userId!), sql`${usersTable.points} >= ${COST}`))
-    .returning();
-
-  if (rows.length === 0) {
-    const [user] = await db.select({ points: usersTable.points }).from(usersTable).where(eq(usersTable.id, req.userId!));
-    if (!user) { res.status(404).json({ error: "User not found" }); return; }
-    res.status(400).json({ error: `You need at least ${COST} points. You have ${user.points} points.` });
-    return;
-  }
-
-  const updated = rows[0];
-  res.json({
-    message: `You purchased ${EXTRA} extra question slots for ${COST} points!`,
-    points: updated.points,
-    questionBonusPool: updated.questionBonusPool,
-  });
-});
 
 router.get("/questions/:id/similar", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
