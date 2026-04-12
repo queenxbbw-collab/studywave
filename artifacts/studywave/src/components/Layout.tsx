@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb
+  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb, ShoppingCart
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -120,6 +120,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         <Link href="/leaderboard#suggest">
                           <Lightbulb className="h-3.5 w-3.5 mr-2 text-amber-500" />
                           <span className="text-amber-600 font-medium">Suggest a Feature</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
+                        <Link href="/buy-points">
+                          <ShoppingCart className="h-3.5 w-3.5 mr-2 text-emerald-500" />
+                          <span className="text-emerald-600 font-medium">Buy Points</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
