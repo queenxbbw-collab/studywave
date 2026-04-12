@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, X, ImageIcon, AlertCircle, Shield, ShoppingCart, Upload, Loader2 } from "lucide-react";
+import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, X, ImageIcon, AlertCircle, Shield, Upload, Loader2, Crown } from "lucide-react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
@@ -28,8 +28,6 @@ const TIPS = [
 const MIN_TITLE = 15;
 const MIN_CONTENT = 50;
 const DAILY_LIMIT = 5;
-const BUY_COST = 50;
-const BUY_EXTRA = 5;
 
 interface DailyLimits {
   questionsToday: number;
@@ -37,6 +35,7 @@ interface DailyLimits {
   questionLimit: number;
   questionBonusPool: number;
   points: number;
+  isPremium: boolean;
 }
 
 export default function AskPage() {
@@ -49,7 +48,6 @@ export default function AskPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBuying, setIsBuying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -123,26 +121,6 @@ export default function AskPage() {
     if (!authLoading && !user) navigate("/login");
   }, [authLoading, user, navigate]);
 
-  const handleBuyExtra = async () => {
-    setIsBuying(true);
-    try {
-      const res = await fetch(`${getBaseUrl()}/questions/buy-extra`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error || "Purchase failed", variant: "destructive" });
-        return;
-      }
-      toast({ title: `Purchased ${BUY_EXTRA} extra question slots!`, description: `${data.points} points remaining.` });
-      fetchLimits();
-      await refreshUser();
-    } finally {
-      setIsBuying(false);
-    }
-  };
-
   usePageTitle("Ask a Question");
 
   if (authLoading || !user) return null;
@@ -183,8 +161,7 @@ export default function AskPage() {
     }
   };
 
-  const limitReached = limits ? limits.questionsRemaining <= 0 && limits.questionBonusPool <= 0 : false;
-  const canBuyMore = limits ? (limits.points >= BUY_COST) : false;
+  const limitReached = limits ? limits.questionsRemaining <= 0 : false;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -212,45 +189,37 @@ export default function AskPage() {
             </div>
           </div>
 
-          {/* Daily limit warning */}
+          {/* Daily limit warning + Premium CTA */}
           {limitReached && (
-            <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <div className="flex items-start gap-3 mb-3">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-red-700">Daily limit reached</p>
-                  <p className="text-xs text-red-600 mt-0.5">
-                    You've used all {DAILY_LIMIT} questions for today. Limits reset at midnight UTC.
+                  <p className="text-sm font-semibold text-amber-800">Daily limit reached</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    You've used all {DAILY_LIMIT} questions for today. Come back tomorrow or upgrade to Premium.
                   </p>
                 </div>
               </div>
               <div className="pl-8">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Or spend <strong className="text-primary">{BUY_COST} points</strong> to unlock {BUY_EXTRA} extra question slots (your balance: <strong>{limits?.points ?? 0} pts</strong>)
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleBuyExtra}
-                  disabled={!canBuyMore || isBuying}
-                  className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5 gradient-primary text-white border-0 shadow-sm hover:opacity-90 disabled:opacity-50"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                  {isBuying ? "Purchasing..." : `Buy ${BUY_EXTRA} extra slots — ${BUY_COST} pts`}
-                </Button>
-                {!canBuyMore && (
-                  <p className="text-xs text-red-500 mt-1.5">Not enough points. Earn more by answering questions!</p>
-                )}
+                <Link href="/buy-points">
+                  <Button
+                    type="button"
+                    className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5 bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-sm"
+                  >
+                    <Crown className="h-3.5 w-3.5" />
+                    Upgrade to Premium — unlimited questions
+                  </Button>
+                </Link>
               </div>
             </div>
           )}
 
-          {/* Bonus pool indicator */}
-          {limits && limits.questionBonusPool > 0 && (
-            <div className="mb-4 flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <ShoppingCart className="h-4 w-4 text-emerald-600" />
-              <p className="text-xs text-emerald-700 font-semibold">
-                You have <strong>{limits.questionBonusPool}</strong> extra question slot{limits.questionBonusPool !== 1 ? "s" : ""} available (in addition to daily limit).
-              </p>
+          {/* Premium badge */}
+          {limits?.isPremium && (
+            <div className="mb-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <Crown className="h-4 w-4 text-amber-500" />
+              <p className="text-xs text-amber-700 font-semibold">Premium — unlimited questions per day</p>
             </div>
           )}
 
@@ -386,9 +355,15 @@ export default function AskPage() {
                 <Zap className="h-4 w-4 text-amber-500 flex-shrink-0" />
                 <span>You earn <span className="font-bold text-foreground">+5 points</span> on publish</span>
                 {limits && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
-                    {limits.questionsRemaining}/{limits.questionLimit} today
-                  </span>
+                  limits.isPremium ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 bg-amber-50 text-amber-600">
+                      <Crown className="h-3 w-3 inline mr-1" />Premium
+                    </span>
+                  ) : (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
+                      {limits.questionsRemaining}/{limits.questionLimit} today
+                    </span>
+                  )
                 )}
               </div>
               <Button
