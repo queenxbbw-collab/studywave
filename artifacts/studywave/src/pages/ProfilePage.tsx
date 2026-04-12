@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useRoute } from "wouter";
 import { useGetUserQuestions, useGetUserAnswers } from "@workspace/api-client-react";
 import { getGetUserQuestionsQueryKey, getGetUserAnswersQueryKey } from "@workspace/api-client-react";
@@ -37,6 +38,7 @@ const BADGE_COLOR_MAP: Record<string, string> = {
 };
 
 export default function ProfilePage() {
+  usePageTitle("Profile");
   const [, params] = useRoute("/profile/:id");
   const rawParam = params?.id || "";
   const numericId = parseInt(rawParam, 10);
