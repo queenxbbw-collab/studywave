@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 import { useGetLeaderboard } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,6 +32,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function LeaderboardPage() {
+  usePageTitle("Leaderboard");
   const { data: leaderboard, isLoading } = useGetLeaderboard();
   const { user } = useAuth();
   const { toast } = useToast();
