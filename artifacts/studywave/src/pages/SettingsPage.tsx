@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useUpdateSettings, useUploadAvatar } from "@workspace/api-client-react";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
 ];
 
 export default function SettingsPage() {
+  usePageTitle("Settings");
   const { user, isLoading: authLoading, updateUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
