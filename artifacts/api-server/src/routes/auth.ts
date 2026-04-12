@@ -165,15 +165,20 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim()));
+  // Always return the same generic response to prevent email enumeration
+  const GENERIC = { message: "If that email is registered, a reset link has been sent to your inbox." };
   if (!user) {
-    res.json({ message: "If that email exists, a reset token has been generated." });
+    res.json(GENERIC);
     return;
   }
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
   await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${user.id}`);
   await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
-  res.json({ message: "Reset token generated.", resetToken: token, userId: user.id });
+  // NOTE: In production, send this token via email. For now log server-side only.
+  // NEVER expose the token in the HTTP response.
+  console.log(`[PASSWORD RESET] user_id=${user.id} email=${user.email} token=${token}`);
+  res.json(GENERIC);
 });
 
 router.post("/auth/reset-password", async (req, res): Promise<void> => {
