@@ -74,6 +74,36 @@ interface SimilarQuestion {
   authorDisplayName: string;
 }
 
+function injectMentionLinks(text: string): string {
+  return text.replace(/@([a-zA-Z0-9_]+)/g, (_, username) =>
+    `[@${username}](/profile/${username})`
+  );
+}
+
+function MentionText({ text }: { text: string }) {
+  const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/^@([a-zA-Z0-9_]+)$/);
+        if (match) {
+          return (
+            <a
+              key={i}
+              href={`/profile/${match[1]}`}
+              className="text-primary font-semibold hover:underline"
+              onClick={e => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function MarkdownContent({ content }: { content: string }) {
   return (
     <div className="prose prose-sm max-w-none text-foreground/85 leading-relaxed
@@ -88,7 +118,7 @@ function MarkdownContent({ content }: { content: string }) {
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex, rehypeHighlight]}
       >
-        {content}
+        {injectMentionLinks(content)}
       </ReactMarkdown>
     </div>
   );
@@ -168,7 +198,7 @@ function CommentsSection({ answerId }: { answerId: number }) {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-semibold text-foreground mr-1.5">{c.authorDisplayName}</span>
-                  <span className="text-xs text-foreground/80">{c.content}</span>
+                  <span className="text-xs text-foreground/80"><MentionText text={c.content} /></span>
                   <span className="text-[11px] text-muted-foreground/60 ml-2">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </span>
