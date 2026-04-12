@@ -1,5 +1,5 @@
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { useUpdateSettings, useUploadAvatar } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
-import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users } from "lucide-react";
+import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users, Upload, Loader2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
+import { useUpload } from "@workspace/object-storage-web";
 
 interface Referral {
   id: number;
@@ -53,6 +54,19 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referralsLoaded, setReferralsLoaded] = useState(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadFile: uploadAvatarFile, isUploading: isUploadingAvatar } = useUpload({
+    onSuccess: (response) => {
+      const url = `${window.location.origin}/api/storage${response.objectPath}`;
+      setAvatarUrl(url);
+      setPreviewUrl(url);
+      toast({ title: "Photo uploaded! Click 'Save profile picture' to apply." });
+    },
+    onError: (err) => {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -306,8 +320,48 @@ export default function SettingsPage() {
                 </div>
 
                 <form onSubmit={handleAvatarSave} className="space-y-4">
+                  {/* Upload from computer */}
                   <div>
-                    <label className="text-sm font-semibold text-foreground mb-2 block">Image URL</label>
+                    <label className="text-sm font-semibold text-foreground mb-2 block">Upload from computer</label>
+                    <input
+                      ref={avatarFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingAvatar}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!file.type.startsWith("image/")) {
+                          toast({ title: "Please select an image file", variant: "destructive" });
+                          return;
+                        }
+                        await uploadAvatarFile(file);
+                        if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="w-full h-10 rounded-xl border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/4 gap-2 text-sm font-medium"
+                    >
+                      {isUploadingAvatar ? (
+                        <><Loader2 className="h-4 w-4 animate-spin text-primary" /> Uploading...</>
+                      ) : (
+                        <><Upload className="h-4 w-4 text-primary" /> Choose photo from computer</>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 border-t border-border/40" />
+                    <span className="text-xs text-muted-foreground font-medium">or paste URL</span>
+                    <div className="flex-1 border-t border-border/40" />
+                  </div>
+
+                  <div>
                     <Input
                       value={avatarUrl}
                       onChange={e => {
