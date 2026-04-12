@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark
+  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -117,6 +117,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
+                        <Link href="/leaderboard#suggest">
+                          <Lightbulb className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                          <span className="text-amber-600 font-medium">Suggest a Feature</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/settings">
                           <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Account Settings
                         </Link>
@@ -186,11 +192,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
               {user && (
-                <Link href="/ask" onClick={() => setMobileOpen(false)}>
-                  <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/8">
-                    <Plus className="h-4 w-4" /> Ask a Question
-                  </button>
-                </Link>
+                <>
+                  <Link href="/ask" onClick={() => setMobileOpen(false)}>
+                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/8">
+                      <Plus className="h-4 w-4" /> Ask a Question
+                    </button>
+                  </Link>
+                  <Link href="/leaderboard" onClick={() => setMobileOpen(false)}>
+                    <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-amber-600 bg-amber-50">
+                      <Lightbulb className="h-4 w-4" /> Suggest a Feature
+                    </button>
+                  </Link>
+                </>
               )}
             </div>
           </div>
