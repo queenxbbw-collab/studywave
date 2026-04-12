@@ -1,20 +1,24 @@
 import { useRoute } from "wouter";
 import { useGetUserQuestions, useGetUserAnswers } from "@workspace/api-client-react";
 import { getGetUserQuestionsQueryKey, getGetUserAnswersQueryKey } from "@workspace/api-client-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuestionCard from "@/components/QuestionCard";
 import { useAuth } from "@/lib/auth";
+import { getAuthHeaders } from "@/lib/auth";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Settings, Trophy, HelpCircle, MessageCircle, Award, Calendar, Shield,
   Star, Zap, TrendingUp, Lock, Sparkles, Flame, Globe, Twitter, Github, Linkedin, ExternalLink,
-  Crown, BookOpen, Target, Medal, CheckCircle, Lightbulb, Brain, Rocket, Heart
+  Crown, BookOpen, Target, Medal, CheckCircle, Lightbulb, Brain, Rocket, Heart,
+  UserPlus, UserCheck, Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Trophy, Star, Award, Shield, Flame, Zap, Crown,
@@ -39,6 +43,9 @@ export default function ProfilePage() {
   const isNumeric = !isNaN(numericId) && String(numericId) === rawParam;
 
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [followLoading, setFollowLoading] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["user-profile", rawParam],
@@ -51,6 +58,37 @@ export default function ProfilePage() {
   });
 
   const resolvedId: number = profile?.id ?? (isNumeric ? numericId : 0);
+
+  const { data: followStatus } = useQuery({
+    queryKey: ["follow-status", resolvedId],
+    queryFn: async () => {
+      if (!currentUser || !resolvedId) return { isFollowing: false };
+      const r = await fetch(`/api/users/${resolvedId}/follow-status`, { headers: getAuthHeaders() });
+      if (!r.ok) return { isFollowing: false };
+      return r.json();
+    },
+    enabled: !!currentUser && !!resolvedId,
+  });
+
+  const followStatusValue = followStatus?.isFollowing ?? false;
+
+  const handleFollowToggle = async () => {
+    if (!currentUser) { toast({ title: "Sign in to follow users", variant: "destructive" }); return; }
+    setFollowLoading(true);
+    try {
+      const method = followStatusValue ? "DELETE" : "POST";
+      const r = await fetch(`/api/users/${resolvedId}/follow`, { method, headers: getAuthHeaders() });
+      if (r.ok) {
+        queryClient.invalidateQueries({ queryKey: ["follow-status", resolvedId] });
+        queryClient.invalidateQueries({ queryKey: ["user-profile", rawParam] });
+        toast({ title: followStatusValue ? "Unfollowed" : `Now following ${profile?.displayName}` });
+      }
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const { data: questions } = useGetUserQuestions(resolvedId, {
     query: { enabled: !!resolvedId, queryKey: getGetUserQuestionsQueryKey(resolvedId) },
@@ -116,16 +154,29 @@ export default function ProfilePage() {
                   {profile.displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              {/* Online indicator */}
               <div className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
             </div>
-            {isOwnProfile && (
-              <Link href="/settings">
-                <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
-                  <Settings className="h-3.5 w-3.5" /> Edit Profile
+            <div className="flex items-center gap-2">
+              {!isOwnProfile && currentUser && (
+                <Button
+                  variant={followStatusValue ? "outline" : "default"}
+                  size="sm"
+                  disabled={followLoading}
+                  onClick={handleFollowToggle}
+                  className={`h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold ${followStatusValue ? "" : "gradient-primary text-white border-0 hover:opacity-90"}`}
+                >
+                  {followStatusValue ? <UserCheck className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+                  {followStatusValue ? "Following" : "Follow"}
                 </Button>
-              </Link>
-            )}
+              )}
+              {isOwnProfile && (
+                <Link href="/settings">
+                  <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
+                    <Settings className="h-3.5 w-3.5" /> Edit Profile
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -185,12 +236,14 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-t border-border/50">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 border-t border-border/50">
           {[
             { icon: Trophy, label: "Points", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
             { icon: HelpCircle, label: "Questions", value: (profile as any).questionCount ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
             { icon: MessageCircle, label: "Answers", value: (profile as any).answerCount ?? 0, color: "text-violet-600", bg: "bg-violet-50" },
             { icon: Award, label: "Gold Ribbons", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: Users, label: "Followers", value: (profile as any).followersCount ?? 0, color: "text-indigo-600", bg: "bg-indigo-50" },
+            { icon: UserPlus, label: "Following", value: (profile as any).followingCount ?? 0, color: "text-teal-600", bg: "bg-teal-50" },
             { icon: Flame, label: "Day Streak", value: (profile as any).currentStreak ?? 0, color: "text-orange-600", bg: "bg-orange-50" },
             { icon: TrendingUp, label: "Best Streak", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
           ].map((stat, i, arr) => (

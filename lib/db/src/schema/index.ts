@@ -3,3 +3,4 @@ export * from "./badges";
 export * from "./questions";
 export * from "./answers";
 export * from "./reports";
+export * from "./follows";

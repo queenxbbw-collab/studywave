@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, usersTable, passwordResetTokensTable } from "@workspace/db";
+import { eq, sql, and, gt, isNull } from "drizzle-orm";
 import { hashPassword, comparePassword, signToken } from "../lib/auth";
 import { authenticate } from "../middlewares/authenticate";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
@@ -149,6 +149,55 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
     return;
   }
   res.json(formatUser(user));
+});
+
+router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body;
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim()));
+  if (!user) {
+    res.json({ message: "If that email exists, a reset token has been generated." });
+    return;
+  }
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${user.id}`);
+  await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
+  res.json({ message: "Reset token generated.", resetToken: token, userId: user.id });
+});
+
+router.post("/auth/reset-password", async (req, res): Promise<void> => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword || typeof token !== "string" || typeof newPassword !== "string") {
+    res.status(400).json({ error: "Token and new password are required" });
+    return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
+    return;
+  }
+  const now = new Date();
+  const [record] = await db
+    .select()
+    .from(passwordResetTokensTable)
+    .where(
+      and(
+        eq(passwordResetTokensTable.token, token),
+        gt(passwordResetTokensTable.expiresAt, now),
+        isNull(passwordResetTokensTable.usedAt)
+      )
+    );
+  if (!record) {
+    res.status(400).json({ error: "Invalid or expired reset token" });
+    return;
+  }
+  const passwordHash = await hashPassword(newPassword);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, record.userId));
+  await db.execute(sql`UPDATE password_reset_tokens SET used_at = now() WHERE id = ${record.id}`);
+  res.json({ message: "Password updated successfully" });
 });
 
 export default router;

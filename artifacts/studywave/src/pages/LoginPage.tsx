@@ -153,12 +153,17 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-primary font-semibold hover:underline">
-              Sign up for free
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-primary font-semibold hover:underline">
+                Sign up for free
+              </Link>
+            </p>
+            <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Forgot your password?
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

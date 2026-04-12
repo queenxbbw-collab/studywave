@@ -7,6 +7,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import { getAuthHeaders } from "@/lib/auth";
@@ -14,7 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
   MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag,
-  Bookmark, BookmarkCheck, Eye, Send, ChevronRight, Share2
+  Bookmark, BookmarkCheck, Eye, Send, ChevronRight, Share2, Pencil, X, Check, EyeOff
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -217,11 +218,22 @@ export default function QuestionDetailPage() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [answerContent, setAnswerContent] = useState("");
+  const [answerPreview, setAnswerPreview] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ type: "question" | "answer" | "user"; id: number; label: string } | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [similarQuestions, setSimilarQuestions] = useState<SimilarQuestion[]>([]);
+  // Question editing
+  const [editingQuestion, setEditingQuestion] = useState(false);
+  const [editQTitle, setEditQTitle] = useState("");
+  const [editQContent, setEditQContent] = useState("");
+  const [editQSubject, setEditQSubject] = useState("");
+  const [editQLoading, setEditQLoading] = useState(false);
+  // Answer editing
+  const [editingAnswerId, setEditingAnswerId] = useState<number | null>(null);
+  const [editAContent, setEditAContent] = useState("");
+  const [editALoading, setEditALoading] = useState(false);
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) },
@@ -309,6 +321,62 @@ export default function QuestionDetailPage() {
     deleteAnswer.mutate({ id: answerId }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
+  const startEditQuestion = () => {
+    if (!question) return;
+    setEditQTitle(question.title);
+    setEditQContent(question.content);
+    setEditQSubject(question.subject);
+    setEditingQuestion(true);
+  };
+
+  const saveEditQuestion = async () => {
+    if (!editQTitle.trim() || editQTitle.trim().length < 15) {
+      toast({ title: "Title must be at least 15 characters", variant: "destructive" }); return;
+    }
+    if (!editQContent.trim() || editQContent.trim().length < 50) {
+      toast({ title: "Content must be at least 50 characters", variant: "destructive" }); return;
+    }
+    setEditQLoading(true);
+    try {
+      const r = await fetch(`/api/questions/${questionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ title: editQTitle.trim(), content: editQContent.trim(), subject: editQSubject }),
+      });
+      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Failed to update", variant: "destructive" }); return; }
+      setEditingQuestion(false);
+      invalidate();
+      toast({ title: "Question updated successfully" });
+    } catch { toast({ title: "Network error", variant: "destructive" }); }
+    finally { setEditQLoading(false); }
+  };
+
+  const startEditAnswer = (answerId: number, content: string) => {
+    setEditingAnswerId(answerId);
+    setEditAContent(content);
+  };
+
+  const saveEditAnswer = async () => {
+    if (!editingAnswerId) return;
+    if (!editAContent.trim() || editAContent.trim().length < 30) {
+      toast({ title: "Answer must be at least 30 characters", variant: "destructive" }); return;
+    }
+    setEditALoading(true);
+    try {
+      const r = await fetch(`/api/answers/${editingAnswerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ content: editAContent.trim() }),
+      });
+      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Failed to update", variant: "destructive" }); return; }
+      setEditingAnswerId(null);
+      setEditAContent("");
+      invalidate();
+      toast({ title: "Answer updated successfully" });
+    } catch { toast({ title: "Network error", variant: "destructive" }); }
+    finally { setEditALoading(false); }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -385,11 +453,57 @@ export default function QuestionDetailPage() {
                 </span>
               </div>
 
-              <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight">
-                {question.title}
-              </h1>
-
-              <MarkdownContent content={question.content} />
+              {editingQuestion ? (
+                <div className="space-y-3 mb-4">
+                  <Input
+                    value={editQTitle}
+                    onChange={e => setEditQTitle(e.target.value)}
+                    placeholder="Question title (min 15 chars)"
+                    className="h-11 rounded-xl border-border/70 font-semibold text-base"
+                  />
+                  <select
+                    value={editQSubject}
+                    onChange={e => setEditQSubject(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-border/70 text-sm bg-white focus:outline-none focus:border-primary"
+                  >
+                    {Object.keys(SUBJECT_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <Textarea
+                    value={editQContent}
+                    onChange={e => setEditQContent(e.target.value)}
+                    placeholder="Question content (min 50 chars)"
+                    rows={6}
+                    className="resize-none rounded-xl border-border/70 font-mono text-sm"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={saveEditQuestion}
+                      disabled={editQLoading}
+                      size="sm"
+                      className="gradient-primary text-white border-0 rounded-xl h-8 px-4 text-xs font-semibold gap-1.5"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      {editQLoading ? "Saving..." : "Save changes"}
+                    </Button>
+                    <Button
+                      onClick={() => setEditingQuestion(false)}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl h-8 px-4 text-xs"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                    </Button>
+                    <span className="text-xs text-muted-foreground ml-auto">{editQContent.length}/10000</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight">
+                    {question.title}
+                  </h1>
+                  <MarkdownContent content={question.content} />
+                </>
+              )}
 
               {/* Images */}
               {imageUrls.filter((_, idx) => !imageErrors.has(idx)).length > 0 && (
@@ -500,6 +614,11 @@ export default function QuestionDetailPage() {
                     <Flag className="h-4 w-4" />
                   </button>
                 )}
+                {(isQuestionAuthor || user?.role === "admin") && !editingQuestion && (
+                  <button onClick={startEditQuestion} title="Edit question" className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
                 {(isQuestionAuthor || user?.role === "admin") && (
                   <button onClick={handleDeleteQuestion} className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
                     <Trash2 className="h-4 w-4" />
@@ -567,7 +686,39 @@ export default function QuestionDetailPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <MarkdownContent content={answer.content} />
+                          {editingAnswerId === answer.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editAContent}
+                                onChange={e => setEditAContent(e.target.value)}
+                                rows={5}
+                                className="resize-none rounded-xl border-border/70 font-mono text-sm"
+                                placeholder="Edit your answer (min 30 chars)"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  onClick={saveEditAnswer}
+                                  disabled={editALoading}
+                                  size="sm"
+                                  className="gradient-primary text-white border-0 rounded-xl h-7 px-3 text-xs font-semibold gap-1"
+                                >
+                                  <Check className="h-3 w-3" />
+                                  {editALoading ? "Saving..." : "Save"}
+                                </Button>
+                                <Button
+                                  onClick={() => { setEditingAnswerId(null); setEditAContent(""); }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-xl h-7 px-3 text-xs"
+                                >
+                                  <X className="h-3 w-3 mr-1" /> Cancel
+                                </Button>
+                                <span className="text-xs text-muted-foreground ml-auto">{editAContent.length}/10000</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <MarkdownContent content={answer.content} />
+                          )}
 
                           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
                             <Link href={`/profile/${answer.authorId}`}>
@@ -597,6 +748,11 @@ export default function QuestionDetailPage() {
                                   className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-50 transition-colors"
                                 >
                                   <Flag className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {(user?.id === answer.authorId || user?.role === "admin") && editingAnswerId !== answer.id && (
+                                <button onClick={() => startEditAnswer(answer.id, answer.content)} title="Edit answer" className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
+                                  <Pencil className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {(user?.id === answer.authorId || user?.role === "admin") && (
@@ -638,21 +794,49 @@ export default function QuestionDetailPage() {
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-border/60 overflow-hidden shadow-xs">
-                <div className="px-5 py-3.5 border-b border-border/50 bg-gray-50/50">
+                <div className="px-5 py-3.5 border-b border-border/50 bg-gray-50/50 flex items-center justify-between">
                   <h3 className="font-bold text-sm flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
                     Write your answer
-                    <span className="ml-auto text-xs text-muted-foreground font-normal">+10 points on post · Markdown supported</span>
                   </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">+10 pts · Markdown supported</span>
+                    <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setAnswerPreview(false)}
+                        className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${!answerPreview ? "bg-white shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Write
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAnswerPreview(true)}
+                        className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1 ${answerPreview ? "bg-white shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <Eye className="h-3 w-3" /> Preview
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <form onSubmit={handleSubmitAnswer} className="p-5">
-                  <Textarea
-                    value={answerContent}
-                    onChange={e => setAnswerContent(e.target.value)}
-                    placeholder="Explain step by step... Markdown supported: **bold**, `code`, ## headings, - lists"
-                    rows={6}
-                    className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
-                  />
+                  {answerPreview ? (
+                    <div className="min-h-[144px] rounded-xl border border-border/70 bg-gray-50/50 p-4">
+                      {answerContent.trim() ? (
+                        <MarkdownContent content={answerContent} />
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Nothing to preview yet. Switch to Write tab and start typing...</p>
+                      )}
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={answerContent}
+                      onChange={e => setAnswerContent(e.target.value)}
+                      placeholder="Explain step by step... Markdown supported: **bold**, `code`, ## headings, - lists"
+                      rows={6}
+                      className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
+                    />
+                  )}
                   <div className="flex items-center justify-between mt-3">
                     <div className="text-xs text-muted-foreground">
                       {answerContent.length > 0 && !answerOk

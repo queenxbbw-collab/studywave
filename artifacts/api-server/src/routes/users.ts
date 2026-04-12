@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, badgesTable, userBadgesTable, questionsTable, answersTable } from "@workspace/db";
-import { eq, count, sql } from "drizzle-orm";
+import { db, usersTable, badgesTable, userBadgesTable, questionsTable, answersTable, userFollowsTable } from "@workspace/db";
+import { eq, count, sql, and } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { hashPassword, comparePassword } from "../lib/auth";
 import { UpdateSettingsBody, UploadAvatarBody } from "@workspace/api-zod";
@@ -44,6 +44,9 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     createdAt: r.badge.createdAt.toISOString(),
   }));
 
+  const [followersCount] = await db.select({ count: count() }).from(userFollowsTable).where(eq(userFollowsTable.followingId, id));
+  const [followingCount] = await db.select({ count: count() }).from(userFollowsTable).where(eq(userFollowsTable.followerId, id));
+
   res.json({
     id: user.id,
     username: user.username,
@@ -62,6 +65,8 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     awardedAnswerCount: Number(awardedCount.count),
     currentStreak: user.currentStreak ?? 0,
     longestStreak: user.longestStreak ?? 0,
+    followersCount: Number(followersCount.count),
+    followingCount: Number(followingCount.count),
     badges,
   });
 });
@@ -205,6 +210,35 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
     isActive: updated.isActive,
     createdAt: updated.createdAt.toISOString(),
   });
+});
+
+router.get("/users/:id/follow-status", authenticate, async (req, res): Promise<void> => {
+  const targetId = parseInt(req.params.id, 10);
+  const [follow] = await db.select().from(userFollowsTable)
+    .where(and(eq(userFollowsTable.followerId, req.userId!), eq(userFollowsTable.followingId, targetId)));
+  res.json({ isFollowing: !!follow });
+});
+
+router.post("/users/:id/follow", authenticate, async (req, res): Promise<void> => {
+  const targetId = parseInt(req.params.id, 10);
+  if (targetId === req.userId) {
+    res.status(400).json({ error: "You cannot follow yourself" });
+    return;
+  }
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, targetId));
+  if (!target) { res.status(404).json({ error: "User not found" }); return; }
+  const [existing] = await db.select().from(userFollowsTable)
+    .where(and(eq(userFollowsTable.followerId, req.userId!), eq(userFollowsTable.followingId, targetId)));
+  if (existing) { res.json({ message: "Already following" }); return; }
+  await db.insert(userFollowsTable).values({ followerId: req.userId!, followingId: targetId });
+  res.json({ message: "Now following" });
+});
+
+router.delete("/users/:id/follow", authenticate, async (req, res): Promise<void> => {
+  const targetId = parseInt(req.params.id, 10);
+  await db.delete(userFollowsTable)
+    .where(and(eq(userFollowsTable.followerId, req.userId!), eq(userFollowsTable.followingId, targetId)));
+  res.json({ message: "Unfollowed" });
 });
 
 router.post("/users/avatar", authenticate, async (req, res): Promise<void> => {

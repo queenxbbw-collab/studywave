@@ -54,14 +54,26 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 - `/` — HomePage with stats, search, subject filter, activity feed
 - `/login`, `/register` — auth pages
+- `/forgot-password` — generates reset token on screen (no email; token valid 1h)
+- `/reset-password?token=xxx` — set new password using a token
 - `/questions` — paginated list with filters/sort
-- `/questions/:id` — detail with voting, award button, answer form
+- `/questions/:id` — detail with voting, award, Write/Preview answer editor, inline edit for questions+answers (authors+admins)
 - `/ask` — create question form
-- `/profile/:id` — user profile with stats, badges, questions, answers tabs
+- `/profile/:id` — user profile with Follow/Unfollow button, Followers+Following stats, badges, questions, answers tabs
 - `/settings` — edit profile, avatar URL, change password
 - `/leaderboard` — top users ranking
 - `/badges` — all badges grouped by category
 - `/admin` — admin-only panel
+
+## Database Tables
+
+- `users` — main user table with streak, social links, bonus pool
+- `questions` / `question_votes` — Q&A core
+- `answers` / `answer_votes`
+- `badges` / `user_badges`
+- `reports`
+- `user_follows` — follow/unfollow between users (follower_id, following_id unique pair)
+- `password_reset_tokens` — token (text), expires_at, used_at (one-time use, 1h expiry)
 
 ## Stack
 
