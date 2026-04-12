@@ -4,6 +4,7 @@ import { eq, count, sql, ilike, and, desc } from "drizzle-orm";
 import { authenticate, requireAdmin } from "../middlewares/authenticate";
 import { AdminUpdateUserBody, AdminCreateBadgeBody, AdminUpdateBadgeBody, AdminListUsersQueryParams, AdminListQuestionsQueryParams } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
+import { logAdminAction } from "../lib/adminLog";
 
 const router = Router();
 
@@ -70,6 +71,49 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
     await checkAndAwardBadges(id);
   }
 
+  // Log specific action
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  const adminUsername = adminUser?.username ?? "admin";
+
+  if (parsed.data.isActive !== undefined) {
+    await logAdminAction({
+      adminId: req.userId!,
+      adminUsername,
+      action: parsed.data.isActive ? "user.unsuspend" : "user.suspend",
+      category: "users",
+      targetType: "user",
+      targetId: id,
+      targetLabel: existing.displayName || existing.username,
+      details: parsed.data.isActive
+        ? `Re-activated account for @${existing.username}`
+        : `Suspended account for @${existing.username}`,
+    });
+  }
+  if (parsed.data.role !== undefined && parsed.data.role !== existing.role) {
+    await logAdminAction({
+      adminId: req.userId!,
+      adminUsername,
+      action: "user.role_change",
+      category: "users",
+      targetType: "user",
+      targetId: id,
+      targetLabel: existing.displayName || existing.username,
+      details: `Changed role of @${existing.username} from "${existing.role}" to "${parsed.data.role}"`,
+    });
+  }
+  if (parsed.data.points !== undefined && parsed.data.points !== existing.points) {
+    await logAdminAction({
+      adminId: req.userId!,
+      adminUsername,
+      action: "user.points_edit",
+      category: "users",
+      targetType: "user",
+      targetId: id,
+      targetLabel: existing.displayName || existing.username,
+      details: `Edited points for @${existing.username}: ${existing.points} → ${parsed.data.points}`,
+    });
+  }
+
   res.json({
     id: updated.id,
     username: updated.username,
@@ -94,6 +138,19 @@ router.delete("/admin/users/:id", async (req, res): Promise<void> => {
   }
 
   await db.update(usersTable).set({ isActive: false }).where(eq(usersTable.id, id));
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "user.delete",
+    category: "users",
+    targetType: "user",
+    targetId: id,
+    targetLabel: existing.displayName || existing.username,
+    details: `Deleted (deactivated) account @${existing.username} (${existing.email})`,
+  });
+
   res.sendStatus(204);
 });
 
@@ -166,6 +223,18 @@ router.delete("/admin/questions/:id", async (req, res): Promise<void> => {
   await db.delete(activityTable).where(eq(activityTable.questionId, id));
   await db.delete(questionsTable).where(eq(questionsTable.id, id));
 
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "question.delete",
+    category: "content",
+    targetType: "question",
+    targetId: id,
+    targetLabel: q.title.slice(0, 80),
+    details: `Deleted question #${id} by @${q.authorId}: "${q.title.slice(0, 80)}"`,
+  });
+
   res.sendStatus(204);
 });
 
@@ -177,6 +246,18 @@ router.post("/admin/badges", async (req, res): Promise<void> => {
   }
 
   const [badge] = await db.insert(badgesTable).values(parsed.data).returning();
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "badge.create",
+    category: "badges",
+    targetType: "badge",
+    targetId: badge.id,
+    targetLabel: badge.name,
+    details: `Created badge "${badge.name}" (${badge.pointsRequired} pts, category: ${badge.category})`,
+  });
 
   res.status(201).json({
     id: badge.id,
@@ -206,6 +287,18 @@ router.patch("/admin/badges/:id", async (req, res): Promise<void> => {
 
   const [updated] = await db.update(badgesTable).set(parsed.data).where(eq(badgesTable.id, id)).returning();
 
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "badge.update",
+    category: "badges",
+    targetType: "badge",
+    targetId: id,
+    targetLabel: existing.name,
+    details: `Updated badge "${existing.name}"`,
+  });
+
   res.json({
     id: updated.id,
     name: updated.name,
@@ -220,8 +313,24 @@ router.patch("/admin/badges/:id", async (req, res): Promise<void> => {
 
 router.delete("/admin/badges/:id", async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+
+  const [existing] = await db.select().from(badgesTable).where(eq(badgesTable.id, id));
+
   await db.delete(userBadgesTable).where(eq(userBadgesTable.badgeId, id));
   await db.delete(badgesTable).where(eq(badgesTable.id, id));
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "badge.delete",
+    category: "badges",
+    targetType: "badge",
+    targetId: id,
+    targetLabel: existing?.name ?? `#${id}`,
+    details: `Deleted badge "${existing?.name ?? id}"`,
+  });
+
   res.sendStatus(204);
 });
 
@@ -272,6 +381,50 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
     newAnswersThisWeek: Number(newAnswersWeek.count),
     totalBadges: Number(badgeCount.count),
     topSubjects,
+  });
+});
+
+// GET /admin/logs — full audit log
+router.get("/admin/logs", async (req, res): Promise<void> => {
+  const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+  const limit = Math.min(50, Math.max(10, parseInt((req.query.limit as string) || "30", 10)));
+  const category = req.query.category as string | undefined;
+  const offset = (page - 1) * limit;
+
+  const VALID_CATEGORIES = ["users", "content", "badges", "moderation", "announcements", "suggestions"];
+  const safeCat = (category && VALID_CATEGORIES.includes(category)) ? category : null;
+
+  const allRows = await db.execute(sql`
+    SELECT id, admin_id, admin_username, action, category, target_type, target_id, target_label, details, created_at
+    FROM admin_logs
+    ORDER BY created_at DESC
+    LIMIT 5000
+  `);
+
+  const filtered = safeCat
+    ? allRows.rows.filter((l: any) => l.category === safeCat)
+    : allRows.rows;
+
+  const total = filtered.length;
+  const paginated = filtered.slice(offset, offset + limit);
+
+  res.json({
+    logs: paginated.map((l: any) => ({
+      id: l.id,
+      adminId: l.admin_id,
+      adminUsername: l.admin_username,
+      action: l.action,
+      category: l.category,
+      targetType: l.target_type,
+      targetId: l.target_id,
+      targetLabel: l.target_label,
+      details: l.details,
+      createdAt: l.created_at,
+    })),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
   });
 });
 

@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
 import { authenticate, requireAdmin } from "../middlewares/authenticate";
+import { logAdminAction } from "../lib/adminLog";
 
 const router: IRouter = Router();
 
@@ -51,13 +52,47 @@ router.patch("/admin/suggestions/:id", authenticate, requireAdmin, async (req, r
   const id = parseInt(req.params.id);
   const { status } = req.body as { status?: string };
   const validStatus = ["pending", "reviewing", "planned", "done", "rejected"].includes(status ?? "") ? status : "pending";
+
+  const existing = await db.execute(sql`SELECT id, title, status FROM suggestions WHERE id = ${id}`);
+  const sug = existing.rows[0] as any;
+
   await db.execute(sql`UPDATE suggestions SET status = ${validStatus} WHERE id = ${id}`);
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "suggestion.status_change",
+    category: "suggestions",
+    targetType: "suggestion",
+    targetId: id,
+    targetLabel: sug?.title?.slice(0, 80) ?? `#${id}`,
+    details: `Changed suggestion "${sug?.title?.slice(0, 60) ?? id}" status: "${sug?.status ?? "?"}" → "${validStatus}"`,
+  });
+
   res.json({ success: true });
 });
 
 router.delete("/admin/suggestions/:id", authenticate, requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+
+  const existing = await db.execute(sql`SELECT id, title FROM suggestions WHERE id = ${id}`);
+  const sug = existing.rows[0] as any;
+
   await db.execute(sql`DELETE FROM suggestions WHERE id = ${id}`);
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "suggestion.delete",
+    category: "suggestions",
+    targetType: "suggestion",
+    targetId: id,
+    targetLabel: sug?.title?.slice(0, 80) ?? `#${id}`,
+    details: `Deleted suggestion: "${sug?.title?.slice(0, 80) ?? id}"`,
+  });
+
   res.json({ success: true });
 });
 

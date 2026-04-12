@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, reportsTable, usersTable, questionsTable, answersTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
+import { logAdminAction } from "../lib/adminLog";
 
 const router = Router();
 
@@ -127,6 +128,17 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Report not found" });
     return;
   }
+
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: user.username,
+    action: `report.${status}`,
+    category: "moderation",
+    targetType: "report",
+    targetId: id,
+    targetLabel: `Report #${id} (${updated.targetType} #${updated.targetId})`,
+    details: `Marked report #${id} [${updated.targetType} #${updated.targetId}, reason: ${updated.reason}] as "${status}"`,
+  });
 
   res.json({ id: updated.id, status: updated.status });
 });
