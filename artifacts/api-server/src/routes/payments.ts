@@ -19,8 +19,57 @@ function getStripe(): Stripe | null {
   return new Stripe(key);
 }
 
+export const PREMIUM_PRICE_MONTHLY = 499; // $4.99/month in cents
+
 router.get("/payments/packages", (_req: Request, res: Response): void => {
   res.json({ packages: POINT_PACKAGES });
+});
+
+router.post("/payments/subscribe", authenticate, async (req: Request, res: Response): Promise<void> => {
+  const stripe = getStripe();
+  if (!stripe) {
+    res.status(503).json({ error: "Payment system not configured. Please contact admin." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  let customerId = user.stripeCustomerId ?? undefined;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.displayName,
+      metadata: { userId: String(user.id) },
+    });
+    customerId = customer.id;
+    await db.update(usersTable).set({ stripeCustomerId: customerId }).where(eq(usersTable.id, req.userId!));
+  }
+
+  const origin = req.headers.origin || `https://${req.headers.host}`;
+
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    payment_method_types: ["card"],
+    mode: "subscription",
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        unit_amount: PREMIUM_PRICE_MONTHLY,
+        recurring: { interval: "month" },
+        product_data: {
+          name: "StudyWave Premium",
+          description: "Unlimited questions per day + Premium badge",
+        },
+      },
+      quantity: 1,
+    }],
+    metadata: { userId: String(user.id), type: "premium_subscription" },
+    success_url: `${origin}/buy-points?premium_success=1`,
+    cancel_url: `${origin}/buy-points?canceled=1`,
+  });
+
+  res.json({ url: session.url });
 });
 
 router.post("/payments/checkout", authenticate, async (req: Request, res: Response): Promise<void> => {
@@ -102,14 +151,32 @@ export async function handleStripeWebhook(payload: Buffer, signature: string): P
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = parseInt(session.metadata?.userId ?? "0");
-    const points = parseInt(session.metadata?.points ?? "0");
+    const type = session.metadata?.type;
 
-    if (userId && points) {
+    if (type === "premium_subscription" && userId) {
+      const subId = session.subscription as string;
       await db.update(usersTable)
-        .set({ points: sql`${usersTable.points} + ${points}` })
+        .set({ isPremium: true, stripeSubscriptionId: subId })
         .where(eq(usersTable.id, userId));
-      console.log(`[Stripe] Added ${points} points to user ${userId}`);
+      console.log(`[Stripe] Activated Premium for user ${userId}`);
+    } else {
+      const points = parseInt(session.metadata?.points ?? "0");
+      if (userId && points) {
+        await db.update(usersTable)
+          .set({ points: sql`${usersTable.points} + ${points}` })
+          .where(eq(usersTable.id, userId));
+        console.log(`[Stripe] Added ${points} points to user ${userId}`);
+      }
     }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const sub = event.data.object as Stripe.Subscription;
+    const subId = sub.id;
+    await db.update(usersTable)
+      .set({ isPremium: false, stripeSubscriptionId: null })
+      .where(eq(usersTable.stripeSubscriptionId, subId));
+    console.log(`[Stripe] Deactivated Premium for subscription ${subId}`);
   }
 }
 
