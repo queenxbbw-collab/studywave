@@ -397,26 +397,38 @@ router.post("/admin/reset-data", async (req, res): Promise<void> => {
   const adminUsername = adminUser?.username ?? "admin";
 
   if (target === "questions" || target === "all") {
-    // Delete in FK-safe order
+    // FK-safe order: delete child tables before parent tables
+    // children of answers first
     await db.execute(sql`DELETE FROM answer_votes`);
-    await db.execute(sql`DELETE FROM question_votes`);
     await db.execute(sql`DELETE FROM comments`);
-    await db.execute(sql`DELETE FROM answer_gold_ribbons`);
-    await db.execute(sql`DELETE FROM answers`);
+    // children of questions
+    await db.execute(sql`DELETE FROM question_votes`);
+    await db.execute(sql`DELETE FROM activity`);
     await db.execute(sql`DELETE FROM bookmarks`);
-    await db.execute(sql`DELETE FROM question_views`);
-    await db.execute(sql`DELETE FROM reports`);
-    await db.execute(sql`DELETE FROM questions`);
     await db.execute(sql`DELETE FROM notifications`);
+    await db.execute(sql`DELETE FROM reports`);
+    // now answers (references questions) and questions
+    await db.execute(sql`DELETE FROM answers`);
+    await db.execute(sql`DELETE FROM questions`);
     await db.execute(sql`DELETE FROM admin_logs WHERE admin_id != ${req.userId!}`);
   }
 
   if (target === "users" || target === "all") {
-    // Delete only non-admin users (role != 'admin')
-    await db.execute(sql`DELETE FROM user_follows WHERE follower_id IN (SELECT id FROM users WHERE role != 'admin') OR following_id IN (SELECT id FROM users WHERE role != 'admin')`);
-    await db.execute(sql`DELETE FROM user_badges WHERE user_id IN (SELECT id FROM users WHERE role != 'admin')`);
-    await db.execute(sql`DELETE FROM referrals WHERE referrer_id IN (SELECT id FROM users WHERE role != 'admin') OR referred_id IN (SELECT id FROM users WHERE role != 'admin')`);
-    await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id IN (SELECT id FROM users WHERE role != 'admin')`);
+    const sub = `(SELECT id FROM users WHERE role != 'admin')`;
+    // Delete all data belonging to non-admin users in FK-safe order
+    await db.execute(sql.raw(`DELETE FROM answer_votes WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM question_votes WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM comments WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM bookmarks WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM notifications WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM activity WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM reports WHERE reporter_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM suggestions WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM answers WHERE author_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM questions WHERE author_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM user_follows WHERE follower_id IN ${sub} OR following_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM user_badges WHERE user_id IN ${sub}`));
+    await db.execute(sql.raw(`DELETE FROM password_reset_tokens WHERE user_id IN ${sub}`));
     await db.execute(sql`DELETE FROM users WHERE role != 'admin'`);
   }
 
