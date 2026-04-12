@@ -17,6 +17,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import BadgesPage from "@/pages/BadgesPage";
 import AdminPage from "@/pages/AdminPage";
+import BookmarksPage from "@/pages/BookmarksPage";
 
 setAuthTokenGetter(() => localStorage.getItem("studywave_token"));
 
@@ -44,6 +45,7 @@ function Router() {
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/badges" component={BadgesPage} />
         <Route path="/admin" component={AdminPage} />
+        <Route path="/bookmarks" component={BookmarksPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

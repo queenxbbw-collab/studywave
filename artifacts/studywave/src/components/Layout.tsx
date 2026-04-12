@@ -8,8 +8,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Sparkles, Zap
+  Plus, Shield, Menu, X, ChevronDown, Sparkles, Zap, Bookmark
 } from "lucide-react";
+import NotificationBell from "./NotificationBell";
+import AnnouncementBanner from "./AnnouncementBanner";
 
 const NAV_ITEMS = [
   { href: "/", icon: Home, label: "Home" },
@@ -27,21 +29,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex h-16 items-center justify-between gap-2 sm:gap-4 min-w-0">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-              <div className="relative w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+              <div className="relative w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm flex-shrink-0">
                 <BookOpen className="h-4.5 w-4.5 text-white" strokeWidth={2.5} />
                 <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-white"></div>
               </div>
-              <div>
+              <div className="hidden xs:block sm:block">
                 <span className="font-extrabold text-lg tracking-tight text-foreground">StudyWave</span>
-                <span className="hidden sm:inline ml-1.5 text-xs font-medium text-primary bg-primary/8 px-1.5 py-0.5 rounded-full">Beta</span>
+                <span className="hidden lg:inline ml-1.5 text-xs font-medium text-primary bg-primary/8 px-1.5 py-0.5 rounded-full">Beta</span>
               </div>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-0.5">
+            <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
               {NAV_ITEMS.map(item => {
                 const active = location === item.href;
                 return (
@@ -60,30 +62,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {user ? (
                 <>
-                  <Link href="/ask" className="hidden sm:block">
-                    <Button size="sm" className="gap-2 shadow-sm gradient-primary text-white border-0 h-8 px-3.5 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                  <Link href="/ask" className="hidden md:block">
+                    <Button size="sm" className="gap-2 shadow-sm gradient-primary text-white border-0 h-8 px-3.5 rounded-lg font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
                       <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
                       Ask a Question
                     </Button>
                   </Link>
 
+                  <NotificationBell />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2.5 pl-1 pr-2.5 py-1 rounded-xl border border-border/60 hover:border-border hover:bg-gray-50/80 transition-all duration-150">
-                        <Avatar className="h-7 w-7">
+                      <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl border border-border/60 hover:border-border hover:bg-gray-50/80 transition-all duration-150 flex-shrink-0">
+                        <Avatar className="h-7 w-7 flex-shrink-0">
                           <AvatarImage src={user.avatarUrl || undefined} />
                           <AvatarFallback className="gradient-primary text-white text-xs font-bold">
                             {user.displayName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="hidden sm:block text-left">
-                          <p className="text-xs font-semibold text-foreground leading-tight">{user.displayName}</p>
+                        <div className="hidden sm:block text-left max-w-[100px]">
+                          <p className="text-xs font-semibold text-foreground leading-tight truncate">{user.displayName}</p>
                           <p className="text-xs text-primary font-medium">{user.points?.toLocaleString()} pts</p>
                         </div>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block flex-shrink-0" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-60 shadow-xl border border-border/60 rounded-xl p-1.5">
@@ -106,6 +110,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <DropdownMenuSeparator className="my-1" />
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href={`/profile/${user.id}`}>Public Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
+                        <Link href="/bookmarks">
+                          <Bookmark className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Bookmarks
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/settings">
@@ -148,9 +157,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </>
               )}
 
-              {/* Mobile menu */}
+              {/* Mobile menu toggle — visible below lg */}
               <button
-                className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+                className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors flex-shrink-0"
                 onClick={() => setMobileOpen(!mobileOpen)}
               >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -159,9 +168,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile / tablet menu (below lg) */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-border/60 bg-white">
+          <div className="lg:hidden border-t border-border/60 bg-white">
             <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
               {NAV_ITEMS.map(item => (
                 <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
@@ -185,7 +194,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       </header>
 
-      <main>{children}</main>
+      <main>
+        <AnnouncementBanner />
+        {children}
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/60 bg-white mt-16">

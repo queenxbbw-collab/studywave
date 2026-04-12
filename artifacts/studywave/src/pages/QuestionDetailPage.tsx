@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetQuestion, useVoteQuestion, useCreateAnswer, useVoteAnswer,
@@ -9,16 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
+import { getAuthHeaders } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
-  MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag
+  MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag,
+  Bookmark, BookmarkCheck, Eye, Send, ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import ReportModal from "@/components/ReportModal";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const MIN_ANSWER = 30;
+const MIN_COMMENT = 5;
 
 const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
   Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
@@ -34,6 +39,157 @@ const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> 
   Other:              { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
 };
 
+interface Comment {
+  id: number;
+  content: string;
+  authorId: number;
+  authorUsername: string;
+  authorDisplayName: string;
+  authorAvatarUrl: string | null;
+  createdAt: string;
+}
+
+interface SimilarQuestion {
+  id: number;
+  title: string;
+  subject: string;
+  upvotes: number;
+  isSolved: boolean;
+  createdAt: string;
+  authorDisplayName: string;
+}
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <div className="prose prose-sm max-w-none text-foreground/85 leading-relaxed
+      prose-headings:font-bold prose-headings:text-foreground
+      prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
+      prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:p-4
+      prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground
+      prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+      prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  );
+}
+
+function CommentsSection({ answerId }: { answerId: number }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  const fetchComments = async () => {
+    setLoading(true);
+    const res = await fetch(`/api/comments/answer/${answerId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setComments(data.comments ?? []);
+    }
+    setLoading(false);
+  };
+
+  const handleToggle = () => {
+    if (!showComments) fetchComments();
+    setShowComments(s => !s);
+  };
+
+  const postComment = async () => {
+    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    if (newComment.trim().length < MIN_COMMENT) return;
+    setPosting(true);
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ answerId, content: newComment.trim() }),
+    });
+    setPosting(false);
+    if (res.ok) {
+      const data = await res.json();
+      setComments(c => [...c, data.comment]);
+      setNewComment("");
+    } else {
+      const data = await res.json();
+      toast({ title: data.error || "Failed to post comment", variant: "destructive" });
+    }
+  };
+
+  const deleteComment = async (id: number) => {
+    await fetch(`/api/comments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+    setComments(c => c.filter(x => x.id !== id));
+  };
+
+  return (
+    <div className="border-t border-border/40 pt-3 mt-3">
+      <button
+        onClick={handleToggle}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors font-medium"
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        {comments.length > 0 ? `${comments.length} comment${comments.length !== 1 ? "s" : ""}` : "Add comment"}
+      </button>
+
+      {showComments && (
+        <div className="mt-3 space-y-2">
+          {loading ? (
+            <p className="text-xs text-muted-foreground animate-pulse">Loading comments...</p>
+          ) : comments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No comments yet.</p>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} className="flex gap-2 items-start group">
+                <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
+                  <AvatarImage src={c.authorAvatarUrl || undefined} />
+                  <AvatarFallback className="text-[9px] gradient-primary text-white">{c.authorDisplayName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold text-foreground mr-1.5">{c.authorDisplayName}</span>
+                  <span className="text-xs text-foreground/80">{c.content}</span>
+                  <span className="text-[11px] text-muted-foreground/60 ml-2">
+                    {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+                {(user?.id === c.authorId || user?.role === "admin") && (
+                  <button
+                    onClick={() => deleteComment(c.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-500 transition-all"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+
+          {user && (
+            <div className="flex gap-2 items-center mt-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(); } }}
+                placeholder="Add a comment..."
+                className="flex-1 text-xs border border-border/60 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:border-primary/60 focus:bg-white transition-colors"
+                maxLength={500}
+              />
+              <button
+                onClick={postComment}
+                disabled={posting || newComment.trim().length < MIN_COMMENT}
+                className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function QuestionDetailPage() {
   const [, params] = useRoute("/questions/:id");
   const questionId = parseInt(params?.id || "0");
@@ -44,6 +200,9 @@ export default function QuestionDetailPage() {
   const [answerContent, setAnswerContent] = useState("");
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ type: "question" | "answer" | "user"; id: number; label: string } | null>(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [similarQuestions, setSimilarQuestions] = useState<SimilarQuestion[]>([]);
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) },
@@ -57,6 +216,42 @@ export default function QuestionDetailPage() {
   const deleteAnswer = useDeleteAnswer();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetQuestionQueryKey(questionId) });
+
+  // Load bookmark status and similar questions
+  useEffect(() => {
+    if (!questionId) return;
+    // Similar questions
+    fetch(`/api/questions/${questionId}/similar`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSimilarQuestions(Array.isArray(data) ? data : []))
+      .catch(() => {});
+    // Bookmark status
+    if (user) {
+      fetch(`/api/bookmarks/${questionId}`, { headers: getAuthHeaders() })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setIsBookmarked(data.isBookmarked ?? false); })
+        .catch(() => {});
+    }
+  }, [questionId, user]);
+
+  const toggleBookmark = async () => {
+    if (!user) { toast({ title: "Sign in to bookmark", variant: "destructive" }); return; }
+    setBookmarkLoading(true);
+    if (isBookmarked) {
+      await fetch(`/api/bookmarks/${questionId}`, { method: "DELETE", headers: getAuthHeaders() });
+      setIsBookmarked(false);
+      toast({ title: "Bookmark removed" });
+    } else {
+      await fetch("/api/bookmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ questionId }),
+      });
+      setIsBookmarked(true);
+      toast({ title: "Bookmarked! Saved to your bookmarks." });
+    }
+    setBookmarkLoading(false);
+  };
 
   const handleVoteQuestion = (type: string) => {
     if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
@@ -126,6 +321,7 @@ export default function QuestionDetailPage() {
   const subjectStyle = SUBJECT_CONFIG[question.subject] || SUBJECT_CONFIG["Other"];
   const score = question.upvotes - question.downvotes;
   const imageUrls: string[] = Array.isArray((question as any).imageUrls) ? (question as any).imageUrls : [];
+  const views: number = (question as any).views ?? 0;
 
   const sortedAnswers = [...(question.answers || [])].sort((a, b) => {
     if (a.isAwarded && !b.isAwarded) return -1;
@@ -135,8 +331,6 @@ export default function QuestionDetailPage() {
 
   const answerTrimmed = answerContent.trim();
   const answerOk = answerTrimmed.length >= MIN_ANSWER;
-
-  // Check if user already answered
   const alreadyAnswered = user ? sortedAnswers.some(a => a.authorId === user.id) : false;
 
   return (
@@ -167,15 +361,16 @@ export default function QuestionDetailPage() {
                     <CheckCircle2 className="h-3 w-3" /> Solved
                   </span>
                 )}
+                <span className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                  <Eye className="h-3 w-3" /> {views.toLocaleString()} view{views !== 1 ? "s" : ""}
+                </span>
               </div>
 
               <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight">
                 {question.title}
               </h1>
 
-              <div className="prose prose-sm max-w-none text-foreground/85 leading-relaxed whitespace-pre-wrap">
-                {question.content}
-              </div>
+              <MarkdownContent content={question.content} />
 
               {/* Images */}
               {imageUrls.filter((_, idx) => !imageErrors.has(idx)).length > 0 && (
@@ -222,6 +417,21 @@ export default function QuestionDetailPage() {
                     <ArrowDown className="h-4 w-4" />
                   </button>
                 </div>
+
+                {/* Bookmark button */}
+                <button
+                  onClick={toggleBookmark}
+                  disabled={bookmarkLoading}
+                  title={isBookmarked ? "Remove bookmark" : "Save to bookmarks"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                    isBookmarked
+                      ? "bg-primary/8 border-primary/30 text-primary hover:bg-primary/12"
+                      : "bg-white border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+                  }`}
+                >
+                  {isBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+                  {isBookmarked ? "Bookmarked" : "Bookmark"}
+                </button>
 
                 <Link href={`/profile/${question.authorId}`}>
                   <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
@@ -319,7 +529,7 @@ export default function QuestionDetailPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">{answer.content}</p>
+                          <MarkdownContent content={answer.content} />
 
                           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
                             <Link href={`/profile/${answer.authorId}`}>
@@ -358,6 +568,9 @@ export default function QuestionDetailPage() {
                               )}
                             </div>
                           </div>
+
+                          {/* Comments */}
+                          <CommentsSection answerId={answer.id} />
                         </div>
                       </div>
                     </div>
@@ -391,16 +604,16 @@ export default function QuestionDetailPage() {
                   <h3 className="font-bold text-sm flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
                     Write your answer
-                    <span className="ml-auto text-xs text-muted-foreground font-normal">+10 points on post</span>
+                    <span className="ml-auto text-xs text-muted-foreground font-normal">+10 points on post · Markdown supported</span>
                   </h3>
                 </div>
                 <form onSubmit={handleSubmitAnswer} className="p-5">
                   <Textarea
                     value={answerContent}
                     onChange={e => setAnswerContent(e.target.value)}
-                    placeholder="Explain step by step... The clearer and more detailed your answer, the better your chances of winning the Gold Ribbon!"
-                    rows={5}
-                    className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
+                    placeholder="Explain step by step... Markdown supported: **bold**, `code`, ## headings, - lists"
+                    rows={6}
+                    className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
                   />
                   <div className="flex items-center justify-between mt-3">
                     <div className="text-xs text-muted-foreground">
@@ -448,11 +661,12 @@ export default function QuestionDetailPage() {
               {[
                 { label: "Upvotes", value: question.upvotes, color: "text-emerald-600" },
                 { label: "Answers", value: question.answers.length, color: "text-blue-600" },
+                { label: "Views", value: views, color: "text-purple-600" },
                 { label: "Score", value: score, color: score >= 0 ? "text-primary" : "text-red-500" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{stat.label}</span>
-                  <span className={`text-sm font-bold ${stat.color}`}>{stat.value}</span>
+                  <span className={`text-sm font-bold ${stat.color}`}>{stat.value?.toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -486,6 +700,30 @@ export default function QuestionDetailPage() {
             </p>
           </div>
 
+          {/* Similar questions */}
+          {similarQuestions.length > 0 && (
+            <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
+              <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Similar Questions</h3>
+              <div className="space-y-2.5">
+                {similarQuestions.map(sq => (
+                  <Link key={sq.id} href={`/questions/${sq.id}`}>
+                    <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                          {sq.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {sq.isSolved && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                          <span className="text-[11px] text-muted-foreground">↑ {sq.upvotes}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

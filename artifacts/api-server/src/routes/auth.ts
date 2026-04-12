@@ -14,6 +14,7 @@ function generateReferralCode(username: string): string {
 }
 
 function formatUser(user: typeof usersTable.$inferSelect) {
+  const u = user as any;
   return {
     id: user.id,
     username: user.username,
@@ -26,6 +27,9 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     isActive: user.isActive,
     referralCode: user.referralCode,
     questionBonusPool: user.questionBonusPool,
+    currentStreak: u.currentStreak ?? u.current_streak ?? 0,
+    longestStreak: u.longestStreak ?? u.longest_streak ?? 0,
+    lastActivityDate: u.lastActivityDate ?? u.last_activity_date ?? null,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -119,8 +123,19 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  // Update streak
+  const today = new Date().toISOString().split("T")[0];
+  const lastDate = user.lastActivityDate ? new Date(user.lastActivityDate as unknown as string).toISOString().split("T")[0] : null;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  let newStreak = (user as any).currentStreak ?? 0;
+  if (!lastDate || lastDate < yesterday) newStreak = 1;
+  else if (lastDate === yesterday) newStreak = newStreak + 1;
+  const newLongest = Math.max(newStreak, (user as any).longestStreak ?? 0);
+  await db.execute(sql`UPDATE users SET current_streak = ${newStreak}, longest_streak = ${newLongest}, last_activity_date = ${today} WHERE id = ${user.id}`);
+
   const token = signToken(user.id, user.role);
-  res.json({ user: formatUser(user), token });
+  const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id));
+  res.json({ user: formatUser(updatedUser), token });
 });
 
 router.post("/auth/logout", async (_req, res): Promise<void> => {

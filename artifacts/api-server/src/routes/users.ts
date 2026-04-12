@@ -54,6 +54,8 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     questionCount: Number(qCount.count),
     answerCount: Number(aCount.count),
     awardedAnswerCount: Number(awardedCount.count),
+    currentStreak: user.currentStreak ?? 0,
+    longestStreak: user.longestStreak ?? 0,
     badges,
   });
 });

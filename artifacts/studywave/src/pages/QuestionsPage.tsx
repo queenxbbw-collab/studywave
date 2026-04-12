@@ -138,9 +138,10 @@ export default function QuestionsPage() {
       </div>
 
       {/* Sort tabs */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 flex-wrap">
         {[
           { value: "newest", label: "Newest" },
+          { value: "trending", label: "🔥 Trending" },
           { value: "most-voted", label: "Most Voted" },
           { value: "unsolved", label: "Unsolved" },
         ].map(tab => (

@@ -9,7 +9,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Settings, Trophy, HelpCircle, MessageCircle, Award, Calendar, Shield,
-  Star, Zap, TrendingUp, Lock, Sparkles
+  Star, Zap, TrendingUp, Lock, Sparkles, Flame
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -125,14 +125,16 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-border/50">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-t border-border/50">
           {[
-            { icon: Trophy, label: "Puncte", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
-            { icon: HelpCircle, label: "Intrebari", value: profile.questionCount, color: "text-blue-600", bg: "bg-blue-50" },
-            { icon: MessageCircle, label: "Raspunsuri", value: profile.answerCount, color: "text-violet-600", bg: "bg-violet-50" },
-            { icon: Award, label: "Funditze", value: profile.awardedAnswerCount, color: "text-amber-600", bg: "bg-amber-50" },
-          ].map((stat, i) => (
-            <div key={stat.label} className={`flex items-center gap-3 px-5 py-4 ${i < 3 ? "border-r border-border/50" : ""}`}>
+            { icon: Trophy, label: "Points", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: HelpCircle, label: "Questions", value: (profile as any).questionCount ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
+            { icon: MessageCircle, label: "Answers", value: (profile as any).answerCount ?? 0, color: "text-violet-600", bg: "bg-violet-50" },
+            { icon: Award, label: "Gold Ribbons", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: Flame, label: "Day Streak", value: (profile as any).currentStreak ?? 0, color: "text-orange-600", bg: "bg-orange-50" },
+            { icon: TrendingUp, label: "Best Streak", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
+          ].map((stat, i, arr) => (
+            <div key={stat.label} className={`flex items-center gap-3 px-4 py-4 ${i < arr.length - 1 ? "border-r border-border/50" : ""}`}>
               <div className={`w-9 h-9 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
                 <stat.icon className={`h-4.5 w-4.5 ${stat.color}`} />
               </div>

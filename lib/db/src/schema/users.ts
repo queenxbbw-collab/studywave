@@ -16,6 +16,9 @@ export const usersTable = pgTable("users", {
   referralCode: text("referral_code").unique(),
   referredBy: integer("referred_by"),
   questionBonusPool: integer("question_bonus_pool").notNull().default(0),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastActivityDate: timestamp("last_activity_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

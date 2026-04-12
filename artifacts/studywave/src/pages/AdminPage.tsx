@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, HelpCircle, Star, BarChart2, Trash2, Ban, CheckCircle2,
   Plus, ChevronLeft, ChevronRight, TrendingUp, Award, MessageCircle,
-  ArrowUpRight, Activity, Search, BookOpen, Flag
+  ArrowUpRight, Activity, Search, BookOpen, Flag, Megaphone, Eye, EyeOff
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -48,6 +48,9 @@ export default function AdminPage() {
   });
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", type: "info" });
 
   const fetchReports = async () => {
     setReportsLoading(true);
@@ -57,6 +60,45 @@ export default function AdminPage() {
     } finally {
       setReportsLoading(false);
     }
+  };
+
+  const fetchAnnouncements = async () => {
+    setAnnouncementsLoading(true);
+    try {
+      const res = await fetch("/api/admin/announcements", { headers: getAuthHeaders() });
+      if (res.ok) setAnnouncements(await res.json());
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  const createAnnouncement = async () => {
+    if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) return;
+    const res = await fetch("/api/admin/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify(newAnnouncement),
+    });
+    if (res.ok) {
+      toast({ title: "Announcement created" });
+      setNewAnnouncement({ title: "", content: "", type: "info" });
+      fetchAnnouncements();
+    }
+  };
+
+  const toggleAnnouncement = async (id: number, isActive: boolean) => {
+    await fetch(`/api/admin/announcements/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ isActive }),
+    });
+    fetchAnnouncements();
+  };
+
+  const deleteAnnouncement = async (id: number) => {
+    if (!confirm("Delete this announcement?")) return;
+    await fetch(`/api/admin/announcements/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+    setAnnouncements(a => a.filter(x => x.id !== id));
   };
 
   const updateReportStatus = async (id: number, status: string) => {
@@ -142,7 +184,10 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="stats" onValueChange={v => { if (v === "reports") fetchReports(); }}>
+      <Tabs defaultValue="stats" onValueChange={v => {
+        if (v === "reports") fetchReports();
+        if (v === "announcements") fetchAnnouncements();
+      }}>
         <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs mb-6 w-full flex">
           {[
             { value: "stats", icon: BarChart2, label: "Stats" },
@@ -150,6 +195,7 @@ export default function AdminPage() {
             { value: "questions", icon: HelpCircle, label: "Questions" },
             { value: "badges", icon: Star, label: "Badges" },
             { value: "reports", icon: Flag, label: "Reports" },
+            { value: "announcements", icon: Megaphone, label: "Announcements" },
           ].map(tab => (
             <TabsTrigger key={tab.value} value={tab.value} className="flex-1 gap-2 rounded-lg text-sm data-[state=active]:shadow-sm">
               <tab.icon className="h-4 w-4" />
@@ -620,6 +666,117 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        </TabsContent>
+        {/* ANNOUNCEMENTS TAB */}
+        <TabsContent value="announcements">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+            {/* List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-lg flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-primary" /> Platform Announcements
+                </h2>
+                <Button variant="outline" size="sm" onClick={fetchAnnouncements} className="h-8 rounded-lg text-xs">
+                  Refresh
+                </Button>
+              </div>
+              {announcementsLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl border bg-white animate-pulse" />)}
+                </div>
+              ) : announcements.length === 0 ? (
+                <div className="bg-white rounded-xl border border-dashed border-border p-12 text-center">
+                  <Megaphone className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="font-semibold text-muted-foreground">No announcements yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {announcements.map((a: any) => (
+                    <div key={a.id} className={`bg-white rounded-xl border p-4 shadow-xs ${a.isActive ? "border-primary/30" : "border-border/60 opacity-60"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              a.type === "info" ? "bg-blue-50 text-blue-700" :
+                              a.type === "warning" ? "bg-amber-50 text-amber-700" :
+                              "bg-emerald-50 text-emerald-700"
+                            }`}>{a.type.toUpperCase()}</span>
+                            {a.isActive && <span className="text-xs text-emerald-600 font-medium">● Active</span>}
+                          </div>
+                          <p className="text-sm font-semibold">{a.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.content}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => toggleAnnouncement(a.id, !a.isActive)}
+                            className={`p-1.5 rounded-lg transition-colors ${a.isActive ? "text-emerald-600 hover:bg-emerald-50" : "text-muted-foreground hover:bg-gray-100"}`}
+                            title={a.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {a.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </button>
+                          <button
+                            onClick={() => deleteAnnouncement(a.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Create form */}
+            <div className="bg-white rounded-xl border border-border/60 p-5 shadow-xs h-fit">
+              <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" /> New Announcement
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                  <Input
+                    value={newAnnouncement.title}
+                    onChange={e => setNewAnnouncement(a => ({ ...a, title: e.target.value }))}
+                    placeholder="Announcement title..."
+                    className="h-9 rounded-lg text-sm"
+                    maxLength={100}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Content</label>
+                  <textarea
+                    value={newAnnouncement.content}
+                    onChange={e => setNewAnnouncement(a => ({ ...a, content: e.target.value }))}
+                    placeholder="Announcement content..."
+                    rows={3}
+                    className="w-full text-sm border border-border/70 rounded-lg px-3 py-2 resize-none bg-gray-50 focus:outline-none focus:border-primary/60 focus:bg-white transition-colors"
+                    maxLength={500}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Type</label>
+                  <select
+                    value={newAnnouncement.type}
+                    onChange={e => setNewAnnouncement(a => ({ ...a, type: e.target.value }))}
+                    className="w-full h-9 text-sm border border-border/70 rounded-lg px-3 bg-white focus:outline-none focus:border-primary/60 transition-colors"
+                  >
+                    <option value="info">Info (blue)</option>
+                    <option value="warning">Warning (amber)</option>
+                    <option value="success">Success (green)</option>
+                  </select>
+                </div>
+                <Button
+                  onClick={createAnnouncement}
+                  disabled={!newAnnouncement.title.trim() || !newAnnouncement.content.trim()}
+                  className="w-full gradient-primary text-white border-0 h-9 rounded-lg font-semibold shadow-sm hover:opacity-90 gap-2"
+                >
+                  <Megaphone className="h-4 w-4" /> Publish Announcement
+                </Button>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

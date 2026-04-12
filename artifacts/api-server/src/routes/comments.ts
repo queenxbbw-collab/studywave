@@ -1,0 +1,97 @@
+import { Router, type IRouter } from "express";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { authenticate } from "../middlewares/authenticate";
+
+const router: IRouter = Router();
+
+router.get("/comments/answer/:answerId", async (req, res): Promise<void> => {
+  const answerId = parseInt(req.params.answerId);
+  if (isNaN(answerId)) { res.status(400).json({ error: "Invalid answer ID" }); return; }
+
+  const comments = await db.execute(sql`
+    SELECT c.id, c.content, c.created_at,
+      u.id as author_id, u.display_name as author_display_name,
+      u.username as author_username, u.avatar_url as author_avatar_url
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.answer_id = ${answerId}
+    ORDER BY c.created_at ASC
+  `);
+
+  res.json({ comments: comments.rows.map((c: any) => ({
+    id: c.id,
+    content: c.content,
+    createdAt: c.created_at,
+    authorId: c.author_id,
+    authorDisplayName: c.author_display_name,
+    authorUsername: c.author_username,
+    authorAvatarUrl: c.author_avatar_url,
+  })) });
+});
+
+router.post("/comments", authenticate, async (req, res): Promise<void> => {
+  const { answerId, content } = req.body as { answerId?: number; content?: string };
+  if (!answerId || typeof answerId !== "number") { res.status(400).json({ error: "answerId required" }); return; }
+  if (!content || content.trim().length < 2) { res.status(400).json({ error: "Comment too short" }); return; }
+  if (content.trim().length > 500) { res.status(400).json({ error: "Comment too long (max 500 chars)" }); return; }
+
+  const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
+  if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
+
+  const result = await db.execute(sql`
+    INSERT INTO comments (answer_id, user_id, content) VALUES (${answerId}, ${req.userId}, ${content.trim()})
+    RETURNING id, content, created_at
+  `);
+  const comment = result.rows[0] as any;
+  const [user] = (await db.execute(sql`SELECT id, display_name, username, avatar_url FROM users WHERE id = ${req.userId}`)).rows as any[];
+  res.status(201).json({ comment: {
+    id: comment.id, content: comment.content, createdAt: comment.created_at,
+    authorId: user.id, authorDisplayName: user.display_name, authorUsername: user.username, authorAvatarUrl: user.avatar_url,
+  }});
+});
+
+router.post("/comments/answer/:answerId", authenticate, async (req, res): Promise<void> => {
+  const answerId = parseInt(req.params.answerId);
+  const { content } = req.body as { content?: string };
+  if (isNaN(answerId)) { res.status(400).json({ error: "Invalid answer ID" }); return; }
+  if (!content || content.trim().length < 2) { res.status(400).json({ error: "Comment too short" }); return; }
+  if (content.trim().length > 500) { res.status(400).json({ error: "Comment too long (max 500 chars)" }); return; }
+
+  const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
+  if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
+
+  const result = await db.execute(sql`
+    INSERT INTO comments (answer_id, user_id, content) VALUES (${answerId}, ${req.userId}, ${content.trim()})
+    RETURNING id, content, created_at
+  `);
+  const comment = result.rows[0] as any;
+
+  const [user] = (await db.execute(sql`SELECT id, display_name, username, avatar_url FROM users WHERE id = ${req.userId}`)).rows as any[];
+
+  res.status(201).json({
+    id: comment.id,
+    content: comment.content,
+    createdAt: comment.created_at,
+    authorId: user.id,
+    authorDisplayName: user.display_name,
+    authorUsername: user.username,
+    authorAvatarUrl: user.avatar_url,
+  });
+});
+
+router.delete("/comments/:id", authenticate, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [comment] = (await db.execute(sql`SELECT user_id FROM comments WHERE id = ${id}`)).rows as any[];
+  if (!comment) { res.status(404).json({ error: "Comment not found" }); return; }
+  if (comment.user_id !== req.userId && req.userRole !== "admin") {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
+
+  await db.execute(sql`DELETE FROM comments WHERE id = ${id}`);
+  res.json({ success: true });
+});
+
+export default router;

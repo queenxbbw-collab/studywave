@@ -4,6 +4,7 @@ import { eq, count, sql, and, gte } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { UpdateAnswerBody, VoteAnswerBody } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
+import { createNotification } from "./notifications";
 
 // --- Limits ---
 const DAILY_ANSWER_LIMIT = 15;
@@ -73,6 +74,17 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
   await db.insert(activityTable).values({ type: "answer_posted", userId: req.userId!, questionId });
   await db.update(usersTable).set({ points: sql`${usersTable.points} + 10` }).where(eq(usersTable.id, req.userId!));
   await checkAndAwardBadges(req.userId!);
+  // Notify question author
+  if (question.authorId !== req.userId) {
+    const [answerer] = await db.select({ displayName: usersTable.displayName }).from(usersTable).where(eq(usersTable.id, req.userId!));
+    await createNotification(
+      question.authorId,
+      "new_answer",
+      "New answer on your question",
+      `${answerer?.displayName ?? "Someone"} answered: "${question.title.slice(0, 60)}"`,
+      questionId
+    );
+  }
 
   res.status(201).json({
     id: answer.id,
@@ -209,6 +221,14 @@ router.post("/answers/:id/award", authenticate, async (req, res): Promise<void> 
   await checkAndAwardBadges(answer.authorId);
 
   await db.insert(activityTable).values({ type: "answer_awarded", userId: answer.authorId, questionId: answer.questionId });
+  // Notify winner
+  await createNotification(
+    answer.authorId,
+    "gold_ribbon",
+    "🎖️ Your answer won a Gold Ribbon!",
+    `You earned +50 points for the best answer on: "${question.title.slice(0, 60)}"`,
+    answer.questionId
+  );
 
   const [updated] = await db.select().from(answersTable).where(eq(answersTable.id, id));
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));

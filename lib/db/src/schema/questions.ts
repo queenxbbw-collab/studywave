@@ -12,6 +12,7 @@ export const questionsTable = pgTable("questions", {
   authorId: integer("author_id").notNull().references(() => usersTable.id),
   upvotes: integer("upvotes").notNull().default(0),
   downvotes: integer("downvotes").notNull().default(0),
+  views: integer("views").notNull().default(0),
   hasAwardedAnswer: boolean("has_awarded_answer").notNull().default(false),
   isSolved: boolean("is_solved").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

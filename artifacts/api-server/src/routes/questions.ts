@@ -61,6 +61,7 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
   if (sort === "oldest") orderClause = asc(questionsTable.createdAt);
   else if (sort === "most-voted") orderClause = desc(questionsTable.upvotes);
   else if (sort === "unsolved") orderClause = asc(questionsTable.isSolved);
+  else if (sort === "trending") orderClause = desc(sql`(${questionsTable.upvotes} * 3 + ${questionsTable.views}) / POWER(GREATEST(1, EXTRACT(EPOCH FROM (NOW() - ${questionsTable.createdAt})) / 3600 + 2), 1.5)`);
   else orderClause = desc(questionsTable.createdAt);
 
   const [totalRow] = await db.select({ count: count() }).from(questionsTable).where(whereClause);
@@ -192,6 +193,9 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     .where(eq(answersTable.questionId, id))
     .orderBy(desc(answersTable.isAwarded), desc(answersTable.upvotes), asc(answersTable.createdAt));
 
+  // Increment view count (fire and forget)
+  db.execute(sql`UPDATE questions SET views = views + 1 WHERE id = ${id}`).catch(() => {});
+
   const { q, author } = questionRow;
   res.json({
     id: q.id,
@@ -206,6 +210,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     authorPoints: author.points,
     upvotes: q.upvotes,
     downvotes: q.downvotes,
+    views: (q as any).views ?? 0,
     hasAwardedAnswer: q.hasAwardedAnswer,
     isSolved: q.isSolved,
     createdAt: q.createdAt.toISOString(),
@@ -365,6 +370,33 @@ router.post("/questions/buy-extra", authenticate, async (req, res): Promise<void
     points: updated.points,
     questionBonusPool: updated.questionBonusPool,
   });
+});
+
+router.get("/questions/:id/similar", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [qRow] = await db.select({ subject: questionsTable.subject }).from(questionsTable).where(eq(questionsTable.id, id));
+  if (!qRow) { res.status(404).json({ error: "Question not found" }); return; }
+
+  const similar = await db
+    .select({ q: questionsTable, author: { displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
+    .from(questionsTable)
+    .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
+    .where(and(eq(questionsTable.subject, qRow.subject), sql`${questionsTable.id} != ${id}`))
+    .orderBy(desc(questionsTable.upvotes))
+    .limit(4);
+
+  res.json(similar.map(({ q, author }) => ({
+    id: q.id,
+    title: q.title,
+    subject: q.subject,
+    upvotes: q.upvotes,
+    isSolved: q.isSolved,
+    createdAt: q.createdAt.toISOString(),
+    authorDisplayName: author.displayName,
+    authorAvatarUrl: author.avatarUrl,
+  })));
 });
 
 export default router;

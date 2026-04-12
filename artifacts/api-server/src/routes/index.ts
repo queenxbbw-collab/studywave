@@ -8,6 +8,10 @@ import badgesRouter from "./badges";
 import statsRouter from "./stats";
 import reportsRouter from "./reports";
 import storageRouter from "./storage";
+import commentsRouter from "./comments";
+import bookmarksRouter from "./bookmarks";
+import notificationsRouter from "./notifications";
+import announcementsRouter from "./announcements";
 import adminRouter from "./admin";
 
 const router: IRouter = Router();
@@ -21,6 +25,10 @@ router.use(badgesRouter);
 router.use(statsRouter);
 router.use(reportsRouter);
 router.use(storageRouter);
+router.use(commentsRouter);
+router.use(bookmarksRouter);
+router.use(notificationsRouter);
+router.use(announcementsRouter);
 router.use(adminRouter);
 
 export default router;
