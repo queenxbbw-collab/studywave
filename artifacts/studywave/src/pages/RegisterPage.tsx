@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ const PERKS = [
 ];
 
 export default function RegisterPage() {
-  const { register, user } = useAuth();
+  const { register, user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [form, setForm] = useState({ username: "", email: "", password: "", displayName: "", referralCode: "" });
@@ -22,7 +22,11 @@ export default function RegisterPage() {
   const [showReferral, setShowReferral] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (user) { navigate("/"); return null; }
+  useEffect(() => {
+    if (!authLoading && user) navigate("/");
+  }, [authLoading, user, navigate]);
+
+  if (authLoading || user) return null;
 
   // Pre-fill referral code from URL param
   const urlParams = new URLSearchParams(window.location.search);

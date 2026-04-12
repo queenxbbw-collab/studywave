@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle2, Users, Award } from "lucide-react";
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
@@ -15,7 +15,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (user) { navigate("/"); return null; }
+  useEffect(() => {
+    if (!authLoading && user) navigate("/");
+  }, [authLoading, user, navigate]);
+
+  if (authLoading || user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -53,6 +53,12 @@ export default function SettingsPage() {
   const [referralsLoaded, setReferralsLoaded] = useState(false);
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [authLoading, user, navigate]);
+
+  useEffect(() => {
     if (activeTab === "referral" && !referralsLoaded && user) {
       fetch("/api/referrals", { headers: getAuthHeaders() })
         .then(r => r.json())
@@ -61,8 +67,7 @@ export default function SettingsPage() {
     }
   }, [activeTab, referralsLoaded, user]);
 
-  if (authLoading) return null;
-  if (!user) { navigate("/login"); return null; }
+  if (authLoading || !user) return null;
 
   const referralLink = `${window.location.origin}/register?ref=${(user as any).referralCode || ""}`;
 

@@ -88,6 +88,10 @@ export default function AskPage() {
 
   useEffect(() => { fetchLimits(); }, [user]);
 
+  useEffect(() => {
+    if (!authLoading && !user) navigate("/login");
+  }, [authLoading, user, navigate]);
+
   const handleBuyExtra = async () => {
     setIsBuying(true);
     try {
@@ -108,8 +112,7 @@ export default function AskPage() {
     }
   };
 
-  if (authLoading) return null;
-  if (!user) { navigate("/login"); return null; }
+  if (authLoading || !user) return null;
 
   const addImageUrl = () => {
     const trimmed = newUrl.trim();

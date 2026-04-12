@@ -236,25 +236,23 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 border-t border-border/50">
+        <div className="grid grid-cols-4 sm:grid-cols-8 border-t border-border/50 divide-x divide-border/50">
           {[
             { icon: Trophy, label: "Points", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
             { icon: HelpCircle, label: "Questions", value: (profile as any).questionCount ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
             { icon: MessageCircle, label: "Answers", value: (profile as any).answerCount ?? 0, color: "text-violet-600", bg: "bg-violet-50" },
-            { icon: Award, label: "Gold Ribbons", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: Award, label: "Ribbons", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
             { icon: Users, label: "Followers", value: (profile as any).followersCount ?? 0, color: "text-indigo-600", bg: "bg-indigo-50" },
             { icon: UserPlus, label: "Following", value: (profile as any).followingCount ?? 0, color: "text-teal-600", bg: "bg-teal-50" },
-            { icon: Flame, label: "Day Streak", value: (profile as any).currentStreak ?? 0, color: "text-orange-600", bg: "bg-orange-50" },
-            { icon: TrendingUp, label: "Best Streak", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
-          ].map((stat, i, arr) => (
-            <div key={stat.label} className={`flex items-center gap-3 px-4 py-4 ${i < arr.length - 1 ? "border-r border-border/50" : ""}`}>
-              <div className={`w-9 h-9 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
-                <stat.icon className={`h-4.5 w-4.5 ${stat.color}`} />
+            { icon: Flame, label: "Streak", value: (profile as any).currentStreak ?? 0, color: "text-orange-600", bg: "bg-orange-50" },
+            { icon: TrendingUp, label: "Best", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
+          ].map((stat) => (
+            <div key={stat.label} className="flex flex-col items-center justify-center py-4 px-1 text-center gap-1">
+              <div className={`w-7 h-7 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
               </div>
-              <div>
-                <p className="text-xl font-extrabold text-foreground leading-none">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-              </div>
+              <p className="text-base font-extrabold text-foreground leading-none tabular-nums">{stat.value}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{stat.label}</p>
             </div>
           ))}
         </div>
