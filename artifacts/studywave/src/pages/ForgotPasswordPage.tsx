@@ -3,14 +3,12 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, ArrowLeft, CheckCircle2, Copy, KeyRound } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Mail, ArrowLeft, CheckCircle2, KeyRound } from "lucide-react";
 
 export default function ForgotPasswordPage() {
-  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ token: string } | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,31 +22,15 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email: email.trim() }),
       });
       const data = await r.json();
-      if (!r.ok) { setError(data.error || "Something went wrong"); return; }
-      if (data.resetToken) {
-        setResult({ token: data.resetToken });
-      } else {
-        setResult({ token: "" });
+      if (!r.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        return;
       }
+      setSent(true);
     } catch {
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const copyToken = () => {
-    if (result?.token) {
-      navigator.clipboard?.writeText(result.token);
-      toast({ title: "Token copied to clipboard" });
-    }
-  };
-
-  const copyLink = () => {
-    if (result?.token) {
-      const url = `${window.location.origin}/reset-password?token=${result.token}`;
-      navigator.clipboard?.writeText(url);
-      toast({ title: "Reset link copied to clipboard" });
     }
   };
 
@@ -64,56 +46,30 @@ export default function ForgotPasswordPage() {
               </div>
               <div>
                 <h1 className="text-lg font-extrabold text-foreground">Forgot Password</h1>
-                <p className="text-xs text-muted-foreground">We'll generate a reset token for you</p>
+                <p className="text-xs text-muted-foreground">We'll send a reset link to your email</p>
               </div>
             </div>
 
-            {result ? (
-              <div className="space-y-4">
-                {result.token ? (
-                  <>
-                    <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold text-emerald-800">Reset token generated!</p>
-                        <p className="text-xs text-emerald-700 mt-0.5">
-                          Copy the reset link below and open it to set a new password. This link expires in 1 hour.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Reset Token</Label>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs bg-gray-50 border border-border/60 rounded-lg px-3 py-2 font-mono truncate text-foreground/80 select-all">
-                          {result.token}
-                        </code>
-                        <button onClick={copyToken} className="p-2 rounded-lg border border-border/60 hover:bg-gray-50 text-muted-foreground hover:text-foreground transition-colors">
-                          <Copy className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Link href={`/reset-password?token=${result.token}`}>
-                        <Button className="flex-1 gradient-primary text-white border-0 rounded-xl font-semibold h-10">
-                          Open Reset Page
-                        </Button>
-                      </Link>
-                      <button onClick={copyLink} className="px-3 py-2 border border-border/60 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-colors">
-                        Copy Link
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-800">If that email exists, a reset token has been generated. Please contact an admin for assistance.</p>
+            {sent ? (
+              <div className="space-y-5">
+                <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Check your inbox</p>
+                    <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
+                      If <span className="font-medium">{email}</span> is registered on StudyWave, you'll receive a password reset link shortly. The link expires in 1 hour.
+                    </p>
                   </div>
-                )}
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    <span className="font-semibold">Didn't receive the email?</span> Check your spam folder, or contact the platform administrator for assistance.
+                  </p>
+                </div>
 
                 <Link href="/login">
-                  <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2">
+                  <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="h-4 w-4" /> Back to Sign In
                   </button>
                 </Link>
@@ -148,9 +104,9 @@ export default function ForgotPasswordPage() {
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Generating...
+                      Sending...
                     </span>
-                  ) : "Generate Reset Token"}
+                  ) : "Send Reset Link"}
                 </Button>
 
                 <div className="text-center">
