@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useListBadges } from "@workspace/api-client-react";
 import {
   Star, Lock, Sparkles, Trophy, Award, Shield, Flame, Zap,
@@ -40,6 +41,7 @@ function BadgeIcon({ iconName, colorClass }: { iconName: string; colorClass: str
 }
 
 export default function BadgesPage() {
+  usePageTitle("Badges");
   const { data: badges, isLoading } = useListBadges();
 
   const grouped = badges?.reduce((acc, badge) => {
