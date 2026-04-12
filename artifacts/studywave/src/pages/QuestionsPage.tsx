@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState, useEffect } from "react";
 import { useListQuestions } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function QuestionsPage() {
+  usePageTitle("Questions");
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [subject, setSubject] = useState("all");
