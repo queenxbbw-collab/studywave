@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users, Upload, Loader2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
-import { useUpload } from "@workspace/object-storage-web";
 
 interface Referral {
   id: number;
@@ -55,18 +54,46 @@ export default function SettingsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referralsLoaded, setReferralsLoaded] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
 
-  const { uploadFile: uploadAvatarFile, isUploading: isUploadingAvatar } = useUpload({
-    onSuccess: (response) => {
-      const url = `${window.location.origin}/api/storage${response.objectPath}`;
-      setAvatarUrl(url);
-      setPreviewUrl(url);
-      toast({ title: "Photo uploaded! Click 'Save profile picture' to apply." });
-    },
-    onError: (err) => {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-    },
-  });
+  const processAvatarFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    setIsProcessingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 256;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { setIsProcessingAvatar(false); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        setAvatarUrl(dataUrl);
+        setPreviewUrl(dataUrl);
+        setIsProcessingAvatar(false);
+        toast({ title: "Photo ready — click 'Save profile picture' to apply." });
+      };
+      img.onerror = () => {
+        setIsProcessingAvatar(false);
+        toast({ title: "Could not read image", variant: "destructive" });
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.onerror = () => {
+      setIsProcessingAvatar(false);
+      toast({ title: "Could not read file", variant: "destructive" });
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -328,15 +355,11 @@ export default function SettingsPage() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      disabled={isUploadingAvatar}
-                      onChange={async (e) => {
+                      disabled={isProcessingAvatar}
+                      onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (!file.type.startsWith("image/")) {
-                          toast({ title: "Please select an image file", variant: "destructive" });
-                          return;
-                        }
-                        await uploadAvatarFile(file);
+                        processAvatarFile(file);
                         if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
                       }}
                     />
@@ -344,11 +367,11 @@ export default function SettingsPage() {
                       type="button"
                       variant="outline"
                       onClick={() => avatarFileInputRef.current?.click()}
-                      disabled={isUploadingAvatar}
+                      disabled={isProcessingAvatar}
                       className="w-full h-10 rounded-xl border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/4 gap-2 text-sm font-medium"
                     >
-                      {isUploadingAvatar ? (
-                        <><Loader2 className="h-4 w-4 animate-spin text-primary" /> Uploading...</>
+                      {isProcessingAvatar ? (
+                        <><Loader2 className="h-4 w-4 animate-spin text-primary" /> Processing...</>
                       ) : (
                         <><Upload className="h-4 w-4 text-primary" /> Choose photo from computer</>
                       )}
