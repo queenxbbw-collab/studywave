@@ -148,7 +148,7 @@ export default function QuestionsPage() {
       <div className="flex gap-2 mb-5 flex-wrap">
         {[
           { value: "newest", label: "Newest" },
-          { value: "trending", label: "🔥 Trending" },
+          { value: "trending", label: "Trending" },
           { value: "most-voted", label: "Most Voted" },
           { value: "unsolved", label: "Unsolved" },
         ].map(tab => (
