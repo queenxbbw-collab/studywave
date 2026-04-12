@@ -32,7 +32,7 @@ router.use(bookmarksRouter);
 router.use(notificationsRouter);
 router.use(announcementsRouter);
 router.use(suggestionsRouter);
-router.use(adminRouter);
 router.use(paymentsRouter);
+router.use(adminRouter);
 
 export default router;
