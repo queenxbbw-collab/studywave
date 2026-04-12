@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
-import { createNotification } from "./notifications";
+import { createNotification, parseMentions } from "./notifications";
 
 const router: IRouter = Router();
 
@@ -74,6 +74,8 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
       answerRow.question_id
     );
   }
+  // Parse @mentions
+  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Someone", answerRow?.question_id);
 
   res.status(201).json({ comment: {
     id: comment.id, content: comment.content, createdAt: comment.created_at,
@@ -113,6 +115,8 @@ router.post("/comments/answer/:answerId", authenticate, async (req, res): Promis
       answerRow2.question_id
     );
   }
+  // Parse @mentions
+  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Someone", answerRow2?.question_id);
 
   res.status(201).json({
     id: comment.id,
