@@ -5,8 +5,22 @@ import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { handleStripeWebhook } from "./routes/payments";
 
 const app: Express = express();
+
+// Stripe webhook must be registered BEFORE express.json() to receive raw Buffer
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req: Request, res: Response) => {
+  const sig = req.headers["stripe-signature"];
+  if (!sig) { res.status(400).json({ error: "Missing stripe-signature" }); return; }
+  try {
+    await handleStripeWebhook(req.body as Buffer, Array.isArray(sig) ? sig[0] : sig);
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error("[Stripe webhook]", err.message);
+    res.status(400).json({ error: "Webhook error" });
+  }
+});
 
 app.use(
   pinoHttp({
