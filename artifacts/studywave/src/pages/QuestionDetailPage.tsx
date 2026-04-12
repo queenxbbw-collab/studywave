@@ -502,7 +502,7 @@ export default function QuestionDetailPage() {
                 </div>
               ) : (
                 <>
-                  <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight break-words">
                     {question.title}
                   </h1>
                   <MarkdownContent content={question.content} />
