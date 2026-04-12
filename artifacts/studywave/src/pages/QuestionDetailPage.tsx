@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetQuestion, useVoteQuestion, useCreateAnswer, useVoteAnswer,
@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import ReportModal from "@/components/ReportModal";
+import MarkdownToolbar from "@/components/MarkdownToolbar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -234,6 +235,9 @@ export default function QuestionDetailPage() {
   const [editingAnswerId, setEditingAnswerId] = useState<number | null>(null);
   const [editAContent, setEditAContent] = useState("");
   const [editALoading, setEditALoading] = useState(false);
+  // Textarea refs for markdown toolbar
+  const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const editATextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) },
@@ -688,13 +692,21 @@ export default function QuestionDetailPage() {
                         <div className="flex-1 min-w-0">
                           {editingAnswerId === answer.id ? (
                             <div className="space-y-2">
-                              <Textarea
-                                value={editAContent}
-                                onChange={e => setEditAContent(e.target.value)}
-                                rows={5}
-                                className="resize-none rounded-xl border-border/70 font-mono text-sm"
-                                placeholder="Edit your answer (min 30 chars)"
-                              />
+                              <div>
+                                <MarkdownToolbar
+                                  textareaRef={editATextareaRef}
+                                  value={editAContent}
+                                  onChange={setEditAContent}
+                                />
+                                <Textarea
+                                  ref={editATextareaRef}
+                                  value={editAContent}
+                                  onChange={e => setEditAContent(e.target.value)}
+                                  rows={5}
+                                  className="resize-none rounded-t-none rounded-b-xl border-border/70 font-mono text-sm"
+                                  placeholder="Edit your answer (min 30 chars)"
+                                />
+                              </div>
                               <div className="flex items-center gap-2">
                                 <Button
                                   onClick={saveEditAnswer}
@@ -829,13 +841,21 @@ export default function QuestionDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <Textarea
-                      value={answerContent}
-                      onChange={e => setAnswerContent(e.target.value)}
-                      placeholder="Explain step by step... Markdown supported: **bold**, `code`, ## headings, - lists"
-                      rows={6}
-                      className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
-                    />
+                    <div>
+                      <MarkdownToolbar
+                        textareaRef={answerTextareaRef}
+                        value={answerContent}
+                        onChange={setAnswerContent}
+                      />
+                      <Textarea
+                        ref={answerTextareaRef}
+                        value={answerContent}
+                        onChange={e => setAnswerContent(e.target.value)}
+                        placeholder="Explain step by step... Use the toolbar above or type Markdown directly"
+                        rows={6}
+                        className={`resize-none rounded-t-none rounded-b-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
+                      />
+                    </div>
                   )}
                   <div className="flex items-center justify-between mt-3">
                     <div className="text-xs text-muted-foreground">
