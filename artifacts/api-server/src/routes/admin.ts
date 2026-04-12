@@ -384,6 +384,80 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
   });
 });
 
+// POST /admin/reset-data — nuke all content + non-admin users
+router.post("/admin/reset-data", async (req, res): Promise<void> => {
+  const { target } = req.body as { target?: string };
+  const VALID = ["questions", "users", "all"];
+  if (!target || !VALID.includes(target)) {
+    res.status(400).json({ error: "Invalid target. Use: questions, users, all" });
+    return;
+  }
+
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  const adminUsername = adminUser?.username ?? "admin";
+
+  if (target === "questions" || target === "all") {
+    // Delete in FK-safe order
+    await db.execute(sql`DELETE FROM answer_votes`);
+    await db.execute(sql`DELETE FROM question_votes`);
+    await db.execute(sql`DELETE FROM comments`);
+    await db.execute(sql`DELETE FROM answer_gold_ribbons`);
+    await db.execute(sql`DELETE FROM answers`);
+    await db.execute(sql`DELETE FROM bookmarks`);
+    await db.execute(sql`DELETE FROM question_views`);
+    await db.execute(sql`DELETE FROM reports`);
+    await db.execute(sql`DELETE FROM questions`);
+    await db.execute(sql`DELETE FROM notifications`);
+    await db.execute(sql`DELETE FROM admin_logs WHERE admin_id != ${req.userId!}`);
+  }
+
+  if (target === "users" || target === "all") {
+    // Delete only non-admin users (role != 'admin')
+    await db.execute(sql`DELETE FROM user_follows WHERE follower_id IN (SELECT id FROM users WHERE role != 'admin') OR following_id IN (SELECT id FROM users WHERE role != 'admin')`);
+    await db.execute(sql`DELETE FROM user_badges WHERE user_id IN (SELECT id FROM users WHERE role != 'admin')`);
+    await db.execute(sql`DELETE FROM referrals WHERE referrer_id IN (SELECT id FROM users WHERE role != 'admin') OR referred_id IN (SELECT id FROM users WHERE role != 'admin')`);
+    await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id IN (SELECT id FROM users WHERE role != 'admin')`);
+    await db.execute(sql`DELETE FROM users WHERE role != 'admin'`);
+  }
+
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername,
+    action: "system.reset_data",
+    category: "moderation",
+    targetType: "system",
+    targetId: null,
+    targetLabel: target,
+    details: `Reset data: target="${target}"`,
+  });
+
+  res.json({ ok: true, message: `Reset complete: ${target}` });
+});
+
+// PATCH /admin/users/:id/points — quick set points
+router.patch("/admin/users/:id/points", async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id, 10);
+  const { points } = req.body as { points?: number };
+  if (isNaN(userId) || points === undefined || typeof points !== "number" || points < 0 || points > 9999999) {
+    res.status(400).json({ error: "Invalid userId or points (0–9,999,999)" });
+    return;
+  }
+  const [updated] = await db.update(usersTable).set({ points }).where(eq(usersTable.id, userId)).returning({ points: usersTable.points, username: usersTable.username });
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  const [adminUser] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  await logAdminAction({
+    adminId: req.userId!,
+    adminUsername: adminUser?.username ?? "admin",
+    action: "user.points_set",
+    category: "users",
+    targetType: "user",
+    targetId: userId,
+    targetLabel: updated.username,
+    details: `Set points for @${updated.username} → ${points}`,
+  });
+  res.json({ ok: true, points: updated.points });
+});
+
 // GET /admin/logs — full audit log
 router.get("/admin/logs", async (req, res): Promise<void> => {
   const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));

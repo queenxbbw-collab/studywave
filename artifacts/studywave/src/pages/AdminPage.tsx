@@ -19,7 +19,7 @@ import {
   Shield, Users, HelpCircle, Star, BarChart2, Trash2, Ban, CheckCircle2,
   Plus, ChevronLeft, ChevronRight, TrendingUp, Award, MessageCircle,
   ArrowUpRight, Activity, Search, BookOpen, Flag, Megaphone, Eye, EyeOff,
-  Lightbulb, ChevronDown, ClipboardList, RefreshCw
+  Lightbulb, ChevronDown, ClipboardList, RefreshCw, AlertTriangle, Zap
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -65,6 +65,13 @@ export default function AdminPage() {
   const [logsTotalPages, setLogsTotalPages] = useState(1);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsCategory, setLogsCategory] = useState("all");
+  // Danger Zone
+  const [dangerLoading, setDangerLoading] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [dangerTarget, setDangerTarget] = useState<"questions" | "users" | "all" | null>(null);
+  const [pointsUserId, setPointsUserId] = useState("");
+  const [pointsValue, setPointsValue] = useState("");
+  const [pointsLoading, setPointsLoading] = useState(false);
 
   const fetchReports = async () => {
     setReportsLoading(true);
@@ -229,6 +236,46 @@ export default function AdminPage() {
     });
   };
 
+  const handleResetData = async () => {
+    if (!dangerTarget) return;
+    const expected = dangerTarget === "all" ? "DELETE ALL" : dangerTarget === "questions" ? "DELETE CONTENT" : "DELETE USERS";
+    if (confirmText !== expected) { toast({ title: "Confirmation text doesn't match", variant: "destructive" }); return; }
+    setDangerLoading(true);
+    try {
+      const r = await fetch("/api/admin/reset-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ target: dangerTarget }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error);
+      toast({ title: "Reset complete", description: `All ${dangerTarget} data has been deleted.` });
+      setConfirmText(""); setDangerTarget(null);
+      queryClient.invalidateQueries();
+    } catch (e: any) {
+      toast({ title: "Reset failed", description: e.message, variant: "destructive" });
+    } finally { setDangerLoading(false); }
+  };
+
+  const handleSetPoints = async () => {
+    const uid = parseInt(pointsUserId, 10);
+    const pts = parseInt(pointsValue, 10);
+    if (isNaN(uid) || isNaN(pts) || pts < 0) { toast({ title: "Invalid user ID or points", variant: "destructive" }); return; }
+    setPointsLoading(true);
+    try {
+      const r = await fetch(`/api/admin/users/${uid}/points`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ points: pts }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error);
+      toast({ title: "Points updated successfully" });
+      queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
+      setPointsValue("");
+    } catch (e: any) {
+      toast({ title: "Failed to set points", description: e.message, variant: "destructive" });
+    } finally { setPointsLoading(false); }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -265,6 +312,7 @@ export default function AdminPage() {
               { value: "announcements", icon: Megaphone, label: "Announcements" },
               { value: "suggestions", icon: Lightbulb, label: "Suggestions" },
               { value: "logs", icon: ClipboardList, label: "Audit Log" },
+              { value: "danger", icon: AlertTriangle, label: "Danger Zone" },
             ].map(tab => (
               <TabsTrigger key={tab.value} value={tab.value} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm data-[state=active]:shadow-sm whitespace-nowrap">
                 <tab.icon className="h-3.5 w-3.5" />
@@ -1146,6 +1194,123 @@ export default function AdminPage() {
                 )}
               </div>
             )}
+          </div>
+        </TabsContent>
+
+        {/* DANGER ZONE TAB */}
+        <TabsContent value="danger">
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-bold text-lg flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" /> Danger Zone
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Irreversible actions. Admin accounts are always preserved.</p>
+            </div>
+
+            {/* SET POINTS */}
+            <div className="bg-white border border-border/60 rounded-2xl p-5 shadow-xs">
+              <h3 className="font-semibold text-sm flex items-center gap-2 mb-1">
+                <Zap className="h-4 w-4 text-primary" /> Set Points for a User
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">Overwrite the points balance of any user directly.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Select user</label>
+                  <select
+                    value={pointsUserId}
+                    onChange={e => setPointsUserId(e.target.value)}
+                    className="w-full rounded-lg border border-border/70 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">— choose user —</option>
+                    {(usersData?.users ?? []).map((u: any) => (
+                      <option key={u.id} value={u.id}>#{u.id} {u.displayName} (@{u.username}) — {u.points} pts</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-40">
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">New points</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={9999999}
+                    value={pointsValue}
+                    onChange={e => setPointsValue(e.target.value)}
+                    placeholder="e.g. 0"
+                    className="rounded-lg h-9 text-sm"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleSetPoints}
+                    disabled={pointsLoading || !pointsUserId || pointsValue === ""}
+                    className="gradient-primary text-white border-0 rounded-xl h-9 px-4 text-sm font-semibold whitespace-nowrap"
+                  >
+                    <Zap className="h-3.5 w-3.5 mr-1.5" />
+                    {pointsLoading ? "Saving..." : "Set Points"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* CLEAR DATA */}
+            <div className="bg-white border border-red-200 rounded-2xl p-5 shadow-xs">
+              <h3 className="font-semibold text-sm flex items-center gap-2 mb-1 text-red-700">
+                <Trash2 className="h-4 w-4" /> Clear Platform Data
+              </h3>
+              <p className="text-xs text-muted-foreground mb-5">Choose what to delete. Admin accounts are never touched.</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                {([
+                  { id: "questions" as const, label: "Content only", desc: "Questions, answers, comments, votes, reports", confirm: "DELETE CONTENT", color: "border-amber-300 bg-amber-50 text-amber-800" },
+                  { id: "users" as const, label: "User accounts", desc: "All non-admin accounts and their data", confirm: "DELETE USERS", color: "border-orange-300 bg-orange-50 text-orange-800" },
+                  { id: "all" as const, label: "Everything", desc: "Content + all non-admin user accounts", confirm: "DELETE ALL", color: "border-red-300 bg-red-50 text-red-800" },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setDangerTarget(opt.id); setConfirmText(""); }}
+                    className={`text-left rounded-xl border-2 p-4 transition-all ${dangerTarget === opt.id ? opt.color + " ring-2 ring-offset-1 ring-red-400" : "border-border/50 bg-gray-50 hover:border-border"}`}
+                  >
+                    <div className="font-semibold text-sm">{opt.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {dangerTarget && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                  <p className="text-sm font-medium text-red-700">
+                    To confirm, type <span className="font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded">
+                      {dangerTarget === "all" ? "DELETE ALL" : dangerTarget === "questions" ? "DELETE CONTENT" : "DELETE USERS"}
+                    </span> below:
+                  </p>
+                  <div className="flex gap-3">
+                    <Input
+                      value={confirmText}
+                      onChange={e => setConfirmText(e.target.value)}
+                      placeholder="Type confirmation text..."
+                      className="rounded-lg h-9 text-sm font-mono border-red-300 bg-white flex-1"
+                    />
+                    <Button
+                      onClick={handleResetData}
+                      disabled={dangerLoading || confirmText !== (dangerTarget === "all" ? "DELETE ALL" : dangerTarget === "questions" ? "DELETE CONTENT" : "DELETE USERS")}
+                      variant="destructive"
+                      className="h-9 px-4 rounded-xl text-sm font-semibold whitespace-nowrap"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      {dangerLoading ? "Deleting..." : "Confirm Delete"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setDangerTarget(null); setConfirmText(""); }}
+                      className="h-9 px-3 rounded-xl text-sm"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
