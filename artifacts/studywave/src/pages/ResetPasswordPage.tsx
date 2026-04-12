@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function ResetPasswordPage() {
+  usePageTitle("Reset Password");
   const [, navigate] = useLocation();
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
