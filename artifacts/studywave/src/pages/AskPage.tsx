@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, Plus, X, ImageIcon, AlertCircle, Shield, ShoppingCart } from "lucide-react";
+import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, Plus, X, ImageIcon, AlertCircle, Shield, ShoppingCart, Upload, Loader2 } from "lucide-react";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
+import { useUpload } from "@workspace/object-storage-web";
 
 const SUBJECTS = ["Mathematics","Physics","Chemistry","Biology","History","Geography","Literature","Computer Science","Economics","Languages","Other"];
 
@@ -44,6 +45,33 @@ export default function AskPage() {
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadFile, isUploading, progress } = useUpload({
+    onSuccess: (response) => {
+      const servingUrl = `/api/storage${response.objectPath}`;
+      setImageUrls(prev => [...prev, servingUrl]);
+      toast({ title: "Image uploaded successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (imageUrls.length >= 5) {
+      toast({ title: "Maximum 5 images per question", variant: "destructive" });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const fetchLimits = () => {
     if (!user) return;
@@ -281,21 +309,60 @@ export default function AskPage() {
                 )}
 
                 {imageUrls.length < 5 && (
-                  <div className="flex gap-2">
-                    <Input
-                      value={newUrl}
-                      onChange={e => setNewUrl(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
-                      placeholder="https://example.com/image.png"
-                      className="h-9 rounded-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm flex-1"
-                    />
-                    <Button type="button" onClick={addImageUrl} variant="outline" size="sm"
-                      className="h-9 px-3 rounded-xl border-border/70 flex-shrink-0 gap-1.5">
-                      <Plus className="h-3.5 w-3.5" /> Add
-                    </Button>
+                  <div className="space-y-2">
+                    {/* Upload from computer */}
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                        disabled={isUploading}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="w-full h-10 rounded-xl border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/4 gap-2 text-sm font-medium"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            Uploading… {progress}%
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 text-primary" />
+                            Upload from computer
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* OR paste URL */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 border-t border-border/40" />
+                      <span className="text-xs text-muted-foreground font-medium">or paste URL</span>
+                      <div className="flex-1 border-t border-border/40" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newUrl}
+                        onChange={e => setNewUrl(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
+                        placeholder="https://example.com/image.png"
+                        className="h-9 rounded-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm flex-1"
+                      />
+                      <Button type="button" onClick={addImageUrl} variant="outline" size="sm"
+                        className="h-9 px-3 rounded-xl border-border/70 flex-shrink-0 gap-1.5">
+                        <Plus className="h-3.5 w-3.5" /> Add
+                      </Button>
+                    </div>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-1.5">Paste a direct image link (e.g. Imgur, Postimage). Press Enter or click Add.</p>
+                <p className="text-xs text-muted-foreground mt-1.5">Max 5 images — JPG, PNG, GIF, WebP supported.</p>
               </div>
             </div>
 
