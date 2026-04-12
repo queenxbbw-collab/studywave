@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, MessageCircle, ThumbsUp, Award } from "lucide-react";
+import { CheckCircle2, MessageCircle, ThumbsUp, Award, ArrowUp, Eye, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Question {
@@ -21,79 +20,96 @@ interface Question {
   createdAt: string;
 }
 
-const SUBJECT_COLORS: Record<string, string> = {
-  Mathematics: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  Physics: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  Chemistry: "bg-green-500/20 text-green-300 border-green-500/30",
-  Biology: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  History: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-  Geography: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-  Literature: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-  "Computer Science": "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-  Economics: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-  Languages: "bg-pink-500/20 text-pink-300 border-pink-500/30",
-  Other: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
+  Mathematics:       { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
+  Physics:           { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
+  Chemistry:         { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
+  Biology:           { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
+  History:           { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
+  Geography:         { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
+  Literature:        { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
+  "Computer Science":{ bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
+  Economics:         { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
+  Languages:         { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
+  Other:             { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
 };
 
 export default function QuestionCard({ question }: { question: Question }) {
+  const score = question.upvotes - question.downvotes;
+  const subjectStyle = SUBJECT_CONFIG[question.subject] || SUBJECT_CONFIG["Other"];
+
   return (
     <Link href={`/questions/${question.id}`}>
-      <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-all duration-200 cursor-pointer group">
-        <div className="flex items-start justify-between gap-3">
+      <article className="group bg-white rounded-xl border border-border/60 p-5 hover:border-primary/30 hover:shadow-md transition-all duration-200 cursor-pointer">
+        <div className="flex items-start gap-4">
+          {/* Vote score */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-1 pt-0.5">
+            <div className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg border transition-colors ${
+              score > 0
+                ? "bg-primary/6 border-primary/20 text-primary"
+                : "bg-gray-50 border-gray-200 text-muted-foreground"
+            }`}>
+              <ArrowUp className="h-3.5 w-3.5" />
+              <span className="text-xs font-bold leading-none">{score}</span>
+            </div>
+          </div>
+
+          {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SUBJECT_COLORS[question.subject] || SUBJECT_COLORS["Other"]}`}>
+            {/* Tags row */}
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${subjectStyle.bg} ${subjectStyle.text}`}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${subjectStyle.dot}`}></span>
                 {question.subject}
               </span>
               {question.isSolved && (
-                <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Rezolvata
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="h-3 w-3" /> Rezolvata
                 </span>
               )}
               {question.hasAwardedAnswer && (
-                <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  <Award className="h-3 w-3" />
-                  Fundita acordata
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+                  <Award className="h-3 w-3" /> Fundita acordata
                 </span>
               )}
             </div>
-            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+
+            {/* Title */}
+            <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors duration-150 line-clamp-2 leading-snug">
               {question.title}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+
+            {/* Excerpt */}
+            <p className="text-sm text-muted-foreground mt-1.5 line-clamp-1">
               {question.content}
             </p>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={question.authorAvatarUrl || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                {question.authorDisplayName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs text-muted-foreground">
-              {question.authorDisplayName}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              · {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true })}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <ThumbsUp className="h-3 w-3" />
-              {question.upvotes}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="h-3 w-3" />
-              {question.answerCount}
-            </span>
+            {/* Footer */}
+            <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-border/50">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={question.authorAvatarUrl || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    {question.authorDisplayName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium text-foreground/70">{question.authorDisplayName}</span>
+                <span className="text-xs text-muted-foreground/60">·</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true })}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1 font-medium">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  {question.answerCount} {question.answerCount === 1 ? "rasp." : "rasp."}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 }

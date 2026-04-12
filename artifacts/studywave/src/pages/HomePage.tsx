@@ -5,10 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import QuestionCard from "@/components/QuestionCard";
 import { useAuth } from "@/lib/auth";
-import { Search, Plus, Users, HelpCircle, MessageCircle, CheckCircle2, TrendingUp, Activity } from "lucide-react";
+import {
+  Search, Plus, Users, HelpCircle, MessageCircle, CheckCircle2,
+  TrendingUp, Activity, ArrowRight, Sparkles, BookOpen, Award,
+  Star, Zap, Shield
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const SUBJECTS = ["all", "Mathematics", "Physics", "Chemistry", "Biology", "History", "Geography", "Literature", "Computer Science", "Economics", "Languages", "Other"];
+const SUBJECTS = ["all","Mathematics","Physics","Chemistry","Biology","History","Geography","Literature","Computer Science","Economics","Languages","Other"];
+
+const ACTIVITY_ICONS: Record<string, React.FC<{className?: string}>> = {
+  question_asked: HelpCircle,
+  answer_posted: MessageCircle,
+  answer_awarded: Award,
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  question_asked: "a pus o intrebare",
+  answer_posted: "a raspuns",
+  answer_awarded: "a primit o fundita",
+};
+
+const ACTIVITY_COLORS: Record<string, string> = {
+  question_asked: "bg-blue-100 text-blue-600",
+  answer_posted: "bg-violet-100 text-violet-600",
+  answer_awarded: "bg-amber-100 text-amber-600",
+};
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -16,7 +38,11 @@ export default function HomePage() {
   const [subject, setSubject] = useState("all");
   const [inputValue, setInputValue] = useState("");
 
-  const { data: questionsData, isLoading } = useListQuestions({ subject: subject !== "all" ? subject : undefined, search, limit: 10 });
+  const { data: questionsData, isLoading } = useListQuestions({
+    subject: subject !== "all" ? subject : undefined,
+    search,
+    limit: 8,
+  });
   const { data: stats } = useGetPlatformStats();
   const { data: activity } = useGetRecentActivity();
   const { data: subjectStats } = useGetSubjectStats();
@@ -27,178 +53,314 @@ export default function HomePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Hero */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
-          Invata mai bine,{" "}
-          <span className="text-primary">impreuna</span>
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Pune intrebari, primeste raspunsuri, acumuleaza puncte si castiga badge-uri pe StudyWave — platforma internationala pentru studenti.
-        </p>
-        {!user && (
-          <div className="flex justify-center gap-3 mt-6">
-            <Link href="/register">
-              <Button size="lg" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Inregistreaza-te gratuit
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline">Autentificare</Button>
-            </Link>
-          </div>
-        )}
-      </div>
+    <div>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden border-b border-border/50">
+        <div className="absolute inset-0 gradient-hero dot-bg"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80 pointer-events-none"></div>
+        {/* Decorative blobs */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/6 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-          {[
-            { icon: Users, label: "Utilizatori", value: stats.totalUsers },
-            { icon: HelpCircle, label: "Intrebari", value: stats.totalQuestions },
-            { icon: MessageCircle, label: "Raspunsuri", value: stats.totalAnswers },
-            { icon: CheckCircle2, label: "Rezolvate", value: stats.solvedQuestions },
-          ].map(stat => (
-            <div key={stat.label} className="bg-card border border-border rounded-xl p-4 text-center">
-              <stat.icon className="h-5 w-5 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{stat.value.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 text-primary text-sm font-semibold mb-6 shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Platforma #1 de invatare colaborativa
             </div>
-          ))}
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main content */}
-        <div className="lg:col-span-2">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="flex gap-2 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                placeholder="Cauta intrebari..."
-                className="pl-10"
-              />
-            </div>
-            <Button type="submit" variant="secondary">Cauta</Button>
-          </form>
+            <h1 className="text-5xl sm:text-6xl font-extrabold text-foreground tracking-tight mb-6 leading-[1.1]">
+              Invata mai bine,{" "}
+              <span className="text-gradient">impreuna</span>
+            </h1>
 
-          {/* Subject filter */}
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-            {SUBJECTS.map(s => (
-              <button
-                key={s}
-                onClick={() => setSubject(s)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
-                  subject === s
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {s === "all" ? "Toate" : s}
-              </button>
-            ))}
-          </div>
+            <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-10">
+              Pune intrebari dificile, primeste raspunsuri de calitate, acumuleaza puncte si urca in clasament pe StudyWave — platforma internationala pentru studenti ambitiosi.
+            </p>
 
-          {/* Questions */}
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              {search ? `Rezultate pentru "${search}"` : "Intrebari recente"}
-            </h2>
-            {user && (
-              <Link href="/ask">
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Pune intrebare
-                </Button>
-              </Link>
+            {user ? (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link href="/ask">
+                  <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
+                    <Plus className="h-5 w-5" /> Pune o intrebare
+                  </Button>
+                </Link>
+                <Link href="/questions">
+                  <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base gap-2 border-border/80">
+                    Exploreaza intrebarile <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link href="/register">
+                  <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
+                    <Sparkles className="h-5 w-5" /> Incepe gratuit
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base border-border/80">
+                    Am deja cont
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {/* Social proof */}
+            {stats && (
+              <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-primary" />
+                  <strong className="text-foreground">{stats.totalUsers.toLocaleString()}</strong> studenti
+                </span>
+                <span className="w-1 h-1 rounded-full bg-border"></span>
+                <span className="flex items-center gap-1.5">
+                  <HelpCircle className="h-4 w-4 text-primary" />
+                  <strong className="text-foreground">{stats.totalQuestions.toLocaleString()}</strong> intrebari
+                </span>
+                <span className="w-1 h-1 rounded-full bg-border"></span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <strong className="text-foreground">{stats.solvedQuestions.toLocaleString()}</strong> rezolvate
+                </span>
+              </div>
             )}
           </div>
-
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="bg-card border border-border rounded-xl p-5 animate-pulse">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-3"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : questionsData?.questions.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <HelpCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Nu s-au gasit intrebari</p>
-              <p className="text-sm mt-1">Fii primul care pune o intrebare!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {questionsData?.questions.map(q => (
-                <QuestionCard key={q.id} question={q} />
-              ))}
-            </div>
-          )}
-
-          {questionsData && questionsData.totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <Link href="/questions">
-                <Button variant="outline">Vezi toate intrebarile</Button>
-              </Link>
-            </div>
-          )}
         </div>
+      </section>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Recent activity */}
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-sm">Activitate recenta</h3>
-            </div>
-            <div className="space-y-3">
-              {activity?.slice(0, 8).map(a => (
-                <div key={a.id} className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-foreground">
-                      <span className="font-medium">{a.displayName}</span>{" "}
-                      {a.type === "question_asked" ? "a pus o intrebare" : a.type === "answer_posted" ? "a raspuns" : "a primit o fundita"}
-                    </p>
-                    {a.questionTitle && (
-                      <p className="text-xs text-muted-foreground truncate">{a.questionTitle}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
-                    </p>
+      {/* Stats bar */}
+      {stats && (
+        <section className="border-b border-border/50 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { icon: Users, label: "Utilizatori activi", value: stats.totalUsers, color: "text-blue-600", bg: "bg-blue-50" },
+                { icon: HelpCircle, label: "Intrebari publicate", value: stats.totalQuestions, color: "text-violet-600", bg: "bg-violet-50" },
+                { icon: MessageCircle, label: "Raspunsuri oferite", value: stats.totalAnswers, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { icon: Award, label: "Funditze acordate", value: stats.totalAwardedAnswers || 0, color: "text-amber-600", bg: "bg-amber-50" },
+              ].map(stat => (
+                <div key={stat.label} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-gray-50/50">
+                  <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center flex-shrink-0`}>
+                    <stat.icon className={`h-4.5 w-4.5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-extrabold text-foreground leading-none">{stat.value.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+        </section>
+      )}
 
-          {/* Subjects */}
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-sm">Subiecte populare</h3>
-            </div>
-            <div className="space-y-2">
-              {subjectStats?.slice(0, 6).map(s => (
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Feed */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Search */}
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  placeholder="Cauta intrebari, subiecte, autori..."
+                  className="pl-10 h-10 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
+                />
+              </div>
+              <Button type="submit" className="h-10 px-5 rounded-xl gradient-primary text-white border-0 font-semibold shadow-sm">
+                Cauta
+              </Button>
+            </form>
+
+            {/* Subject pills */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {SUBJECTS.map(s => (
                 <button
-                  key={s.subject}
-                  onClick={() => setSubject(s.subject)}
-                  className="w-full flex items-center justify-between group hover:text-primary transition-colors"
+                  key={s}
+                  onClick={() => setSubject(s)}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border ${
+                    subject === s
+                      ? "gradient-primary text-white border-transparent shadow-sm"
+                      : "bg-white text-muted-foreground border-border/70 hover:border-primary/40 hover:text-primary"
+                  }`}
                 >
-                  <span className="text-sm text-muted-foreground group-hover:text-primary">{s.subject}</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {s.count}
-                  </span>
+                  {s === "all" ? "Toate" : s}
                 </button>
               ))}
+            </div>
+
+            {/* Section header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-foreground">
+                {search ? (
+                  <span>Rezultate pentru <span className="text-primary">"{search}"</span></span>
+                ) : subject !== "all" ? (
+                  <span>Intrebari · <span className="text-primary">{subject}</span></span>
+                ) : (
+                  "Intrebari recente"
+                )}
+              </h2>
+              <Link href="/questions">
+                <button className="text-xs font-semibold text-primary flex items-center gap-1 hover:gap-2 transition-all">
+                  Toate intrebarile <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </Link>
+            </div>
+
+            {/* Questions list */}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="bg-white rounded-xl border border-border/60 p-5 animate-pulse">
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex-shrink-0"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex gap-2">
+                          <div className="h-5 bg-gray-100 rounded-full w-20"></div>
+                          <div className="h-5 bg-gray-100 rounded-full w-16"></div>
+                        </div>
+                        <div className="h-5 bg-gray-100 rounded w-4/5"></div>
+                        <div className="h-4 bg-gray-100 rounded w-3/5"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : questionsData?.questions.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-xl border border-border/60">
+                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <HelpCircle className="h-7 w-7 text-muted-foreground/60" />
+                </div>
+                <p className="text-base font-semibold text-foreground">Nicio intrebare gasita</p>
+                <p className="text-sm text-muted-foreground mt-1">Fii primul care pune o intrebare!</p>
+                {user && (
+                  <Link href="/ask" className="inline-block mt-4">
+                    <Button size="sm" className="gradient-primary text-white border-0">
+                      <Plus className="h-4 w-4 mr-2" /> Pune intrebare
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {questionsData?.questions.map(q => (
+                  <QuestionCard key={q.id} question={q} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-5">
+            {/* CTA if not logged in */}
+            {!user && (
+              <div className="bg-white rounded-xl border border-border/60 p-5 relative overflow-hidden">
+                <div className="absolute inset-0 gradient-hero opacity-60"></div>
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center mb-3 shadow-sm">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-foreground mb-1">Alatura-te comunitatii</h3>
+                  <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                    Inregistreaza-te gratuit si incepe sa inveti alaturi de mii de studenti.
+                  </p>
+                  <Link href="/register">
+                    <Button className="w-full gradient-primary text-white border-0 h-9 rounded-lg font-semibold text-sm">
+                      Creeaza cont gratuit
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Activity feed */}
+            <div className="bg-white rounded-xl border border-border/60 overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-border/50 flex items-center justify-between">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Activitate recenta
+                </h3>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></span>
+              </div>
+              <div className="divide-y divide-border/40">
+                {activity?.slice(0, 7).map((a, i) => {
+                  const Icon = ACTIVITY_ICONS[a.type] || HelpCircle;
+                  const iconCls = ACTIVITY_COLORS[a.type] || "bg-gray-100 text-gray-600";
+                  return (
+                    <div key={a.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/70 transition-colors">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${iconCls}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-foreground leading-snug">
+                          <span className="font-semibold">{a.displayName}</span>{" "}
+                          <span className="text-muted-foreground">{ACTIVITY_LABELS[a.type] || "a fost activ"}</span>
+                        </p>
+                        {a.questionTitle && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">{a.questionTitle}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground/60 mt-1">
+                          {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Top subjects */}
+            <div className="bg-white rounded-xl border border-border/60 overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-border/50">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Subiecte populare
+                </h3>
+              </div>
+              <div className="p-3 space-y-1">
+                {subjectStats?.slice(0, 7).map((s, i) => (
+                  <button
+                    key={s.subject}
+                    onClick={() => setSubject(s.subject)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-5 h-5 rounded-md bg-primary/8 text-primary text-xs font-bold flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-medium text-foreground/80 group-hover:text-primary transition-colors">{s.subject}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">
+                      {s.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature pills */}
+            <div className="bg-white rounded-xl border border-border/60 p-4">
+              <h3 className="font-bold text-sm mb-3">De ce StudyWave?</h3>
+              <div className="space-y-2.5">
+                {[
+                  { icon: Zap, text: "Sistem de puncte si recompense", color: "text-amber-500 bg-amber-50" },
+                  { icon: Award, text: "Fundita de aur pentru cel mai bun raspuns", color: "text-rose-500 bg-rose-50" },
+                  { icon: Shield, text: "Moderat de o echipa dedicata", color: "text-blue-500 bg-blue-50" },
+                  { icon: Star, text: "Badge-uri si titluri exclusive", color: "text-violet-500 bg-violet-50" },
+                ].map(item => (
+                  <div key={item.text} className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>
+                      <item.icon className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{item.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { BookOpen, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle2, Users, Award } from "lucide-react";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -31,65 +31,137 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <BookOpen className="h-8 w-8 text-primary-foreground" />
+    <div className="min-h-[calc(100vh-4rem)] flex">
+      {/* Left panel */}
+      <div className="hidden lg:flex flex-col justify-between w-[480px] flex-shrink-0 p-12 relative overflow-hidden border-r border-border/60 gradient-hero">
+        <div className="absolute inset-0 dot-bg opacity-60"></div>
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/8 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500/6 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="relative">
+          <Link href="/" className="flex items-center gap-2.5 mb-10">
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+              <BookOpen className="h-4.5 w-4.5 text-white" />
+            </div>
+            <span className="font-extrabold text-lg text-foreground">StudyWave</span>
+          </Link>
+
+          <h2 className="text-3xl font-extrabold text-foreground mb-3 leading-tight tracking-tight">
+            Bun venit<br />inapoi!
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Continua calatoria ta de invatare. Comunitatea te asteapta cu noi intrebari si raspunsuri.
+          </p>
+
+          <div className="mt-8 space-y-3">
+            {[
+              { icon: CheckCircle2, text: "Raspunsuri verificate de comunitate", color: "text-emerald-500" },
+              { icon: Users, text: "Comunitate de mii de studenti", color: "text-blue-500" },
+              { icon: Award, text: "Sistem de premii si recompense unic", color: "text-amber-500" },
+              { icon: Sparkles, text: "Continut de calitate pe toate subiectele", color: "text-violet-500" },
+            ].map(item => (
+              <div key={item.text} className="flex items-center gap-3">
+                <item.icon className={`h-4.5 w-4.5 flex-shrink-0 ${item.color}`} />
+                <span className="text-sm text-foreground/75 font-medium">{item.text}</span>
+              </div>
+            ))}
           </div>
-          <h1 className="text-3xl font-bold">Bun venit inapoi</h1>
-          <p className="text-muted-foreground mt-2">Autentifica-te in contul tau StudyWave</p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-8">
+        <div className="relative">
+          <div className="p-4 bg-white/80 backdrop-blur rounded-xl border border-border/60 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">D</div>
+              <div>
+                <p className="text-xs font-semibold">Dan Constantin</p>
+                <p className="text-xs text-muted-foreground">1,240 puncte · Top 3</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              "StudyWave m-a ajutat sa inteleg matematica cu adevarat. Raspunsurile sunt clare si detaliate!"
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-[400px]">
+          <div className="text-center mb-8 lg:text-left">
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Autentificare</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">Introdu datele contului tau pentru a continua</p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Email</label>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Adresa de email</label>
               <Input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="email@example.com"
+                placeholder="email@exemplu.com"
                 required
+                className="h-11 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Parola</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-semibold text-foreground">Parola</label>
+              </div>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Parola ta"
+                  placeholder="Parola ta secreta"
                   required
+                  className="h-11 rounded-xl border-border/70 bg-white shadow-xs pr-12 focus-visible:ring-primary/30"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Se autentifica..." : "Autentificare"}
+
+            <Button
+              type="submit"
+              className="w-full gradient-primary text-white border-0 h-11 rounded-xl font-semibold shadow-sm hover:opacity-95 transition-all gap-2 text-base mt-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Se autentifica...
+                </div>
+              ) : (
+                <>Autentificare <ArrowRight className="h-4.5 w-4.5" /></>
+              )}
             </Button>
           </form>
 
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Conturi de test:</p>
-            <p>Admin: admin@studywave.com / admin123</p>
-            <p>User: alex@studywave.com / user123</p>
+          <div className="mt-4 p-3.5 bg-gray-50 border border-border/60 rounded-xl">
+            <p className="text-xs font-semibold text-foreground mb-1.5">Conturi demo:</p>
+            <button onClick={() => { setEmail("admin@studywave.com"); setPassword("admin123"); }}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors block">
+              Admin: admin@studywave.com / admin123
+            </button>
+            <button onClick={() => { setEmail("alex@studywave.com"); setPassword("user123"); }}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors block mt-0.5">
+              User: alex@studywave.com / user123
+            </button>
           </div>
-        </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Nu ai cont?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium">
-            Inregistreaza-te
-          </Link>
-        </p>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Nu ai cont?{" "}
+            <Link href="/register" className="text-primary font-semibold hover:underline">
+              Inregistreaza-te gratuit
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
