@@ -46,11 +46,12 @@ export default function AnnouncementBanner() {
   if (visible.length === 0) return null;
 
   return (
-    <div className="space-y-2 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+    <div className="border-t border-border/60 bg-background/95">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 space-y-1.5">
       {visible.map(a => {
         const cfg = TYPE_CONFIG[a.type] ?? TYPE_CONFIG.info;
         return (
-          <div key={a.id} className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${cfg.bg}`}>
+          <div key={a.id} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border ${cfg.bg}`}>
             <Megaphone className={`h-4 w-4 flex-shrink-0 mt-0.5 ${cfg.text}`} />
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold ${cfg.text}`}>{a.title}</p>
@@ -65,6 +66,7 @@ export default function AnnouncementBanner() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

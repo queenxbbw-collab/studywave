@@ -163,6 +163,10 @@ export const UpdateSettingsBody = zod.object({
   email: zod.string().optional(),
   currentPassword: zod.string().optional(),
   newPassword: zod.string().optional(),
+  website: zod.string().optional(),
+  twitter: zod.string().optional(),
+  github: zod.string().optional(),
+  linkedin: zod.string().optional(),
 });
 
 export const UpdateSettingsResponse = zod.object({

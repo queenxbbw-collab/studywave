@@ -8,7 +8,12 @@ import { useAuth } from "@/lib/auth";
 import { Link } from "wouter";
 import { Search, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
 
-const SUBJECTS = ["all","Mathematics","Physics","Chemistry","Biology","History","Geography","Literature","Computer Science","Economics","Languages","Other"];
+const SUBJECTS = [
+  "all","Mathematics","Physics","Chemistry","Biology","History","Geography",
+  "Literature","Computer Science","Economics","Languages",
+  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
+  "Other"
+];
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);

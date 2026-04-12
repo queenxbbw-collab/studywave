@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const SUBJECTS = ["all","Mathematics","Physics","Chemistry","Biology","History","Geography","Literature","Computer Science","Economics","Languages","Other"];
+const SUBJECTS = [
+  "all","Mathematics","Physics","Chemistry","Biology","History","Geography",
+  "Literature","Computer Science","Economics","Languages",
+  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
+  "Other"
+];
 
 const ACTIVITY_ICONS: Record<string, React.FC<{className?: string}>> = {
   question_asked: HelpCircle,

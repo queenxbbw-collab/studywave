@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
-import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check } from "lucide-react";
+import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "profile", icon: User, label: "Profile" },
@@ -30,6 +30,10 @@ export default function SettingsPage() {
     displayName: user?.displayName || "",
     bio: user?.bio || "",
     email: user?.email || "",
+    website: (user as any)?.website || "",
+    twitter: (user as any)?.twitter || "",
+    github: (user as any)?.github || "",
+    linkedin: (user as any)?.linkedin || "",
   });
   const [password, setPassword] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
@@ -188,6 +192,51 @@ export default function SettingsPage() {
                     className="resize-none rounded-xl border-border/70 text-sm"
                   />
                 </div>
+
+                <div className="pt-1">
+                  <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" /> Social Links
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={profile.website}
+                        onChange={e => setProfile(p => ({ ...p, website: e.target.value }))}
+                        placeholder="https://yourwebsite.com"
+                        className="h-10 rounded-xl border-border/70 pl-8 text-sm"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={profile.twitter}
+                        onChange={e => setProfile(p => ({ ...p, twitter: e.target.value }))}
+                        placeholder="@username or URL"
+                        className="h-10 rounded-xl border-border/70 pl-8 text-sm"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Github className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={profile.github}
+                        onChange={e => setProfile(p => ({ ...p, github: e.target.value }))}
+                        placeholder="github.com/username"
+                        className="h-10 rounded-xl border-border/70 pl-8 text-sm"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={profile.linkedin}
+                        onChange={e => setProfile(p => ({ ...p, linkedin: e.target.value }))}
+                        placeholder="linkedin.com/in/username"
+                        className="h-10 rounded-xl border-border/70 pl-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-3 pt-2">
                   <Button
                     type="submit"

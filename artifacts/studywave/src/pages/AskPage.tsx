@@ -11,7 +11,12 @@ import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
 import { useUpload } from "@workspace/object-storage-web";
 
-const SUBJECTS = ["Mathematics","Physics","Chemistry","Biology","History","Geography","Literature","Computer Science","Economics","Languages","Other"];
+const SUBJECTS = [
+  "Mathematics","Physics","Chemistry","Biology","History","Geography",
+  "Literature","Computer Science","Economics","Languages",
+  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
+  "Other"
+];
 
 const TIPS = [
   { icon: CheckCircle2, text: "Be specific — title must be at least 15 characters", color: "text-emerald-600 bg-emerald-50" },

@@ -14,29 +14,42 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
   MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag,
-  Bookmark, BookmarkCheck, Eye, Send, ChevronRight
+  Bookmark, BookmarkCheck, Eye, Send, ChevronRight, Share2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import ReportModal from "@/components/ReportModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/atom-one-dark.css";
 
 const MIN_ANSWER = 30;
 const MIN_COMMENT = 5;
 
 const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
-  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
-  Physics:            { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
-  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
-  Biology:            { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
-  History:            { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
-  Geography:          { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
-  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
-  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
-  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
-  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
-  Other:              { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
+  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-400" },
+  Physics:            { bg: "bg-purple-50",  text: "text-purple-700",  dot: "bg-purple-400" },
+  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-400" },
+  Biology:            { bg: "bg-green-50",   text: "text-green-700",   dot: "bg-green-400" },
+  History:            { bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-400" },
+  Geography:          { bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-400" },
+  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",    dot: "bg-rose-400" },
+  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",    dot: "bg-cyan-400" },
+  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700",  dot: "bg-yellow-400" },
+  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",    dot: "bg-pink-400" },
+  Philosophy:         { bg: "bg-indigo-50",  text: "text-indigo-700",  dot: "bg-indigo-400" },
+  Psychology:         { bg: "bg-teal-50",    text: "text-teal-700",    dot: "bg-teal-400" },
+  Music:              { bg: "bg-violet-50",  text: "text-violet-700",  dot: "bg-violet-400" },
+  Art:                { bg: "bg-fuchsia-50", text: "text-fuchsia-700", dot: "bg-fuchsia-400" },
+  Engineering:        { bg: "bg-slate-50",   text: "text-slate-700",   dot: "bg-slate-400" },
+  Medicine:           { bg: "bg-red-50",     text: "text-red-700",     dot: "bg-red-400" },
+  Environment:        { bg: "bg-lime-50",    text: "text-lime-700",    dot: "bg-lime-400" },
+  Law:                { bg: "bg-stone-50",   text: "text-stone-700",   dot: "bg-stone-400" },
+  Sports:             { bg: "bg-sky-50",     text: "text-sky-700",     dot: "bg-sky-400" },
+  Other:              { bg: "bg-gray-50",    text: "text-gray-600",    dot: "bg-gray-400" },
 };
 
 interface Comment {
@@ -63,12 +76,18 @@ function MarkdownContent({ content }: { content: string }) {
   return (
     <div className="prose prose-sm max-w-none text-foreground/85 leading-relaxed
       prose-headings:font-bold prose-headings:text-foreground
-      prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
-      prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:p-4
+      prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+      prose-pre:bg-[#282c34] prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:p-0 prose-pre:overflow-hidden
       prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground
       prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-      prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal
+      [&_.katex-display]:overflow-x-auto [&_.katex-display]:py-2">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex, rehypeHighlight]}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
@@ -431,6 +450,25 @@ export default function QuestionDetailPage() {
                 >
                   {isBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
                   {isBookmarked ? "Bookmarked" : "Bookmark"}
+                </button>
+
+                {/* Share button */}
+                <button
+                  onClick={() => {
+                    const url = window.location.href;
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(url).then(() => {
+                        toast({ title: "Link copied!", description: "Question URL copied to clipboard." });
+                      });
+                    } else {
+                      toast({ title: "Share", description: url });
+                    }
+                  }}
+                  title="Share this question"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-white text-muted-foreground hover:text-foreground hover:border-border text-xs font-medium transition-colors"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
                 </button>
 
                 <Link href={`/profile/${question.authorId}`}>

@@ -50,6 +50,10 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
     bio: user.bio,
+    website: user.website,
+    twitter: user.twitter,
+    github: user.github,
+    linkedin: user.linkedin,
     points: user.points,
     role: user.role,
     createdAt: user.createdAt.toISOString(),
@@ -148,7 +152,7 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
     return;
   }
 
-  const { displayName, bio, email, currentPassword, newPassword } = parsed.data;
+  const { displayName, bio, email, currentPassword, newPassword, website, twitter, github, linkedin } = parsed.data;
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
   if (!user) {
@@ -167,6 +171,10 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
   const updateData: Record<string, unknown> = {};
   if (displayName) updateData.displayName = displayName;
   if (bio !== undefined) updateData.bio = bio;
+  if (website !== undefined) updateData.website = website;
+  if (twitter !== undefined) updateData.twitter = twitter;
+  if (github !== undefined) updateData.github = github;
+  if (linkedin !== undefined) updateData.linkedin = linkedin;
   if (email) {
     const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
     if (existing && existing.id !== user.id) {
@@ -188,6 +196,10 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
     displayName: updated.displayName,
     avatarUrl: updated.avatarUrl,
     bio: updated.bio,
+    website: updated.website,
+    twitter: updated.twitter,
+    github: updated.github,
+    linkedin: updated.linkedin,
     points: updated.points,
     role: updated.role,
     isActive: updated.isActive,

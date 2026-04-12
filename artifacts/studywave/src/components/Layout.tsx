@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Sparkles, Zap, Bookmark
+  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80">
+      <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-2 sm:gap-4 min-w-0">
             {/* Logo */}
@@ -159,7 +159,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               {/* Mobile menu toggle — visible below lg */}
               <button
-                className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors flex-shrink-0"
+                className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
                 onClick={() => setMobileOpen(!mobileOpen)}
               >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -168,9 +168,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+        {/* Announcement banner — inside sticky header so it doesn't push page content */}
+        <AnnouncementBanner />
+
         {/* Mobile / tablet menu (below lg) */}
         {mobileOpen && (
-          <div className="lg:hidden border-t border-border/60 bg-white">
+          <div className="lg:hidden border-t border-border/60 bg-background">
             <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
               {NAV_ITEMS.map(item => (
                 <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
@@ -195,12 +198,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main>
-        <AnnouncementBanner />
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/60 bg-white mt-16">
+      <footer className="border-t border-border/60 bg-background mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">

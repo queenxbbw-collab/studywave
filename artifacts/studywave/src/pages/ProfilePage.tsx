@@ -10,13 +10,26 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Settings, Trophy, HelpCircle, MessageCircle, Award, Calendar, Shield,
-  Star, Zap, TrendingUp, Lock, Sparkles, Flame
+  Star, Zap, TrendingUp, Lock, Sparkles, Flame, Globe, Twitter, Github, Linkedin, ExternalLink,
+  Crown, BookOpen, Target, Medal, CheckCircle, Lightbulb, Brain, Rocket, Heart
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const EMOJI_MAP: Record<string, string> = {
-  Trophy: "🏆", Star: "⭐", Award: "🎖️", Shield: "🛡️", Flame: "🔥",
-  Zap: "⚡", Crown: "👑", BookOpen: "📖", HelpCircle: "❓", MessageCircle: "💬",
+const ICON_MAP: Record<string, LucideIcon> = {
+  Trophy, Star, Award, Shield, Flame, Zap, Crown,
+  BookOpen, HelpCircle, MessageCircle, Target, Medal,
+  CheckCircle, Lightbulb, Brain, Rocket, Heart, Sparkles,
+};
+
+const BADGE_COLOR_MAP: Record<string, string> = {
+  gold:    "from-amber-400 to-yellow-500",
+  silver:  "from-slate-300 to-slate-400",
+  bronze:  "from-orange-400 to-amber-500",
+  blue:    "from-blue-400 to-indigo-500",
+  green:   "from-emerald-400 to-teal-500",
+  purple:  "from-violet-400 to-purple-500",
+  red:     "from-rose-400 to-red-500",
 };
 
 export default function ProfilePage() {
@@ -67,7 +80,7 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-        <p className="text-muted-foreground">Utilizatorul nu a fost gasit.</p>
+        <p className="text-muted-foreground">User not found.</p>
       </div>
     );
   }
@@ -77,10 +90,10 @@ export default function ProfilePage() {
   // Calculate rank/level based on points
   const getLevel = (points: number) => {
     if (points >= 5000) return { label: "Expert", color: "text-yellow-600 bg-yellow-50 border-yellow-200", icon: "🏆" };
-    if (points >= 2000) return { label: "Avansat", color: "text-purple-600 bg-purple-50 border-purple-200", icon: "💎" };
-    if (points >= 1000) return { label: "Intermediar", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "🔥" };
-    if (points >= 100) return { label: "Incepator", color: "text-green-600 bg-green-50 border-green-200", icon: "⭐" };
-    return { label: "Nou", color: "text-gray-600 bg-gray-50 border-gray-200", icon: "🌱" };
+    if (points >= 2000) return { label: "Advanced", color: "text-purple-600 bg-purple-50 border-purple-200", icon: "💎" };
+    if (points >= 1000) return { label: "Intermediate", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "🔥" };
+    if (points >= 100) return { label: "Beginner", color: "text-green-600 bg-green-50 border-green-200", icon: "⭐" };
+    return { label: "New", color: "text-gray-600 bg-gray-50 border-gray-200", icon: "🌱" };
   };
   const level = getLevel(profile.points);
 
@@ -109,7 +122,7 @@ export default function ProfilePage() {
             {isOwnProfile && (
               <Link href="/settings">
                 <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
-                  <Settings className="h-3.5 w-3.5" /> Editare profil
+                  <Settings className="h-3.5 w-3.5" /> Edit Profile
                 </Button>
               </Link>
             )}
@@ -131,9 +144,43 @@ export default function ProfilePage() {
           {profile.bio && (
             <p className="text-sm text-foreground/75 mt-2 max-w-lg leading-relaxed">{profile.bio}</p>
           )}
+
+          {/* Social links */}
+          {((profile as any).website || (profile as any).twitter || (profile as any).github || (profile as any).linkedin) && (
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {(profile as any).website && (
+                <a href={(profile as any).website} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg border border-border/50 hover:border-border bg-gray-50/50 hover:bg-gray-100">
+                  <Globe className="h-3 w-3" /> Website <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                </a>
+              )}
+              {(profile as any).twitter && (
+                <a href={(profile as any).twitter.startsWith("http") ? (profile as any).twitter : `https://twitter.com/${(profile as any).twitter.replace("@","")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-600 transition-colors px-2 py-1 rounded-lg border border-border/50 hover:border-sky-200 bg-gray-50/50 hover:bg-sky-50">
+                  <Twitter className="h-3 w-3" /> Twitter
+                </a>
+              )}
+              {(profile as any).github && (
+                <a href={(profile as any).github.startsWith("http") ? (profile as any).github : `https://github.com/${(profile as any).github}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg border border-border/50 hover:border-border bg-gray-50/50 hover:bg-gray-100">
+                  <Github className="h-3 w-3" /> GitHub
+                </a>
+              )}
+              {(profile as any).linkedin && (
+                <a href={(profile as any).linkedin.startsWith("http") ? (profile as any).linkedin : `https://linkedin.com/in/${(profile as any).linkedin}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-blue-600 transition-colors px-2 py-1 rounded-lg border border-border/50 hover:border-blue-200 bg-gray-50/50 hover:bg-blue-50">
+                  <Linkedin className="h-3 w-3" /> LinkedIn
+                </a>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            Membru din {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
+            Member since {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
           </div>
         </div>
 
@@ -168,24 +215,27 @@ export default function ProfilePage() {
               <div className="w-7 h-7 bg-primary/8 rounded-lg flex items-center justify-center">
                 <Star className="h-3.5 w-3.5 text-primary" />
               </div>
-              Badge-uri ({profile.badges.length})
+              Badges ({profile.badges.length})
             </h2>
           </div>
-          <div className="flex flex-wrap gap-2.5">
-            {profile.badges.map(badge => (
-              <div
-                key={badge.id}
-                title={badge.description}
-                className="group flex items-center gap-2 px-3 py-2 rounded-xl border transition-all hover:shadow-sm cursor-default"
-                style={{
-                  backgroundColor: badge.color + "10",
-                  borderColor: badge.color + "30",
-                }}
-              >
-                <span className="text-base">{EMOJI_MAP[badge.icon] || "🏅"}</span>
-                <span className="text-xs font-bold" style={{ color: badge.color }}>{badge.name}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {profile.badges.map(badge => {
+              const Icon = ICON_MAP[badge.icon] || Star;
+              const gradient = BADGE_COLOR_MAP[badge.color] || "from-primary to-violet-600";
+              return (
+                <div
+                  key={badge.id}
+                  title={badge.description}
+                  className="group bg-gray-50/60 rounded-xl border border-border/60 p-4 text-center hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-default"
+                >
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm mx-auto mb-2.5`}>
+                    <Icon className="h-5 w-5 text-white" strokeWidth={2} />
+                  </div>
+                  <p className="font-bold text-xs text-foreground leading-tight mb-1">{badge.name}</p>
+                  <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2">{badge.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -207,7 +257,7 @@ export default function ProfilePage() {
           {questions?.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-border/60">
               <HelpCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="font-semibold text-foreground/60">Nicio intrebare publicata</p>
+              <p className="font-semibold text-foreground/60">No questions posted yet</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -220,7 +270,7 @@ export default function ProfilePage() {
           {answers?.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-border/60">
               <MessageCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="font-semibold text-foreground/60">Niciun raspuns publicat</p>
+              <p className="font-semibold text-foreground/60">No answers posted yet</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -233,7 +283,7 @@ export default function ProfilePage() {
                 >
                   {a.isAwarded && (
                     <div className="flex items-center gap-2 text-amber-700 text-xs font-bold mb-3 pb-2.5 border-b border-amber-100">
-                      <Award className="h-3.5 w-3.5" /> Cel mai bun raspuns · Fundita de aur
+                      <Award className="h-3.5 w-3.5" /> Best Answer · Gold Ribbon
                     </div>
                   )}
                   <p className="text-sm text-foreground/85 line-clamp-3 leading-relaxed">{a.content}</p>
@@ -242,11 +292,11 @@ export default function ProfilePage() {
                       {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
                     </span>
                     <span className="flex items-center gap-1 text-xs font-medium text-primary">
-                      <TrendingUp className="h-3 w-3" /> {a.upvotes - a.downvotes} voturi
+                      <TrendingUp className="h-3 w-3" /> {a.upvotes - a.downvotes} votes
                     </span>
                     <Link href={`/questions/${a.questionId}`}>
                       <span className="ml-auto text-xs text-primary font-semibold hover:underline cursor-pointer">
-                        Vezi intrebarea →
+                        View question →
                       </span>
                     </Link>
                   </div>

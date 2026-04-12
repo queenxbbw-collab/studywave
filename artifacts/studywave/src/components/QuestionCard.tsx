@@ -21,17 +21,26 @@ interface Question {
 }
 
 const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
-  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
-  Physics:            { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
-  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
-  Biology:            { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
-  History:            { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
-  Geography:          { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
-  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
-  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
-  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
-  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
-  Other:              { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
+  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-400" },
+  Physics:            { bg: "bg-purple-50",  text: "text-purple-700",  dot: "bg-purple-400" },
+  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-400" },
+  Biology:            { bg: "bg-green-50",   text: "text-green-700",   dot: "bg-green-400" },
+  History:            { bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-400" },
+  Geography:          { bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-400" },
+  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",    dot: "bg-rose-400" },
+  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",    dot: "bg-cyan-400" },
+  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700",  dot: "bg-yellow-400" },
+  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",    dot: "bg-pink-400" },
+  Philosophy:         { bg: "bg-indigo-50",  text: "text-indigo-700",  dot: "bg-indigo-400" },
+  Psychology:         { bg: "bg-teal-50",    text: "text-teal-700",    dot: "bg-teal-400" },
+  Music:              { bg: "bg-violet-50",  text: "text-violet-700",  dot: "bg-violet-400" },
+  Art:                { bg: "bg-fuchsia-50", text: "text-fuchsia-700", dot: "bg-fuchsia-400" },
+  Engineering:        { bg: "bg-slate-50",   text: "text-slate-700",   dot: "bg-slate-400" },
+  Medicine:           { bg: "bg-red-50",     text: "text-red-700",     dot: "bg-red-400" },
+  Environment:        { bg: "bg-lime-50",    text: "text-lime-700",    dot: "bg-lime-400" },
+  Law:                { bg: "bg-stone-50",   text: "text-stone-700",   dot: "bg-stone-400" },
+  Sports:             { bg: "bg-sky-50",     text: "text-sky-700",     dot: "bg-sky-400" },
+  Other:              { bg: "bg-gray-50",    text: "text-gray-600",    dot: "bg-gray-400" },
 };
 
 export default function QuestionCard({ question }: { question: Question }) {

@@ -12,4 +12,8 @@ export interface UpdateSettingsBody {
   email?: string;
   currentPassword?: string;
   newPassword?: string;
+  website?: string;
+  twitter?: string;
+  github?: string;
+  linkedin?: string;
 }
