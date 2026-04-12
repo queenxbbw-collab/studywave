@@ -6,6 +6,19 @@ import { createNotification } from "./notifications";
 
 const router: IRouter = Router();
 
+const DAILY_COMMENT_LIMIT = 50;
+const MIN_COMMENT_LENGTH = 5;
+
+async function checkCommentLimit(userId: number): Promise<boolean> {
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+  const [row] = (await db.execute(sql`
+    SELECT COUNT(*) as cnt FROM comments
+    WHERE user_id = ${userId} AND created_at >= ${todayUTC.toISOString()}
+  `)).rows as any[];
+  return parseInt(row?.cnt ?? "0") < DAILY_COMMENT_LIMIT;
+}
+
 router.get("/comments/answer/:answerId", async (req, res): Promise<void> => {
   const answerId = parseInt(req.params.answerId);
   if (isNaN(answerId)) { res.status(400).json({ error: "Invalid answer ID" }); return; }
@@ -34,8 +47,11 @@ router.get("/comments/answer/:answerId", async (req, res): Promise<void> => {
 router.post("/comments", authenticate, async (req, res): Promise<void> => {
   const { answerId, content } = req.body as { answerId?: number; content?: string };
   if (!answerId || typeof answerId !== "number") { res.status(400).json({ error: "answerId required" }); return; }
-  if (!content || content.trim().length < 2) { res.status(400).json({ error: "Comment too short" }); return; }
+  if (!content || content.trim().length < MIN_COMMENT_LENGTH) { res.status(400).json({ error: `Comment must be at least ${MIN_COMMENT_LENGTH} characters` }); return; }
   if (content.trim().length > 500) { res.status(400).json({ error: "Comment too long (max 500 chars)" }); return; }
+
+  const canComment = await checkCommentLimit(req.userId!);
+  if (!canComment) { res.status(429).json({ error: `You've reached the daily limit of ${DAILY_COMMENT_LIMIT} comments. Come back tomorrow!` }); return; }
 
   const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
@@ -69,8 +85,11 @@ router.post("/comments/answer/:answerId", authenticate, async (req, res): Promis
   const answerId = parseInt(req.params.answerId);
   const { content } = req.body as { content?: string };
   if (isNaN(answerId)) { res.status(400).json({ error: "Invalid answer ID" }); return; }
-  if (!content || content.trim().length < 2) { res.status(400).json({ error: "Comment too short" }); return; }
+  if (!content || content.trim().length < MIN_COMMENT_LENGTH) { res.status(400).json({ error: `Comment must be at least ${MIN_COMMENT_LENGTH} characters` }); return; }
   if (content.trim().length > 500) { res.status(400).json({ error: "Comment too long (max 500 chars)" }); return; }
+
+  const canComment = await checkCommentLimit(req.userId!);
+  if (!canComment) { res.status(429).json({ error: `You've reached the daily limit of ${DAILY_COMMENT_LIMIT} comments. Come back tomorrow!` }); return; }
 
   const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }

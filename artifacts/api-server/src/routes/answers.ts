@@ -161,12 +161,12 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
   if (existingVote) {
     if (existingVote.voteType === type) {
       await db.delete(answerVotesTable).where(eq(answerVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(answersTable).set({ upvotes: sql`${answersTable.upvotes} - 1` }).where(eq(answersTable.id, id));
-      else await db.update(answersTable).set({ downvotes: sql`${answersTable.downvotes} - 1` }).where(eq(answersTable.id, id));
+      if (type === "up") await db.update(answersTable).set({ upvotes: sql`GREATEST(0, ${answersTable.upvotes} - 1)` }).where(eq(answersTable.id, id));
+      else await db.update(answersTable).set({ downvotes: sql`GREATEST(0, ${answersTable.downvotes} - 1)` }).where(eq(answersTable.id, id));
     } else {
       await db.update(answerVotesTable).set({ voteType: type }).where(eq(answerVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(answersTable).set({ upvotes: sql`${answersTable.upvotes} + 1`, downvotes: sql`${answersTable.downvotes} - 1` }).where(eq(answersTable.id, id));
-      else await db.update(answersTable).set({ downvotes: sql`${answersTable.downvotes} + 1`, upvotes: sql`${answersTable.upvotes} - 1` }).where(eq(answersTable.id, id));
+      if (type === "up") await db.update(answersTable).set({ upvotes: sql`${answersTable.upvotes} + 1`, downvotes: sql`GREATEST(0, ${answersTable.downvotes} - 1)` }).where(eq(answersTable.id, id));
+      else await db.update(answersTable).set({ downvotes: sql`${answersTable.downvotes} + 1`, upvotes: sql`GREATEST(0, ${answersTable.upvotes} - 1)` }).where(eq(answersTable.id, id));
     }
   } else {
     await db.insert(answerVotesTable).values({ answerId: id, userId: req.userId!, voteType: type });

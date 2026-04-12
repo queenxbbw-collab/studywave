@@ -47,7 +47,7 @@ function validateCreateQuestion(body: unknown): { error?: string; data?: { title
 router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> => {
   const params = ListQuestionsQueryParams.safeParse(req.query);
   const page = params.success && params.data.page ? Number(params.data.page) : 1;
-  const limit = params.success && params.data.limit ? Number(params.data.limit) : 10;
+  const limit = Math.min(50, params.success && params.data.limit ? Number(params.data.limit) : 10);
   const subject = params.success ? params.data.subject : undefined;
   const search = params.success ? params.data.search : undefined;
   const sort = params.success ? params.data.sort : "newest";
@@ -292,12 +292,12 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
   if (existingVote) {
     if (existingVote.voteType === type) {
       await db.delete(questionVotesTable).where(eq(questionVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} - 1` }).where(eq(questionsTable.id, id));
-      else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} - 1` }).where(eq(questionsTable.id, id));
+      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`GREATEST(0, ${questionsTable.upvotes} - 1)` }).where(eq(questionsTable.id, id));
+      else await db.update(questionsTable).set({ downvotes: sql`GREATEST(0, ${questionsTable.downvotes} - 1)` }).where(eq(questionsTable.id, id));
     } else {
       await db.update(questionVotesTable).set({ voteType: type }).where(eq(questionVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1`, downvotes: sql`${questionsTable.downvotes} - 1` }).where(eq(questionsTable.id, id));
-      else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1`, upvotes: sql`${questionsTable.upvotes} - 1` }).where(eq(questionsTable.id, id));
+      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1`, downvotes: sql`GREATEST(0, ${questionsTable.downvotes} - 1)` }).where(eq(questionsTable.id, id));
+      else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1`, upvotes: sql`GREATEST(0, ${questionsTable.upvotes} - 1)` }).where(eq(questionsTable.id, id));
     }
   } else {
     await db.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: type });
@@ -358,26 +358,25 @@ router.post("/questions/buy-extra", authenticate, async (req, res): Promise<void
   const COST = 50;
   const EXTRA = 5;
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
-
-  if (user.points < COST) {
-    res.status(400).json({ error: `You need at least ${COST} points. You have ${user.points} points.` });
-    return;
-  }
-
-  const [updated] = await db
+  // Atomic conditional update: only deduct points if user actually has enough
+  // This prevents race conditions from simultaneous requests
+  const rows = await db
     .update(usersTable)
     .set({
       points: sql`${usersTable.points} - ${COST}`,
       questionBonusPool: sql`${usersTable.questionBonusPool} + ${EXTRA}`,
     })
-    .where(eq(usersTable.id, req.userId!))
+    .where(and(eq(usersTable.id, req.userId!), sql`${usersTable.points} >= ${COST}`))
     .returning();
 
+  if (rows.length === 0) {
+    const [user] = await db.select({ points: usersTable.points }).from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    res.status(400).json({ error: `You need at least ${COST} points. You have ${user.points} points.` });
+    return;
+  }
+
+  const updated = rows[0];
   res.json({
     message: `You purchased ${EXTRA} extra question slots for ${COST} points!`,
     points: updated.points,

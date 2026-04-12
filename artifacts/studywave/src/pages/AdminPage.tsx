@@ -317,7 +317,7 @@ export default function AdminPage() {
                     {stat.pct !== null && (
                       <div className="mt-2">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-muted-foreground">Rata rezolvare</span>
+                          <span className="text-xs text-muted-foreground">Resolution rate</span>
                           <span className="text-xs font-bold text-primary">{stat.pct}%</span>
                         </div>
                         <div className="h-1.5 bg-gray-100 rounded-full">
