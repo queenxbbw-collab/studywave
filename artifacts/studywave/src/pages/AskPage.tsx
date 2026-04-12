@@ -10,6 +10,7 @@ import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, Plus
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
 import { useUpload } from "@workspace/object-storage-web";
+import MarkdownToolbar from "@/components/MarkdownToolbar";
 
 const SUBJECTS = [
   "Mathematics","Physics","Chemistry","Biology","History","Geography",
@@ -51,6 +52,7 @@ export default function AskPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { uploadFile, isUploading, progress } = useUpload({
     onSuccess: (response) => {
@@ -273,12 +275,18 @@ export default function AskPage() {
                 <label className="text-sm font-semibold text-foreground mb-2 block">
                   Question details <span className="text-red-500">*</span>
                 </label>
+                <MarkdownToolbar
+                  textareaRef={contentTextareaRef}
+                  value={content}
+                  onChange={setContent}
+                />
                 <Textarea
+                  ref={contentTextareaRef}
                   value={content}
                   onChange={e => setContent(e.target.value)}
                   placeholder="Describe the problem in detail. Explain what you've tried, where you got stuck, and what you don't understand."
                   rows={9}
-                  className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm leading-relaxed ${content.length > 0 && !contentOk ? "border-amber-400 focus:border-amber-500" : ""}`}
+                  className={`resize-none rounded-t-none rounded-b-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm leading-relaxed ${content.length > 0 && !contentOk ? "border-amber-400 focus:border-amber-500" : ""}`}
                 />
                 <div className="flex items-center justify-between mt-1.5">
                   <p className={`text-xs ${content.length > 0 && !contentOk ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
