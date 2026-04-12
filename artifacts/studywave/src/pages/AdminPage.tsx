@@ -443,7 +443,7 @@ export default function AdminPage() {
                           u.isActive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? "bg-emerald-500" : "bg-red-500"}`}></span>
-                          {u.isActive ? "Activ" : "Blocat"}
+                          {u.isActive ? "Active" : "Suspended"}
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-xs text-muted-foreground">
@@ -458,7 +458,7 @@ export default function AdminPage() {
                                 ? "text-muted-foreground hover:text-red-500 hover:bg-red-50"
                                 : "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
                             }`}
-                            title={u.isActive ? "Blocheaza" : "Deblocheaza"}
+                            title={u.isActive ? "Suspend user" : "Unsuspend user"}
                           >
                             {u.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                           </button>
@@ -570,7 +570,7 @@ export default function AdminPage() {
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <span className="text-xs font-medium text-muted-foreground">
-                        {badge.pointsRequired === 0 ? "La inreg." : `${badge.pointsRequired} pts`}
+                        {badge.pointsRequired === 0 ? "On join" : `${badge.pointsRequired} pts`}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{badge.category}</span>
                       <button
@@ -589,7 +589,7 @@ export default function AdminPage() {
             <div className="bg-white rounded-2xl border border-border/60 shadow-xs overflow-hidden h-fit">
               <div className="px-5 py-4 border-b border-border/50 bg-gray-50/50">
                 <h2 className="font-bold text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" /> Creeaza badge nou
+                  <Plus className="h-4 w-4 text-primary" /> Create New Badge
                 </h2>
               </div>
               <form onSubmit={handleCreateBadge} className="p-5 space-y-3">
@@ -603,27 +603,27 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold" style={{ color: newBadge.color }}>
-                      {newBadge.name || "Nume badge"}
+                      {newBadge.name || "Badge name"}
                     </p>
-                    <p className="text-xs text-muted-foreground">{newBadge.description || "Descriere..."}</p>
+                    <p className="text-xs text-muted-foreground">{newBadge.description || "Description..."}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Nume *</label>
-                    <Input value={newBadge.name} onChange={e => setNewBadge(b => ({ ...b, name: e.target.value }))} placeholder="Ex: Maestru" className="h-9 rounded-lg text-sm" required />
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Name *</label>
+                    <Input value={newBadge.name} onChange={e => setNewBadge(b => ({ ...b, name: e.target.value }))} placeholder="Ex: Master" className="h-9 rounded-lg text-sm" required />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Descriere *</label>
-                    <Input value={newBadge.description} onChange={e => setNewBadge(b => ({ ...b, description: e.target.value }))} placeholder="Cand se acorda?" className="h-9 rounded-lg text-sm" required />
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Description *</label>
+                    <Input value={newBadge.description} onChange={e => setNewBadge(b => ({ ...b, description: e.target.value }))} placeholder="When is it awarded?" className="h-9 rounded-lg text-sm" required />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-foreground mb-1 block">Icon</label>
                     <Input value={newBadge.icon} onChange={e => setNewBadge(b => ({ ...b, icon: e.target.value }))} placeholder="Star, Trophy..." className="h-9 rounded-lg text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Culoare</label>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Color</label>
                     <div className="flex gap-2">
                       <input
                         type="color"
@@ -635,11 +635,11 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Puncte necesare</label>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Points required</label>
                     <Input type="number" value={newBadge.pointsRequired} onChange={e => setNewBadge(b => ({ ...b, pointsRequired: parseInt(e.target.value) || 0 }))} min={0} className="h-9 rounded-lg text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Categorie</label>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Category</label>
                     <Input value={newBadge.category} onChange={e => setNewBadge(b => ({ ...b, category: e.target.value }))} placeholder="general" className="h-9 rounded-lg text-sm" />
                   </div>
                 </div>
@@ -649,7 +649,7 @@ export default function AdminPage() {
                   disabled={createBadge.isPending}
                 >
                   <Plus className="h-4 w-4" />
-                  {createBadge.isPending ? "Se creeaza..." : "Creeaza badge"}
+                  {createBadge.isPending ? "Creating..." : "Create badge"}
                 </Button>
               </form>
             </div>
