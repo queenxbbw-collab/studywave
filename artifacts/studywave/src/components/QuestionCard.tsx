@@ -84,12 +84,12 @@ export default function QuestionCard({ question }: { question: Question }) {
             </div>
 
             {/* Title */}
-            <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors duration-150 line-clamp-2 leading-snug">
+            <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors duration-150 line-clamp-2 leading-snug break-words">
               {question.title}
             </h3>
 
             {/* Excerpt */}
-            <p className="text-sm text-muted-foreground mt-1.5 line-clamp-1">
+            <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2 break-words">
               {question.content}
             </p>
 
