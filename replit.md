@@ -2,7 +2,7 @@
 
 ## Overview
 
-StudyWave is a Brainly-like Q&A platform for students with: user accounts, JWT auth, questions/answers, voting, award system ("fundița de aur"/ribbon for best answer), points, badges, user profiles, leaderboard, and a full admin panel. Dark navy+purple theme with Plus Jakarta Sans font.
+StudyWave is a Brainly-like Q&A platform for students with: user accounts, JWT auth, questions/answers, voting, award system (Gold Ribbon for best answer), points, badges, user profiles, leaderboard, feature suggestions system, and a full admin panel. White/indigo enterprise design with Plus Jakarta Sans font. Fully in English.
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
@@ -28,8 +28,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Award system: question author can award ONE answer with Gold Ribbon (+50pts to answerer, min 5 min wait)
 - Points: ask=+5, answer=+10, award=+50
 - Badges auto-assigned on point thresholds
-- Leaderboard with podium display
-- Admin panel: stats, user management (block/unblock), question moderation, badge CRUD
+- Leaderboard with gradient hero, podium display, "Suggest a Feature" modal
+- Feature suggestions: users submit from Leaderboard, admin reviews in Suggestions tab
+- Admin panel: 7 tabs — Stats (with recharts BarChart/PieChart), Users, Questions, Badges, Reports, Announcements, Suggestions
+- Streak system: daily_streak, longest_streak tracked per user, displayed on profile
+- Bookmarks, Comments on answers, Notifications bell with dropdown
+- Markdown editor + renderer for questions/answers
+- View count on questions (auto-incremented on GET)
 
 ## Anti-Abuse Rules
 

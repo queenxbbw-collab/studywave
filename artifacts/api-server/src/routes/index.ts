@@ -12,6 +12,7 @@ import commentsRouter from "./comments";
 import bookmarksRouter from "./bookmarks";
 import notificationsRouter from "./notifications";
 import announcementsRouter from "./announcements";
+import suggestionsRouter from "./suggestions";
 import adminRouter from "./admin";
 
 const router: IRouter = Router();
@@ -29,6 +30,7 @@ router.use(commentsRouter);
 router.use(bookmarksRouter);
 router.use(notificationsRouter);
 router.use(announcementsRouter);
+router.use(suggestionsRouter);
 router.use(adminRouter);
 
 export default router;

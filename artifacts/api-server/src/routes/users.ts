@@ -8,18 +8,20 @@ import { UpdateSettingsBody, UploadAvatarBody } from "@workspace/api-zod";
 const router = Router();
 
 router.get("/users/:id", async (req, res): Promise<void> => {
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid user id" });
-    return;
-  }
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const numericId = parseInt(raw, 10);
+  const isNumeric = !isNaN(numericId) && String(numericId) === raw;
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const [user] = isNumeric
+    ? await db.select().from(usersTable).where(eq(usersTable.id, numericId))
+    : await db.select().from(usersTable).where(eq(usersTable.username, raw));
+
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
   }
 
+  const id = user.id;
   const [qCount] = await db.select({ count: count() }).from(questionsTable).where(eq(questionsTable.authorId, id));
   const [aCount] = await db.select({ count: count() }).from(answersTable).where(eq(answersTable.authorId, id));
   const [awardedCount] = await db.select({ count: count() }).from(answersTable)

@@ -18,9 +18,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, HelpCircle, Star, BarChart2, Trash2, Ban, CheckCircle2,
   Plus, ChevronLeft, ChevronRight, TrendingUp, Award, MessageCircle,
-  ArrowUpRight, Activity, Search, BookOpen, Flag, Megaphone, Eye, EyeOff
+  ArrowUpRight, Activity, Search, BookOpen, Flag, Megaphone, Eye, EyeOff,
+  Lightbulb, ChevronDown
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from "recharts";
 
 interface Report {
   id: number;
@@ -34,7 +39,7 @@ interface Report {
 }
 
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -51,6 +56,8 @@ export default function AdminPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", type: "info" });
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const fetchReports = async () => {
     setReportsLoading(true);
@@ -95,6 +102,30 @@ export default function AdminPage() {
     fetchAnnouncements();
   };
 
+  const fetchSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const res = await fetch("/api/admin/suggestions", { headers: getAuthHeaders() });
+      if (res.ok) setSuggestions(await res.json());
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const updateSuggestionStatus = async (id: number, status: string) => {
+    await fetch(`/api/admin/suggestions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ status }),
+    });
+    fetchSuggestions();
+  };
+
+  const deleteSuggestion = async (id: number) => {
+    await fetch(`/api/admin/suggestions/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+    setSuggestions(s => s.filter(x => x.id !== id));
+  };
+
   const deleteAnnouncement = async (id: number) => {
     if (!confirm("Delete this announcement?")) return;
     await fetch(`/api/admin/announcements/${id}`, { method: "DELETE", headers: getAuthHeaders() });
@@ -122,23 +153,27 @@ export default function AdminPage() {
   const createBadge = useAdminCreateBadge();
   const deleteBadge = useAdminDeleteBadge();
 
-  if (!user || user.role !== "admin") { navigate("/"); return null; }
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== "admin")) navigate("/");
+  }, [authLoading, user, navigate]);
+
+  if (authLoading || !user || user.role !== "admin") return null;
 
   const handleToggleUser = (userId: number, isActive: boolean) => {
     updateUser.mutate({ id: userId, data: { isActive: !isActive } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
-        toast({ title: isActive ? "Utilizator dezactivat" : "Utilizator activat" });
+        toast({ title: isActive ? "User deactivated" : "User activated" });
       },
     });
   };
 
   const handleDeleteQuestion = (questionId: number) => {
-    if (!confirm("Stergi aceasta intrebare si toate raspunsurile sale?")) return;
+    if (!confirm("Delete this question and all its answers?")) return;
     deleteQuestion.mutate({ id: questionId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListQuestionsQueryKey() });
-        toast({ title: "Intrebare stearsa" });
+        toast({ title: "Question deleted" });
       },
     });
   };
@@ -149,18 +184,18 @@ export default function AdminPage() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListBadgesQueryKey() });
         setNewBadge({ name: "", description: "", icon: "Star", color: "#6366f1", pointsRequired: 0, category: "general" });
-        toast({ title: "Badge creat cu succes!" });
+        toast({ title: "Badge created!" });
       },
       onError: e => toast({ title: e.message, variant: "destructive" }),
     });
   };
 
   const handleDeleteBadge = (badgeId: number) => {
-    if (!confirm("Stergi acest badge?")) return;
+    if (!confirm("Delete this badge?")) return;
     deleteBadge.mutate({ id: badgeId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListBadgesQueryKey() });
-        toast({ title: "Badge sters" });
+        toast({ title: "Badge deleted" });
       },
     });
   };
@@ -174,35 +209,39 @@ export default function AdminPage() {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Panou Admin</h1>
-            <p className="text-xs text-muted-foreground">Controleaza si monitorizeaza platforma StudyWave</p>
+            <h1 className="text-2xl font-extrabold tracking-tight">Admin Panel</h1>
+            <p className="text-xs text-muted-foreground">Manage and monitor the StudyWave platform</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs font-semibold text-emerald-700">Sistem online</span>
+          <span className="text-xs font-semibold text-emerald-700">System online</span>
         </div>
       </div>
 
       <Tabs defaultValue="stats" onValueChange={v => {
         if (v === "reports") fetchReports();
         if (v === "announcements") fetchAnnouncements();
+        if (v === "suggestions") fetchSuggestions();
       }}>
-        <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs mb-6 w-full flex">
-          {[
-            { value: "stats", icon: BarChart2, label: "Stats" },
-            { value: "users", icon: Users, label: "Users" },
-            { value: "questions", icon: HelpCircle, label: "Questions" },
-            { value: "badges", icon: Star, label: "Badges" },
-            { value: "reports", icon: Flag, label: "Reports" },
-            { value: "announcements", icon: Megaphone, label: "Announcements" },
-          ].map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="flex-1 gap-2 rounded-lg text-sm data-[state=active]:shadow-sm">
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto mb-6 pb-1">
+          <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs flex w-max min-w-full gap-0.5">
+            {[
+              { value: "stats", icon: BarChart2, label: "Stats" },
+              { value: "users", icon: Users, label: "Users" },
+              { value: "questions", icon: HelpCircle, label: "Questions" },
+              { value: "badges", icon: Star, label: "Badges" },
+              { value: "reports", icon: Flag, label: "Reports" },
+              { value: "announcements", icon: Megaphone, label: "Announcements" },
+              { value: "suggestions", icon: Lightbulb, label: "Suggestions" },
+            ].map(tab => (
+              <TabsTrigger key={tab.value} value={tab.value} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm data-[state=active]:shadow-sm whitespace-nowrap">
+                <tab.icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {/* STATS TAB */}
         <TabsContent value="stats">
@@ -211,10 +250,10 @@ export default function AdminPage() {
               {/* KPI cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: "Utilizatori totali", value: stats.totalUsers, icon: Users, color: "text-blue-600", bg: "bg-blue-50", trend: `+${stats.newUsersThisWeek} sapt.` },
-                  { label: "Intrebari totale", value: stats.totalQuestions, icon: HelpCircle, color: "text-violet-600", bg: "bg-violet-50", trend: `+${stats.newQuestionsThisWeek} sapt.` },
-                  { label: "Raspunsuri", value: stats.totalAnswers, icon: MessageCircle, color: "text-emerald-600", bg: "bg-emerald-50", trend: null },
-                  { label: "Funditze acordate", value: stats.totalAwardedAnswers, icon: Award, color: "text-amber-600", bg: "bg-amber-50", trend: null },
+                  { label: "Total Users", value: stats.totalUsers, icon: Users, color: "text-blue-600", bg: "bg-blue-50", trend: `+${stats.newUsersThisWeek} this week` },
+                  { label: "Total Questions", value: stats.totalQuestions, icon: HelpCircle, color: "text-violet-600", bg: "bg-violet-50", trend: `+${stats.newQuestionsThisWeek} this week` },
+                  { label: "Answers", value: stats.totalAnswers, icon: MessageCircle, color: "text-emerald-600", bg: "bg-emerald-50", trend: null },
+                  { label: "Gold Ribbons", value: stats.totalAwardedAnswers, icon: Award, color: "text-amber-600", bg: "bg-amber-50", trend: null },
                 ].map(stat => (
                   <div key={stat.label} className="bg-white rounded-xl border border-border/60 p-5 shadow-xs">
                     <div className="flex items-start justify-between mb-3">
@@ -236,10 +275,10 @@ export default function AdminPage() {
               {/* Secondary stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: "Intrebari rezolvate", value: stats.solvedQuestions, pct: stats.totalQuestions ? Math.round(stats.solvedQuestions / stats.totalQuestions * 100) : 0 },
-                  { label: "Badge-uri active", value: stats.totalBadges, pct: null },
-                  { label: "Noi utilizatori (sapt.)", value: stats.newUsersThisWeek, pct: null },
-                  { label: "Noi intrebari (sapt.)", value: stats.newQuestionsThisWeek, pct: null },
+                  { label: "Solved Questions", value: stats.solvedQuestions, pct: stats.totalQuestions ? Math.round(stats.solvedQuestions / stats.totalQuestions * 100) : 0 },
+                  { label: "Active Badges", value: stats.totalBadges, pct: null },
+                  { label: "New Users (week)", value: stats.newUsersThisWeek, pct: null },
+                  { label: "New Questions (week)", value: stats.newQuestionsThisWeek, pct: null },
                 ].map(stat => (
                   <div key={stat.label} className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
                     <p className="text-xl font-extrabold text-foreground">{stat.value.toLocaleString()}</p>
@@ -259,37 +298,83 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Subject distribution */}
-              {stats.topSubjects.length > 0 && (
-                <div className="bg-white rounded-xl border border-border/60 p-6 shadow-xs">
-                  <h3 className="font-bold mb-5 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Distributie pe subiecte
-                  </h3>
-                  <div className="space-y-3">
-                    {stats.topSubjects.map((s, i) => {
-                      const pct = stats.totalQuestions ? Math.round(s.count / stats.totalQuestions * 100) : 0;
-                      const colors = ["bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500"];
-                      return (
-                        <div key={s.subject} className="flex items-center gap-4">
-                          <div className="w-24 flex-shrink-0">
-                            <span className="text-sm font-medium text-foreground/80 truncate block">{s.subject}</span>
-                          </div>
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${colors[i % colors.length]}`}
-                              style={{ width: `${pct}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex items-center gap-2 w-16 flex-shrink-0 text-right">
-                            <span className="text-sm font-bold text-foreground ml-auto">{s.count}</span>
-                            <span className="text-xs text-muted-foreground">({pct}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+              {/* Charts row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Subject distribution bar chart */}
+                {stats.topSubjects.length > 0 && (
+                  <div className="bg-white rounded-xl border border-border/60 p-6 shadow-xs">
+                    <h3 className="font-bold mb-4 flex items-center gap-2 text-sm">
+                      <TrendingUp className="h-4 w-4 text-primary" /> Questions by Subject
+                    </h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={stats.topSubjects.map(s => ({ name: s.subject, count: s.count }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12 }}
+                          cursor={{ fill: "#f5f3ff" }}
+                        />
+                        <Bar dataKey="count" name="Questions" radius={[6,6,0,0]}>
+                          {stats.topSubjects.map((_, i) => {
+                            const colors = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444"];
+                            return <Cell key={i} fill={colors[i % colors.length]} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
+                )}
+
+                {/* Question status pie chart */}
+                <div className="bg-white rounded-xl border border-border/60 p-6 shadow-xs">
+                  <h3 className="font-bold mb-4 flex items-center gap-2 text-sm">
+                    <Activity className="h-4 w-4 text-primary" /> Question Status
+                  </h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Solved", value: stats.solvedQuestions },
+                          { name: "Unsolved", value: Math.max(0, stats.totalQuestions - stats.solvedQuestions) },
+                        ]}
+                        cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                        paddingAngle={4} dataKey="value"
+                      >
+                        <Cell fill="#6366f1" />
+                        <Cell fill="#e5e7eb" />
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12 }} />
+                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              )}
+              </div>
+
+              {/* Content overview bar chart */}
+              <div className="bg-white rounded-xl border border-border/60 p-6 shadow-xs">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-sm">
+                  <BarChart2 className="h-4 w-4 text-primary" /> Platform Overview
+                </h3>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart
+                    data={[
+                      { name: "Users", value: stats.totalUsers },
+                      { name: "Questions", value: stats.totalQuestions },
+                      { name: "Answers", value: stats.totalAnswers },
+                      { name: "Awarded", value: stats.totalAwardedAnswers },
+                      { name: "Badges", value: stats.totalBadges },
+                    ]}
+                    margin={{ top: 4, right: 8, left: -20, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 12 }} cursor={{ fill: "#f5f3ff" }} />
+                    <Bar dataKey="value" name="Count" radius={[6,6,0,0]} fill="#6366f1" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -300,7 +385,7 @@ export default function AdminPage() {
             <div className="px-5 py-4 border-b border-border/50 bg-gray-50/50 flex items-center justify-between gap-3">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
-                Utilizatori ({usersData?.total || 0})
+                Users ({usersData?.total || 0})
               </h2>
               <form onSubmit={e => { e.preventDefault(); setUserSearch(userSearchInput); setUserPage(1); }} className="flex gap-2">
                 <div className="relative">
@@ -308,11 +393,11 @@ export default function AdminPage() {
                   <Input
                     value={userSearchInput}
                     onChange={e => setUserSearchInput(e.target.value)}
-                    placeholder="Cauta utilizator..."
+                    placeholder="Search users..."
                     className="pl-9 h-8 w-52 rounded-lg text-xs border-border/70"
                   />
                 </div>
-                <Button type="submit" className="h-8 px-3 rounded-lg text-xs gradient-primary text-white border-0">Cauta</Button>
+                <Button type="submit" className="h-8 px-3 rounded-lg text-xs gradient-primary text-white border-0">Search</Button>
               </form>
             </div>
 
@@ -320,7 +405,7 @@ export default function AdminPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/50 bg-gray-50/30">
-                    {["Utilizator", "Email", "Puncte", "Rol", "Status", "Inscris", "Actiuni"].map(h => (
+                    {["User", "Email", "Points", "Role", "Status", "Joined", "Actions"].map(h => (
                       <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -388,7 +473,7 @@ export default function AdminPage() {
             {usersData && usersData.totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3.5 border-t border-border/50 bg-gray-50/30">
                 <p className="text-xs text-muted-foreground">
-                  Pagina {userPage} din {usersData.totalPages} · {usersData.total} utilizatori
+                  Page {userPage} of {usersData.totalPages} · {usersData.total} users
                 </p>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="h-7 px-2.5 rounded-lg text-xs" onClick={() => setUserPage(p => p - 1)} disabled={userPage === 1}>
@@ -409,7 +494,7 @@ export default function AdminPage() {
             <div className="px-5 py-4 border-b border-border/50 bg-gray-50/50">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <HelpCircle className="h-4 w-4 text-primary" />
-                Intrebari ({questionsData?.total || 0})
+                Questions ({questionsData?.total || 0})
               </h2>
             </div>
             <div className="divide-y divide-border/40">
@@ -446,7 +531,7 @@ export default function AdminPage() {
             </div>
             {questionsData && questionsData.totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3.5 border-t border-border/50 bg-gray-50/30">
-                <p className="text-xs text-muted-foreground">Pagina {questionPage} din {questionsData.totalPages}</p>
+                <p className="text-xs text-muted-foreground">Page {questionPage} of {questionsData.totalPages}</p>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="h-7 px-2.5 rounded-lg text-xs" onClick={() => setQuestionPage(p => p - 1)} disabled={questionPage === 1}>
                     <ChevronLeft className="h-3.5 w-3.5" />
@@ -467,7 +552,7 @@ export default function AdminPage() {
             <div className="bg-white rounded-2xl border border-border/60 shadow-xs overflow-hidden">
               <div className="px-5 py-4 border-b border-border/50 bg-gray-50/50">
                 <h2 className="font-bold text-sm flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" /> Badge-uri active ({badges?.length || 0})
+                  <Star className="h-4 w-4 text-primary" /> Active Badges ({badges?.length || 0})
                 </h2>
               </div>
               <div className="divide-y divide-border/40">
@@ -777,6 +862,85 @@ export default function AdminPage() {
                 </Button>
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* SUGGESTIONS TAB */}
+        <TabsContent value="suggestions">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-sm flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-primary" />
+                Feature Suggestions ({suggestions.length})
+              </h2>
+              <Button variant="outline" size="sm" onClick={fetchSuggestions} className="h-8 rounded-lg text-xs">
+                Refresh
+              </Button>
+            </div>
+
+            {suggestionsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-24 rounded-xl border bg-white animate-pulse" />)}
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div className="bg-white rounded-xl border border-dashed border-border p-12 text-center">
+                <Lightbulb className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="font-semibold text-muted-foreground">No suggestions yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Users can suggest features from the Leaderboard page</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {suggestions.map((s: any) => {
+                  const statusCfg: Record<string, { label: string; color: string }> = {
+                    pending:   { label: "Pending",      color: "bg-amber-50 text-amber-700 border-amber-200" },
+                    reviewing: { label: "Reviewing",    color: "bg-blue-50 text-blue-700 border-blue-200" },
+                    planned:   { label: "Planned",      color: "bg-violet-50 text-violet-700 border-violet-200" },
+                    done:      { label: "Done",         color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                    rejected:  { label: "Not Planned",  color: "bg-gray-50 text-gray-600 border-gray-200" },
+                  };
+                  const cfg = statusCfg[s.status] ?? statusCfg.pending;
+                  return (
+                    <div key={s.id} className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>{cfg.label}</span>
+                            {s.author && (
+                              <span className="text-xs text-muted-foreground">by <span className="font-medium">{s.author.displayName}</span> @{s.author.username}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {formatDistanceToNow(new Date(s.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-foreground">{s.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{s.description}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <select
+                            value={s.status}
+                            onChange={e => updateSuggestionStatus(s.id, e.target.value)}
+                            className="text-xs border border-border/70 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-primary/60"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="reviewing">Reviewing</option>
+                            <option value="planned">Planned</option>
+                            <option value="done">Done</option>
+                            <option value="rejected">Not Planned</option>
+                          </select>
+                          <button
+                            onClick={() => deleteSuggestion(s.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Delete suggestion"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

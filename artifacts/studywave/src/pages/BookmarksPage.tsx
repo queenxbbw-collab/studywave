@@ -36,7 +36,7 @@ const SUBJECT_COLORS: Record<string, string> = {
 };
 
 export default function BookmarksPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const [bookmarks, setBookmarks] = useState<BookmarkedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,9 +52,12 @@ export default function BookmarksPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { navigate("/login"); return; }
     fetchBookmarks();
-  }, [user]);
+  }, [user, authLoading]);
+
+  if (authLoading) return null;
 
   const removeBookmark = async (questionId: number) => {
     await fetch(`/api/bookmarks/${questionId}`, { method: "DELETE", headers: getAuthHeaders() });

@@ -1,6 +1,7 @@
 import { useRoute } from "wouter";
-import { useGetUser, useGetUserQuestions, useGetUserAnswers } from "@workspace/api-client-react";
-import { getGetUserQueryKey, getGetUserQuestionsQueryKey, getGetUserAnswersQueryKey } from "@workspace/api-client-react";
+import { useGetUserQuestions, useGetUserAnswers } from "@workspace/api-client-react";
+import { getGetUserQuestionsQueryKey, getGetUserAnswersQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuestionCard from "@/components/QuestionCard";
@@ -20,17 +21,29 @@ const EMOJI_MAP: Record<string, string> = {
 
 export default function ProfilePage() {
   const [, params] = useRoute("/profile/:id");
-  const userId = parseInt(params?.id || "0");
+  const rawParam = params?.id || "";
+  const numericId = parseInt(rawParam, 10);
+  const isNumeric = !isNaN(numericId) && String(numericId) === rawParam;
+
   const { user: currentUser } = useAuth();
 
-  const { data: profile, isLoading } = useGetUser(userId, {
-    query: { enabled: !!userId, queryKey: getGetUserQueryKey(userId) },
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["user-profile", rawParam],
+    queryFn: async () => {
+      const r = await fetch(`/api/users/${rawParam}`);
+      if (!r.ok) return null;
+      return r.json();
+    },
+    enabled: !!rawParam,
   });
-  const { data: questions } = useGetUserQuestions(userId, {
-    query: { enabled: !!userId, queryKey: getGetUserQuestionsQueryKey(userId) },
+
+  const resolvedId: number = profile?.id ?? (isNumeric ? numericId : 0);
+
+  const { data: questions } = useGetUserQuestions(resolvedId, {
+    query: { enabled: !!resolvedId, queryKey: getGetUserQuestionsQueryKey(resolvedId) },
   });
-  const { data: answers } = useGetUserAnswers(userId, {
-    query: { enabled: !!userId, queryKey: getGetUserAnswersQueryKey(userId) },
+  const { data: answers } = useGetUserAnswers(resolvedId, {
+    query: { enabled: !!resolvedId, queryKey: getGetUserAnswersQueryKey(resolvedId) },
   });
 
   if (isLoading) {
@@ -59,7 +72,7 @@ export default function ProfilePage() {
     );
   }
 
-  const isOwnProfile = currentUser?.id === userId;
+  const isOwnProfile = currentUser?.id === resolvedId;
 
   // Calculate rank/level based on points
   const getLevel = (points: number) => {
@@ -182,11 +195,11 @@ export default function ProfilePage() {
         <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs w-full">
           <TabsTrigger value="questions" className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm">
             <HelpCircle className="h-4 w-4 mr-2" />
-            Intrebari ({questions?.length || 0})
+            Questions ({questions?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="answers" className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm">
             <MessageCircle className="h-4 w-4 mr-2" />
-            Raspunsuri ({answers?.length || 0})
+            Answers ({answers?.length || 0})
           </TabsTrigger>
         </TabsList>
 

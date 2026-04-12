@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 ];
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, isLoading: authLoading, updateUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [previewUrl, setPreviewUrl] = useState(user?.avatarUrl || "");
   const [saving, setSaving] = useState(false);
 
+  if (authLoading) return null;
   if (!user) { navigate("/login"); return null; }
 
   const referralLink = `${window.location.origin}/register?ref=${(user as any).referralCode || ""}`;

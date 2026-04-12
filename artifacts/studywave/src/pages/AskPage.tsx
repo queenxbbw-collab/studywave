@@ -34,7 +34,7 @@ interface DailyLimits {
 }
 
 export default function AskPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [title, setTitle] = useState("");
@@ -103,6 +103,7 @@ export default function AskPage() {
     }
   };
 
+  if (authLoading) return null;
   if (!user) { navigate("/login"); return null; }
 
   const addImageUrl = () => {
