@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: studywave
+    runtime: node
+    buildCommand: pnpm install && BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/studywave run build && pnpm --filter @workspace/api-server run build
+    startCommand: NODE_ENV=production pnpm --filter @workspace/api-server run start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: studywave-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+
+databases:
+  - name: studywave-db
+    databaseName: studywave
+    user: studywave
