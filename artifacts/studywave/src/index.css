@@ -50,6 +50,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: 0 0% 99%;
   --foreground: 222 47% 11%;
   --border: 220 13% 91%;
