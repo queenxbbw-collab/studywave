@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, Plus, X, ImageIcon, AlertCircle, Shield, ShoppingCart, Upload, Loader2 } from "lucide-react";
+import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, X, ImageIcon, AlertCircle, Shield, ShoppingCart, Upload, Loader2 } from "lucide-react";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
 import { useUpload } from "@workspace/object-storage-web";
@@ -47,7 +47,6 @@ export default function AskPage() {
   const [content, setContent] = useState("");
   const [subject, setSubject] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [newUrl, setNewUrl] = useState("");
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
@@ -114,17 +113,9 @@ export default function AskPage() {
     }
   };
 
-  if (authLoading || !user) return null;
+  usePageTitle("Ask a Question");
 
-  const addImageUrl = () => {
-    const trimmed = newUrl.trim();
-    if (!trimmed) return;
-    try { new URL(trimmed); } catch { toast({ title: "Please enter a valid URL", variant: "destructive" }); return; }
-    if (imageUrls.length >= 5) { toast({ title: "Maximum 5 images per question", variant: "destructive" }); return; }
-    if (imageUrls.includes(trimmed)) { toast({ title: "This URL was already added", variant: "destructive" }); return; }
-    setImageUrls([...imageUrls, trimmed]);
-    setNewUrl("");
-  };
+  if (authLoading || !user) return null;
 
   const removeImageUrl = (idx: number) => setImageUrls(imageUrls.filter((_, i) => i !== idx));
 
@@ -326,76 +317,53 @@ export default function AskPage() {
                 )}
 
                 {imageUrls.length < 5 && (
-                  <div className="space-y-2">
-                    {/* Upload from computer */}
-                    <div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                        disabled={isUploading}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className="w-full h-10 rounded-xl border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/4 gap-2 text-sm font-medium"
-                      >
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            Uploading… {progress}%
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4 text-primary" />
-                            Upload from computer
-                          </>
-                        )}
-                      </Button>
-                    </div>
-
-                    {/* OR paste URL */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 border-t border-border/40" />
-                      <span className="text-xs text-muted-foreground font-medium">or paste URL</span>
-                      <div className="flex-1 border-t border-border/40" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newUrl}
-                        onChange={e => setNewUrl(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
-                        placeholder="https://example.com/image.png"
-                        className="h-9 rounded-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm flex-1"
-                      />
-                      <Button type="button" onClick={addImageUrl} variant="outline" size="sm"
-                        className="h-9 px-3 rounded-xl border-border/70 flex-shrink-0 gap-1.5">
-                        <Plus className="h-3.5 w-3.5" /> Add
-                      </Button>
-                    </div>
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      disabled={isUploading}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-full h-10 rounded-xl border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/4 gap-2 text-sm font-medium"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          Uploading… {progress}%
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 text-primary" />
+                          Upload from computer
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground mt-1.5">Max 5 images — JPG, PNG, GIF, WebP supported.</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Zap className="h-4 w-4 text-amber-500" />
-                You earn <span className="font-bold text-foreground mx-1">+5 points</span> on publish
+                <Zap className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                <span>You earn <span className="font-bold text-foreground">+5 points</span> on publish</span>
                 {limits && (
-                  <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
                     {limits.questionsRemaining}/{limits.questionLimit} today
                   </span>
                 )}
               </div>
               <Button
                 type="submit"
-                className="gradient-primary text-white border-0 h-11 px-7 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all gap-2"
+                className="w-full sm:w-auto gradient-primary text-white border-0 h-11 px-7 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all gap-2"
                 disabled={!canSubmit}
               >
                 {isSubmitting ? (
