@@ -2,6 +2,10 @@ import { getToken } from "./auth";
 
 const API_BASE = "/api";
 
+export function getBaseUrl(): string {
+  return API_BASE;
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {

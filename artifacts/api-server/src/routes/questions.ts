@@ -1,11 +1,47 @@
 import { Router } from "express";
 import { db, usersTable, questionsTable, answersTable, questionVotesTable, activityTable } from "@workspace/db";
-import { eq, count, sql, and, desc, asc, ilike, or } from "drizzle-orm";
+import { eq, count, sql, and, desc, asc, ilike, or, gte } from "drizzle-orm";
 import { authenticate, optionalAuthenticate } from "../middlewares/authenticate";
 import { CreateQuestionBody, UpdateQuestionBody, VoteQuestionBody, ListQuestionsQueryParams } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
 
 const router = Router();
+
+// --- Limits ---
+const DAILY_QUESTION_LIMIT = 5;
+const MIN_TITLE_LENGTH = 15;
+const MIN_CONTENT_LENGTH = 50;
+
+function startOfTodayUTC() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function validateCreateQuestion(body: unknown): { error?: string; data?: { title: string; content: string; subject: string; imageUrls: string[] } } {
+  if (!body || typeof body !== "object") return { error: "Invalid request body" };
+  const { title, content, subject, imageUrls } = body as Record<string, unknown>;
+  if (!title || typeof title !== "string" || title.trim().length < MIN_TITLE_LENGTH)
+    return { error: `Title must be at least ${MIN_TITLE_LENGTH} characters` };
+  if (title.trim().length > 200)
+    return { error: "Title must be 200 characters or less" };
+  if (!content || typeof content !== "string" || content.trim().length < MIN_CONTENT_LENGTH)
+    return { error: `Description must be at least ${MIN_CONTENT_LENGTH} characters` };
+  if (content.trim().length > 10000)
+    return { error: "Description must be 10,000 characters or less" };
+  if (!subject || typeof subject !== "string" || subject.trim().length === 0)
+    return { error: "Subject is required" };
+  const urls: string[] = [];
+  if (imageUrls !== undefined) {
+    if (!Array.isArray(imageUrls)) return { error: "imageUrls must be an array" };
+    if (imageUrls.length > 5) return { error: "Maximum 5 image URLs allowed" };
+    for (const u of imageUrls) {
+      if (typeof u !== "string") return { error: "Each image URL must be a string" };
+      try { new URL(u); } catch { return { error: `Invalid URL: ${u}` }; }
+      urls.push(u);
+    }
+  }
+  return { data: { title: title.trim(), content: content.trim(), subject: subject.trim(), imageUrls: urls } };
+}
 
 router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> => {
   const params = ListQuestionsQueryParams.safeParse(req.query);
@@ -14,13 +50,11 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
   const subject = params.success ? params.data.subject : undefined;
   const search = params.success ? params.data.search : undefined;
   const sort = params.success ? params.data.sort : "newest";
-
   const offset = (page - 1) * limit;
 
   const conditions = [];
   if (subject && subject !== "all") conditions.push(eq(questionsTable.subject, subject));
   if (search) conditions.push(or(ilike(questionsTable.title, `%${search}%`), ilike(questionsTable.content, `%${search}%`)));
-
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   let orderClause;
@@ -33,14 +67,7 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
   const total = Number(totalRow.count);
 
   const questions = await db
-    .select({
-      q: questionsTable,
-      author: {
-        username: usersTable.username,
-        displayName: usersTable.displayName,
-        avatarUrl: usersTable.avatarUrl,
-      },
-    })
+    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
     .where(whereClause)
@@ -64,6 +91,7 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
       title: q.title,
       content: q.content,
       subject: q.subject,
+      imageUrls: JSON.parse(q.imageUrls || "[]"),
       authorId: q.authorId,
       authorUsername: author.username,
       authorDisplayName: author.displayName,
@@ -84,25 +112,35 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
 });
 
 router.post("/questions", authenticate, async (req, res): Promise<void> => {
-  const parsed = CreateQuestionBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+  const validation = validateCreateQuestion(req.body);
+  if (validation.error) {
+    res.status(400).json({ error: validation.error });
     return;
   }
+  const { imageUrls, ...rest } = validation.data!;
 
+  // --- Daily rate limit ---
+  const todayStart = startOfTodayUTC();
+  const [todayCount] = await db
+    .select({ cnt: count() })
+    .from(questionsTable)
+    .where(and(
+      eq(questionsTable.authorId, req.userId!),
+      gte(questionsTable.createdAt, todayStart),
+    ));
+  if (Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
+    res.status(429).json({ error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Come back tomorrow!` });
+    return;
+  }
   const [question] = await db.insert(questionsTable).values({
-    ...parsed.data,
+    ...rest,
+    imageUrls: JSON.stringify(imageUrls || []),
     authorId: req.userId!,
   }).returning();
 
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
 
-  await db.insert(activityTable).values({
-    type: "question_asked",
-    userId: req.userId!,
-    questionId: question.id,
-  });
-
+  await db.insert(activityTable).values({ type: "question_asked", userId: req.userId!, questionId: question.id });
   await db.update(usersTable).set({ points: sql`${usersTable.points} + 5` }).where(eq(usersTable.id, req.userId!));
   await checkAndAwardBadges(req.userId!);
 
@@ -111,6 +149,7 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
     title: question.title,
     content: question.content,
     subject: question.subject,
+    imageUrls: imageUrls || [],
     authorId: question.authorId,
     authorUsername: author.username,
     authorDisplayName: author.displayName,
@@ -129,34 +168,15 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   const [questionRow] = await db
-    .select({
-      q: questionsTable,
-      author: {
-        username: usersTable.username,
-        displayName: usersTable.displayName,
-        avatarUrl: usersTable.avatarUrl,
-        points: usersTable.points,
-      },
-    })
+    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points } })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
     .where(eq(questionsTable.id, id));
 
-  if (!questionRow) {
-    res.status(404).json({ error: "Question not found" });
-    return;
-  }
+  if (!questionRow) { res.status(404).json({ error: "Question not found" }); return; }
 
   const answers = await db
-    .select({
-      a: answersTable,
-      author: {
-        username: usersTable.username,
-        displayName: usersTable.displayName,
-        avatarUrl: usersTable.avatarUrl,
-        points: usersTable.points,
-      },
-    })
+    .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points } })
     .from(answersTable)
     .innerJoin(usersTable, eq(answersTable.authorId, usersTable.id))
     .where(eq(answersTable.questionId, id))
@@ -168,6 +188,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     title: q.title,
     content: q.content,
     subject: q.subject,
+    imageUrls: JSON.parse(q.imageUrls || "[]"),
     authorId: q.authorId,
     authorUsername: author.username,
     authorDisplayName: author.displayName,
@@ -200,91 +221,57 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
 router.patch("/questions/:id", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const parsed = UpdateQuestionBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, id));
-  if (!question) {
-    res.status(404).json({ error: "Question not found" });
-    return;
-  }
-
-  if (question.authorId !== req.userId && req.userRole !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (!question) { res.status(404).json({ error: "Question not found" }); return; }
+  if (question.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
   const [updated] = await db.update(questionsTable).set(parsed.data).where(eq(questionsTable.id, id)).returning();
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));
-
   const [answerCount] = await db.select({ cnt: count() }).from(answersTable).where(eq(answersTable.questionId, id));
 
   res.json({
-    id: updated.id,
-    title: updated.title,
-    content: updated.content,
-    subject: updated.subject,
-    authorId: updated.authorId,
-    authorUsername: author.username,
-    authorDisplayName: author.displayName,
-    authorAvatarUrl: author.avatarUrl,
-    upvotes: updated.upvotes,
-    downvotes: updated.downvotes,
-    answerCount: Number(answerCount.cnt),
-    hasAwardedAnswer: updated.hasAwardedAnswer,
-    isSolved: updated.isSolved,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
+    id: updated.id, title: updated.title, content: updated.content, subject: updated.subject,
+    imageUrls: JSON.parse(updated.imageUrls || "[]"),
+    authorId: updated.authorId, authorUsername: author.username, authorDisplayName: author.displayName,
+    authorAvatarUrl: author.avatarUrl, upvotes: updated.upvotes, downvotes: updated.downvotes,
+    answerCount: Number(answerCount.cnt), hasAwardedAnswer: updated.hasAwardedAnswer,
+    isSolved: updated.isSolved, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString(),
   });
 });
 
 router.delete("/questions/:id", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, id));
-  if (!question) {
-    res.status(404).json({ error: "Question not found" });
-    return;
-  }
-
-  if (question.authorId !== req.userId && req.userRole !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (!question) { res.status(404).json({ error: "Question not found" }); return; }
+  if (question.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
   await db.delete(questionVotesTable).where(eq(questionVotesTable.questionId, id));
   await db.delete(answersTable).where(eq(answersTable.questionId, id));
   await db.delete(activityTable).where(eq(activityTable.questionId, id));
   await db.delete(questionsTable).where(eq(questionsTable.id, id));
-
   res.sendStatus(204);
 });
 
 router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const parsed = VoteQuestionBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { type } = parsed.data;
-  if (type !== "up" && type !== "down") {
-    res.status(400).json({ error: "Vote type must be 'up' or 'down'" });
-    return;
-  }
+  if (type !== "up" && type !== "down") { res.status(400).json({ error: "Vote type must be 'up' or 'down'" }); return; }
 
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, id));
-  if (!question) {
-    res.status(404).json({ error: "Question not found" });
+  if (!question) { res.status(404).json({ error: "Question not found" }); return; }
+
+  // Block voting on own question
+  if (question.authorId === req.userId) {
+    res.status(403).json({ error: "You cannot vote on your own question" });
     return;
   }
 
-  const [existingVote] = await db.select()
-    .from(questionVotesTable)
-    .where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId!)));
+  const [existingVote] = await db.select().from(questionVotesTable).where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId!)));
 
   if (existingVote) {
     if (existingVote.voteType === type) {
@@ -293,11 +280,8 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
       else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} - 1` }).where(eq(questionsTable.id, id));
     } else {
       await db.update(questionVotesTable).set({ voteType: type }).where(eq(questionVotesTable.id, existingVote.id));
-      if (type === "up") {
-        await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1`, downvotes: sql`${questionsTable.downvotes} - 1` }).where(eq(questionsTable.id, id));
-      } else {
-        await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1`, upvotes: sql`${questionsTable.upvotes} - 1` }).where(eq(questionsTable.id, id));
-      }
+      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1`, downvotes: sql`${questionsTable.downvotes} - 1` }).where(eq(questionsTable.id, id));
+      else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1`, upvotes: sql`${questionsTable.upvotes} - 1` }).where(eq(questionsTable.id, id));
     }
   } else {
     await db.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: type });
@@ -305,30 +289,35 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
     else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1` }).where(eq(questionsTable.id, id));
   }
 
-  const [updated] = await db
-    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
-    .from(questionsTable)
-    .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
-    .where(eq(questionsTable.id, id));
-
+  const [updated] = await db.select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
+    .from(questionsTable).innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id)).where(eq(questionsTable.id, id));
   const [answerCount] = await db.select({ cnt: count() }).from(answersTable).where(eq(answersTable.questionId, id));
 
   res.json({
-    id: updated.q.id,
-    title: updated.q.title,
-    content: updated.q.content,
-    subject: updated.q.subject,
-    authorId: updated.q.authorId,
-    authorUsername: updated.author.username,
-    authorDisplayName: updated.author.displayName,
-    authorAvatarUrl: updated.author.avatarUrl,
-    upvotes: updated.q.upvotes,
-    downvotes: updated.q.downvotes,
-    answerCount: Number(answerCount.cnt),
-    hasAwardedAnswer: updated.q.hasAwardedAnswer,
-    isSolved: updated.q.isSolved,
-    createdAt: updated.q.createdAt.toISOString(),
-    updatedAt: updated.q.updatedAt.toISOString(),
+    id: updated.q.id, title: updated.q.title, content: updated.q.content, subject: updated.q.subject,
+    imageUrls: JSON.parse(updated.q.imageUrls || "[]"),
+    authorId: updated.q.authorId, authorUsername: updated.author.username, authorDisplayName: updated.author.displayName,
+    authorAvatarUrl: updated.author.avatarUrl, upvotes: updated.q.upvotes, downvotes: updated.q.downvotes,
+    answerCount: Number(answerCount.cnt), hasAwardedAnswer: updated.q.hasAwardedAnswer,
+    isSolved: updated.q.isSolved, createdAt: updated.q.createdAt.toISOString(), updatedAt: updated.q.updatedAt.toISOString(),
+  });
+});
+
+// Get current user's daily usage limits
+router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
+  const todayStart = startOfTodayUTC();
+  const [qCount] = await db.select({ cnt: count() }).from(questionsTable)
+    .where(and(eq(questionsTable.authorId, req.userId!), gte(questionsTable.createdAt, todayStart)));
+  const [aCount] = await db.select({ cnt: count() }).from(answersTable)
+    .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
+
+  res.json({
+    questionsToday: Number(qCount.cnt),
+    questionLimit: DAILY_QUESTION_LIMIT,
+    questionsRemaining: Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt)),
+    answersToday: Number(aCount.cnt),
+    answerLimit: 15,
+    answersRemaining: Math.max(0, 15 - Number(aCount.cnt)),
   });
 });
 

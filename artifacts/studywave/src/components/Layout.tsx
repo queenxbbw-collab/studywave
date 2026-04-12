@@ -6,17 +6,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, Bell, ChevronDown, Sparkles, Zap
+  Plus, Shield, Menu, X, ChevronDown, Sparkles, Zap
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/", icon: Home, label: "Acasa" },
-  { href: "/questions", icon: HelpCircle, label: "Intrebari" },
-  { href: "/leaderboard", icon: Trophy, label: "Clasament" },
-  { href: "/badges", icon: Star, label: "Badge-uri" },
+  { href: "/", icon: Home, label: "Home" },
+  { href: "/questions", icon: HelpCircle, label: "Questions" },
+  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+  { href: "/badges", icon: Star, label: "Badges" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +25,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
       <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
@@ -68,7 +66,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/ask" className="hidden sm:block">
                     <Button size="sm" className="gap-2 shadow-sm gradient-primary text-white border-0 h-8 px-3.5 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                       <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-                      Pune intrebare
+                      Ask a Question
                     </Button>
                   </Link>
 
@@ -102,16 +100,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </div>
                         <div className="mt-2.5 flex items-center gap-2 p-2 rounded-lg bg-primary/6 border border-primary/10">
                           <Zap className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-xs font-medium text-primary">{user.points?.toLocaleString()} puncte acumulate</span>
+                          <span className="text-xs font-medium text-primary">{user.points?.toLocaleString()} points earned</span>
                         </div>
                       </div>
                       <DropdownMenuSeparator className="my-1" />
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
-                        <Link href={`/profile/${user.id}`}>Profil public</Link>
+                        <Link href={`/profile/${user.id}`}>Public Profile</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/settings">
-                          <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Setari cont
+                          <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Account Settings
                         </Link>
                       </DropdownMenuItem>
                       {user.role === "admin" && (
@@ -120,7 +118,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                           <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                             <Link href="/admin">
                               <Shield className="h-3.5 w-3.5 mr-2 text-primary" />
-                              <span className="text-primary font-medium">Panou Admin</span>
+                              <span className="text-primary font-medium">Admin Panel</span>
                             </Link>
                           </DropdownMenuItem>
                         </>
@@ -130,7 +128,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         onClick={logout}
                         className="rounded-lg py-2 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                       >
-                        <LogOut className="h-3.5 w-3.5 mr-2" /> Deconectare
+                        <LogOut className="h-3.5 w-3.5 mr-2" /> Sign Out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -139,12 +137,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <>
                   <Link href="/login">
                     <Button variant="ghost" size="sm" className="text-sm font-medium h-8 px-3.5">
-                      Autentificare
+                      Sign In
                     </Button>
                   </Link>
                   <Link href="/register">
                     <Button size="sm" className="gradient-primary text-white border-0 h-8 px-4 rounded-lg font-semibold shadow-sm hover:opacity-90 transition-opacity">
-                      Inregistrare gratuita
+                      Sign Up Free
                     </Button>
                   </Link>
                 </>
@@ -178,7 +176,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {user && (
                 <Link href="/ask" onClick={() => setMobileOpen(false)}>
                   <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/8">
-                    <Plus className="h-4 w-4" /> Pune o intrebare
+                    <Plus className="h-4 w-4" /> Ask a Question
                   </button>
                 </Link>
               )}
@@ -198,9 +196,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <BookOpen className="h-3.5 w-3.5 text-white" />
               </div>
               <span className="font-bold text-sm text-foreground">StudyWave</span>
-              <span className="text-muted-foreground text-sm">· Invata mai bine, impreuna</span>
+              <span className="text-muted-foreground text-sm">· Learn better, together</span>
             </div>
-            <p className="text-xs text-muted-foreground">© 2026 StudyWave. Toate drepturile rezervate.</p>
+            <p className="text-xs text-muted-foreground">© 2026 StudyWave. All rights reserved.</p>
           </div>
         </div>
       </footer>

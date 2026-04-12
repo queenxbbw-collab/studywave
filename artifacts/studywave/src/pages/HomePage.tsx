@@ -7,8 +7,7 @@ import QuestionCard from "@/components/QuestionCard";
 import { useAuth } from "@/lib/auth";
 import {
   Search, Plus, Users, HelpCircle, MessageCircle, CheckCircle2,
-  TrendingUp, Activity, ArrowRight, Sparkles, BookOpen, Award,
-  Star, Zap, Shield
+  TrendingUp, Activity, ArrowRight, Sparkles, Award, Star, Zap, Shield
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -21,9 +20,9 @@ const ACTIVITY_ICONS: Record<string, React.FC<{className?: string}>> = {
 };
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  question_asked: "a pus o intrebare",
-  answer_posted: "a raspuns",
-  answer_awarded: "a primit o fundita",
+  question_asked: "asked a question",
+  answer_posted: "posted an answer",
+  answer_awarded: "received a best answer award",
 };
 
 const ACTIVITY_COLORS: Record<string, string> = {
@@ -58,37 +57,35 @@ export default function HomePage() {
       <section className="relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 gradient-hero dot-bg"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80 pointer-events-none"></div>
-        {/* Decorative blobs */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/6 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="max-w-3xl mx-auto text-center">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 text-primary text-sm font-semibold mb-6 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              Platforma #1 de invatare colaborativa
+              The #1 collaborative learning platform
             </div>
 
             <h1 className="text-5xl sm:text-6xl font-extrabold text-foreground tracking-tight mb-6 leading-[1.1]">
-              Invata mai bine,{" "}
-              <span className="text-gradient">impreuna</span>
+              Learn smarter,{" "}
+              <span className="text-gradient">together</span>
             </h1>
 
             <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-10">
-              Pune intrebari dificile, primeste raspunsuri de calitate, acumuleaza puncte si urca in clasament pe StudyWave — platforma internationala pentru studenti ambitiosi.
+              Ask tough questions, get quality answers, earn points and climb the leaderboard on StudyWave — the international Q&A platform for ambitious students worldwide.
             </p>
 
             {user ? (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link href="/ask">
                   <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
-                    <Plus className="h-5 w-5" /> Pune o intrebare
+                    <Plus className="h-5 w-5" /> Ask a Question
                   </Button>
                 </Link>
                 <Link href="/questions">
                   <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base gap-2 border-border/80">
-                    Exploreaza intrebarile <ArrowRight className="h-4 w-4" />
+                    Browse Questions <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -96,33 +93,32 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link href="/register">
                   <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
-                    <Sparkles className="h-5 w-5" /> Incepe gratuit
+                    <Sparkles className="h-5 w-5" /> Get Started Free
                   </Button>
                 </Link>
                 <Link href="/login">
                   <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base border-border/80">
-                    Am deja cont
+                    Sign In
                   </Button>
                 </Link>
               </div>
             )}
 
-            {/* Social proof */}
             {stats && (
-              <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-primary" />
-                  <strong className="text-foreground">{stats.totalUsers.toLocaleString()}</strong> studenti
+                  <strong className="text-foreground">{stats.totalUsers.toLocaleString()}</strong> students
                 </span>
                 <span className="w-1 h-1 rounded-full bg-border"></span>
                 <span className="flex items-center gap-1.5">
                   <HelpCircle className="h-4 w-4 text-primary" />
-                  <strong className="text-foreground">{stats.totalQuestions.toLocaleString()}</strong> intrebari
+                  <strong className="text-foreground">{stats.totalQuestions.toLocaleString()}</strong> questions
                 </span>
                 <span className="w-1 h-1 rounded-full bg-border"></span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <strong className="text-foreground">{stats.solvedQuestions.toLocaleString()}</strong> rezolvate
+                  <strong className="text-foreground">{stats.solvedQuestions.toLocaleString()}</strong> solved
                 </span>
               </div>
             )}
@@ -136,10 +132,10 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Users, label: "Utilizatori activi", value: stats.totalUsers, color: "text-blue-600", bg: "bg-blue-50" },
-                { icon: HelpCircle, label: "Intrebari publicate", value: stats.totalQuestions, color: "text-violet-600", bg: "bg-violet-50" },
-                { icon: MessageCircle, label: "Raspunsuri oferite", value: stats.totalAnswers, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { icon: Award, label: "Funditze acordate", value: stats.totalAwardedAnswers || 0, color: "text-amber-600", bg: "bg-amber-50" },
+                { icon: Users, label: "Active Students", value: stats.totalUsers, color: "text-blue-600", bg: "bg-blue-50" },
+                { icon: HelpCircle, label: "Questions Asked", value: stats.totalQuestions, color: "text-violet-600", bg: "bg-violet-50" },
+                { icon: MessageCircle, label: "Answers Given", value: stats.totalAnswers, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { icon: Award, label: "Best Answers Awarded", value: stats.totalAwardedAnswers || 0, color: "text-amber-600", bg: "bg-amber-50" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-gray-50/50">
                   <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center flex-shrink-0`}>
@@ -168,12 +164,12 @@ export default function HomePage() {
                 <Input
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
-                  placeholder="Cauta intrebari, subiecte, autori..."
+                  placeholder="Search questions, topics, authors..."
                   className="pl-10 h-10 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
                 />
               </div>
               <Button type="submit" className="h-10 px-5 rounded-xl gradient-primary text-white border-0 font-semibold shadow-sm">
-                Cauta
+                Search
               </Button>
             </form>
 
@@ -189,7 +185,7 @@ export default function HomePage() {
                       : "bg-white text-muted-foreground border-border/70 hover:border-primary/40 hover:text-primary"
                   }`}
                 >
-                  {s === "all" ? "Toate" : s}
+                  {s === "all" ? "All" : s}
                 </button>
               ))}
             </div>
@@ -198,16 +194,16 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground">
                 {search ? (
-                  <span>Rezultate pentru <span className="text-primary">"{search}"</span></span>
+                  <span>Results for <span className="text-primary">"{search}"</span></span>
                 ) : subject !== "all" ? (
-                  <span>Intrebari · <span className="text-primary">{subject}</span></span>
+                  <span>Questions · <span className="text-primary">{subject}</span></span>
                 ) : (
-                  "Intrebari recente"
+                  "Recent Questions"
                 )}
               </h2>
               <Link href="/questions">
                 <button className="text-xs font-semibold text-primary flex items-center gap-1 hover:gap-2 transition-all">
-                  Toate intrebarile <ArrowRight className="h-3.5 w-3.5" />
+                  All questions <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </Link>
             </div>
@@ -220,10 +216,7 @@ export default function HomePage() {
                     <div className="flex gap-4">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex-shrink-0"></div>
                       <div className="flex-1 space-y-2">
-                        <div className="flex gap-2">
-                          <div className="h-5 bg-gray-100 rounded-full w-20"></div>
-                          <div className="h-5 bg-gray-100 rounded-full w-16"></div>
-                        </div>
+                        <div className="flex gap-2"><div className="h-5 bg-gray-100 rounded-full w-20"></div><div className="h-5 bg-gray-100 rounded-full w-16"></div></div>
                         <div className="h-5 bg-gray-100 rounded w-4/5"></div>
                         <div className="h-4 bg-gray-100 rounded w-3/5"></div>
                       </div>
@@ -236,12 +229,12 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <HelpCircle className="h-7 w-7 text-muted-foreground/60" />
                 </div>
-                <p className="text-base font-semibold text-foreground">Nicio intrebare gasita</p>
-                <p className="text-sm text-muted-foreground mt-1">Fii primul care pune o intrebare!</p>
+                <p className="text-base font-semibold text-foreground">No questions found</p>
+                <p className="text-sm text-muted-foreground mt-1">Be the first to ask one!</p>
                 {user && (
                   <Link href="/ask" className="inline-block mt-4">
                     <Button size="sm" className="gradient-primary text-white border-0">
-                      <Plus className="h-4 w-4 mr-2" /> Pune intrebare
+                      <Plus className="h-4 w-4 mr-2" /> Ask a Question
                     </Button>
                   </Link>
                 )}
@@ -257,7 +250,6 @@ export default function HomePage() {
 
           {/* Sidebar */}
           <div className="space-y-5">
-            {/* CTA if not logged in */}
             {!user && (
               <div className="bg-white rounded-xl border border-border/60 p-5 relative overflow-hidden">
                 <div className="absolute inset-0 gradient-hero opacity-60"></div>
@@ -265,13 +257,13 @@ export default function HomePage() {
                   <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center mb-3 shadow-sm">
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="font-bold text-foreground mb-1">Alatura-te comunitatii</h3>
+                  <h3 className="font-bold text-foreground mb-1">Join the community</h3>
                   <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                    Inregistreaza-te gratuit si incepe sa inveti alaturi de mii de studenti.
+                    Sign up free and start learning alongside thousands of students worldwide.
                   </p>
                   <Link href="/register">
                     <Button className="w-full gradient-primary text-white border-0 h-9 rounded-lg font-semibold text-sm">
-                      Creeaza cont gratuit
+                      Create Free Account
                     </Button>
                   </Link>
                 </div>
@@ -283,12 +275,12 @@ export default function HomePage() {
               <div className="px-4 py-3.5 border-b border-border/50 flex items-center justify-between">
                 <h3 className="font-bold text-sm flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  Activitate recenta
+                  Live Activity
                 </h3>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></span>
               </div>
               <div className="divide-y divide-border/40">
-                {activity?.slice(0, 7).map((a, i) => {
+                {activity?.slice(0, 7).map((a) => {
                   const Icon = ACTIVITY_ICONS[a.type] || HelpCircle;
                   const iconCls = ACTIVITY_COLORS[a.type] || "bg-gray-100 text-gray-600";
                   return (
@@ -299,7 +291,7 @@ export default function HomePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-foreground leading-snug">
                           <span className="font-semibold">{a.displayName}</span>{" "}
-                          <span className="text-muted-foreground">{ACTIVITY_LABELS[a.type] || "a fost activ"}</span>
+                          <span className="text-muted-foreground">{ACTIVITY_LABELS[a.type] || "was active"}</span>
                         </p>
                         {a.questionTitle && (
                           <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">{a.questionTitle}</p>
@@ -319,7 +311,7 @@ export default function HomePage() {
               <div className="px-4 py-3.5 border-b border-border/50">
                 <h3 className="font-bold text-sm flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Subiecte populare
+                  Popular Subjects
                 </h3>
               </div>
               <div className="p-3 space-y-1">
@@ -330,28 +322,24 @@ export default function HomePage() {
                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="w-5 h-5 rounded-md bg-primary/8 text-primary text-xs font-bold flex items-center justify-center">
-                        {i + 1}
-                      </span>
+                      <span className="w-5 h-5 rounded-md bg-primary/8 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
                       <span className="text-sm font-medium text-foreground/80 group-hover:text-primary transition-colors">{s.subject}</span>
                     </div>
-                    <span className="text-xs font-semibold text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">
-                      {s.count}
-                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">{s.count}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Feature pills */}
+            {/* Why StudyWave */}
             <div className="bg-white rounded-xl border border-border/60 p-4">
-              <h3 className="font-bold text-sm mb-3">De ce StudyWave?</h3>
+              <h3 className="font-bold text-sm mb-3">Why StudyWave?</h3>
               <div className="space-y-2.5">
                 {[
-                  { icon: Zap, text: "Sistem de puncte si recompense", color: "text-amber-500 bg-amber-50" },
-                  { icon: Award, text: "Fundita de aur pentru cel mai bun raspuns", color: "text-rose-500 bg-rose-50" },
-                  { icon: Shield, text: "Moderat de o echipa dedicata", color: "text-blue-500 bg-blue-50" },
-                  { icon: Star, text: "Badge-uri si titluri exclusive", color: "text-violet-500 bg-violet-50" },
+                  { icon: Zap, text: "Earn points for every contribution", color: "text-amber-500 bg-amber-50" },
+                  { icon: Award, text: "Gold Ribbon for the best answer", color: "text-rose-500 bg-rose-50" },
+                  { icon: Shield, text: "Moderated by a dedicated team", color: "text-blue-500 bg-blue-50" },
+                  { icon: Star, text: "Exclusive badges & titles", color: "text-violet-500 bg-violet-50" },
                 ].map(item => (
                   <div key={item.text} className="flex items-center gap-2.5">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>

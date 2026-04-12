@@ -11,24 +11,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 import {
-  ThumbsUp, ThumbsDown, Award, CheckCircle2, Trash2, ChevronLeft,
-  MessageCircle, ArrowUp, ArrowDown, Sparkles, Share2, BookOpen, Clock, Zap
+  Award, CheckCircle2, Trash2, ChevronLeft,
+  MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
+const MIN_ANSWER = 30;
+
 const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
-  Mathematics:       { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
-  Physics:           { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
-  Chemistry:         { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
-  Biology:           { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
-  History:           { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
-  Geography:         { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
-  Literature:        { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
-  "Computer Science":{ bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
-  Economics:         { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
-  Languages:         { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
-  Other:             { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
+  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
+  Physics:            { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
+  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
+  Biology:            { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
+  History:            { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
+  Geography:          { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
+  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
+  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
+  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
+  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
+  Other:              { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
 };
 
 export default function QuestionDetailPage() {
@@ -39,6 +41,7 @@ export default function QuestionDetailPage() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [answerContent, setAnswerContent] = useState("");
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) },
@@ -54,59 +57,40 @@ export default function QuestionDetailPage() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetQuestionQueryKey(questionId) });
 
   const handleVoteQuestion = (type: string) => {
-    if (!user) { toast({ title: "Autentificare necesara", variant: "destructive" }); return; }
-    voteQuestion.mutate({ id: questionId, data: { type } }, {
-      onSuccess: invalidate,
-      onError: e => toast({ title: e.message, variant: "destructive" }),
-    });
+    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    voteQuestion.mutate({ id: questionId, data: { type } }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleVoteAnswer = (answerId: number, type: string) => {
-    if (!user) { toast({ title: "Autentificare necesara", variant: "destructive" }); return; }
-    voteAnswer.mutate({ id: answerId, data: { type } }, {
-      onSuccess: invalidate,
-      onError: e => toast({ title: e.message, variant: "destructive" }),
-    });
+    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    voteAnswer.mutate({ id: answerId, data: { type } }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleAwardAnswer = (answerId: number) => {
     awardAnswer.mutate({ id: answerId }, {
-      onSuccess: () => {
-        invalidate();
-        toast({ title: "Fundita de aur acordata! +50 puncte pentru respondent." });
-      },
-      onError: e => toast({ title: e.message, variant: "destructive" }),
+      onSuccess: () => { invalidate(); toast({ title: "Gold Ribbon awarded! The respondent earned +50 points." }); },
+      onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
     });
   };
 
   const handleSubmitAnswer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answerContent.trim()) return;
-    if (!user) { toast({ title: "Autentificare necesara", variant: "destructive" }); return; }
+    if (!answerContent.trim() || answerContent.trim().length < MIN_ANSWER) return;
+    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
     createAnswer.mutate({ data: { questionId, content: answerContent } }, {
-      onSuccess: () => {
-        setAnswerContent("");
-        invalidate();
-        toast({ title: "Raspuns adaugat! +10 puncte" });
-      },
-      onError: e => toast({ title: e.message, variant: "destructive" }),
+      onSuccess: () => { setAnswerContent(""); invalidate(); toast({ title: "Answer posted! +10 points" }); },
+      onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
     });
   };
 
   const handleDeleteQuestion = () => {
-    if (!confirm("Stergi aceasta intrebare?")) return;
-    deleteQuestion.mutate({ id: questionId }, {
-      onSuccess: () => navigate("/questions"),
-      onError: e => toast({ title: e.message, variant: "destructive" }),
-    });
+    if (!confirm("Delete this question?")) return;
+    deleteQuestion.mutate({ id: questionId }, { onSuccess: () => navigate("/questions"), onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleDeleteAnswer = (answerId: number) => {
-    if (!confirm("Stergi acest raspuns?")) return;
-    deleteAnswer.mutate({ id: answerId }, {
-      onSuccess: invalidate,
-      onError: e => toast({ title: e.message, variant: "destructive" }),
-    });
+    if (!confirm("Delete this answer?")) return;
+    deleteAnswer.mutate({ id: answerId }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   if (isLoading) {
@@ -130,8 +114,8 @@ export default function QuestionDetailPage() {
         <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <BookOpen className="h-7 w-7 text-muted-foreground/50" />
         </div>
-        <p className="text-base font-semibold">Intrebarea nu a fost gasita</p>
-        <Link href="/questions"><Button className="mt-4" variant="outline">Inapoi la intrebari</Button></Link>
+        <p className="text-base font-semibold">Question not found</p>
+        <Link href="/questions"><Button className="mt-4" variant="outline">Back to Questions</Button></Link>
       </div>
     );
   }
@@ -139,13 +123,19 @@ export default function QuestionDetailPage() {
   const isQuestionAuthor = user?.id === question.authorId;
   const subjectStyle = SUBJECT_CONFIG[question.subject] || SUBJECT_CONFIG["Other"];
   const score = question.upvotes - question.downvotes;
+  const imageUrls: string[] = Array.isArray((question as any).imageUrls) ? (question as any).imageUrls : [];
 
-  // Sort: awarded answer first, then by score
   const sortedAnswers = [...(question.answers || [])].sort((a, b) => {
     if (a.isAwarded && !b.isAwarded) return -1;
     if (!a.isAwarded && b.isAwarded) return 1;
     return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
   });
+
+  const answerTrimmed = answerContent.trim();
+  const answerOk = answerTrimmed.length >= MIN_ANSWER;
+
+  // Check if user already answered
+  const alreadyAnswered = user ? sortedAnswers.some(a => a.authorId === user.id) : false;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -153,7 +143,7 @@ export default function QuestionDetailPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link href="/questions">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="h-4 w-4" /> Intrebari
+            <ChevronLeft className="h-4 w-4" /> Questions
           </button>
         </Link>
         <span className="text-muted-foreground/40">/</span>
@@ -161,12 +151,10 @@ export default function QuestionDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
-        {/* Main column */}
         <div className="space-y-5">
           {/* Question card */}
           <div className="bg-white rounded-xl border border-border/60 overflow-hidden shadow-xs">
             <div className="p-6">
-              {/* Tags */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${subjectStyle.bg} ${subjectStyle.text}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${subjectStyle.dot}`}></span>
@@ -174,53 +162,70 @@ export default function QuestionDetailPage() {
                 </span>
                 {question.isSolved && (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    <CheckCircle2 className="h-3 w-3" /> Rezolvata
+                    <CheckCircle2 className="h-3 w-3" /> Solved
                   </span>
                 )}
               </div>
 
-              {/* Title */}
               <h1 className="text-xl sm:text-2xl font-extrabold text-foreground leading-tight mb-4 tracking-tight">
                 {question.title}
               </h1>
 
-              {/* Content */}
               <div className="prose prose-sm max-w-none text-foreground/85 leading-relaxed whitespace-pre-wrap">
                 {question.content}
               </div>
+
+              {/* Images */}
+              {imageUrls.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-border/40">
+                  <div className="flex items-center gap-1.5 mb-3 text-xs font-medium text-muted-foreground">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Attached images ({imageUrls.length})
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {imageUrls.map((url, idx) =>
+                      imageErrors.has(idx) ? null : (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-border/60 hover:border-primary/40 transition-colors shadow-xs group">
+                          <img
+                            src={url}
+                            alt={`Image ${idx + 1}`}
+                            className="max-h-56 max-w-xs object-contain bg-gray-50 group-hover:opacity-90 transition-opacity"
+                            onError={() => setImageErrors(prev => new Set([...prev, idx]))}
+                          />
+                        </a>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60 border-t border-border/50">
-              <div className="flex items-center gap-3">
-                {/* Vote buttons */}
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1 bg-white rounded-lg border border-border/60 p-1 shadow-xs">
                   <button
                     onClick={() => handleVoteQuestion("up")}
-                    className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground"
-                    title="Vot pozitiv"
-                  >
+                    disabled={isQuestionAuthor}
+                    title={isQuestionAuthor ? "You cannot vote on your own question" : "Upvote"}
+                    className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                     <ArrowUp className="h-4 w-4" />
                   </button>
-                  <span className={`px-2 text-sm font-bold ${score > 0 ? "text-primary" : score < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                    {score}
-                  </span>
+                  <span className={`px-2 text-sm font-bold ${score > 0 ? "text-primary" : score < 0 ? "text-red-500" : "text-muted-foreground"}`}>{score}</span>
                   <button
                     onClick={() => handleVoteQuestion("down")}
-                    className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground"
-                    title="Vot negativ"
-                  >
+                    disabled={isQuestionAuthor}
+                    title={isQuestionAuthor ? "You cannot vote on your own question" : "Downvote"}
+                    className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                     <ArrowDown className="h-4 w-4" />
                   </button>
                 </div>
 
                 <Link href={`/profile/${question.authorId}`}>
-                  <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={question.authorAvatarUrl || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                        {question.authorDisplayName.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{question.authorDisplayName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-xs font-semibold text-foreground">{question.authorDisplayName}</p>
@@ -236,11 +241,7 @@ export default function QuestionDetailPage() {
               </div>
 
               {(isQuestionAuthor || user?.role === "admin") && (
-                <button
-                  onClick={handleDeleteQuestion}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                  title="Sterge intrebarea"
-                >
+                <button onClick={handleDeleteQuestion} className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
@@ -253,78 +254,66 @@ export default function QuestionDetailPage() {
               <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
                 <MessageCircle className="h-3.5 w-3.5 text-primary" />
               </div>
-              {sortedAnswers.length} {sortedAnswers.length === 1 ? "Raspuns" : "Raspunsuri"}
+              {sortedAnswers.length} {sortedAnswers.length === 1 ? "Answer" : "Answers"}
             </h2>
           </div>
 
-          {/* Answers list */}
           {sortedAnswers.length === 0 ? (
             <div className="bg-white rounded-xl border border-dashed border-border p-12 text-center">
               <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <MessageCircle className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <p className="font-semibold text-foreground/70">Nu exista inca raspunsuri</p>
-              <p className="text-sm text-muted-foreground mt-1">Fii primul care ajuta!</p>
+              <p className="font-semibold text-foreground/70">No answers yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Be the first to help!</p>
             </div>
           ) : (
             <div className="space-y-4">
               {sortedAnswers.map(answer => {
                 const answerScore = answer.upvotes - answer.downvotes;
+                const isOwnAnswer = user?.id === answer.authorId;
                 return (
-                  <div
-                    key={answer.id}
-                    className={`bg-white rounded-xl border overflow-hidden shadow-xs transition-all ${
-                      answer.isAwarded
-                        ? "border-amber-300 ring-1 ring-amber-200/50"
-                        : "border-border/60 hover:border-border"
-                    }`}
-                  >
+                  <div key={answer.id} className={`bg-white rounded-xl border overflow-hidden shadow-xs transition-all ${answer.isAwarded ? "border-amber-300 ring-1 ring-amber-200/50" : "border-border/60 hover:border-border"}`}>
                     {answer.isAwarded && (
                       <div className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200/60">
                         <div className="w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
                           <Award className="h-3 w-3 text-white" />
                         </div>
-                        <span className="text-xs font-bold text-amber-700">Cel mai bun raspuns · Fundita de aur</span>
+                        <span className="text-xs font-bold text-amber-700">Best Answer · Gold Ribbon</span>
                         <div className="ml-auto flex items-center gap-1 text-xs text-amber-600 font-medium">
-                          <Zap className="h-3 w-3" /> +50 puncte acordate
+                          <Zap className="h-3 w-3" /> +50 points awarded
                         </div>
                       </div>
                     )}
 
                     <div className="p-5">
                       <div className="flex items-start gap-4">
-                        {/* Vote column */}
                         <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                           <button
                             onClick={() => handleVoteAnswer(answer.id, "up")}
-                            className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground"
-                          >
+                            disabled={isOwnAnswer}
+                            title={isOwnAnswer ? "You cannot vote on your own answer" : "Upvote"}
+                            className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                             <ArrowUp className="h-4 w-4" />
                           </button>
-                          <span className={`text-sm font-bold ${answerScore > 0 ? "text-primary" : answerScore < 0 ? "text-red-500" : "text-muted-foreground"}`}>
-                            {answerScore}
-                          </span>
+                          <span className={`text-sm font-bold ${answerScore > 0 ? "text-primary" : answerScore < 0 ? "text-red-500" : "text-muted-foreground"}`}>{answerScore}</span>
                           <button
                             onClick={() => handleVoteAnswer(answer.id, "down")}
-                            className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground"
-                          >
+                            disabled={isOwnAnswer}
+                            title={isOwnAnswer ? "You cannot vote on your own answer" : "Downvote"}
+                            className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                             <ArrowDown className="h-4 w-4" />
                           </button>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                            {answer.content}
-                          </p>
+                          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">{answer.content}</p>
 
                           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
                             <Link href={`/profile/${answer.authorId}`}>
-                              <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                              <div className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={answer.authorAvatarUrl || undefined} />
-                                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                                    {answer.authorDisplayName.charAt(0)}
-                                  </AvatarFallback>
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{answer.authorDisplayName.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="text-xs font-semibold">{answer.authorDisplayName}</p>
@@ -334,22 +323,14 @@ export default function QuestionDetailPage() {
                             </Link>
 
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true })}
-                              </span>
+                              <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true })}</span>
                               {isQuestionAuthor && !question.hasAwardedAnswer && !answer.isAwarded && answer.authorId !== user?.id && (
-                                <button
-                                  onClick={() => handleAwardAnswer(answer.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors text-xs font-semibold shadow-xs"
-                                >
-                                  <Award className="h-3 w-3" /> Acorda fundita
+                                <button onClick={() => handleAwardAnswer(answer.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors text-xs font-semibold shadow-xs">
+                                  <Award className="h-3 w-3" /> Award Gold Ribbon
                                 </button>
                               )}
                               {(user?.id === answer.authorId || user?.role === "admin") && (
-                                <button
-                                  onClick={() => handleDeleteAnswer(answer.id)}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                                >
+                                <button onClick={() => handleDeleteAnswer(answer.id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               )}
@@ -366,51 +347,72 @@ export default function QuestionDetailPage() {
 
           {/* Answer form */}
           {user ? (
-            <div className="bg-white rounded-xl border border-border/60 overflow-hidden shadow-xs">
-              <div className="px-5 py-3.5 border-b border-border/50 bg-gray-50/50">
-                <h3 className="font-bold text-sm flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Scrie raspunsul tau
-                  <span className="ml-auto text-xs text-muted-foreground font-normal">+10 puncte la postare</span>
-                </h3>
-              </div>
-              <form onSubmit={handleSubmitAnswer} className="p-5">
-                <Textarea
-                  value={answerContent}
-                  onChange={e => setAnswerContent(e.target.value)}
-                  placeholder="Explica pas cu pas... Cu cat mai clar si mai detaliat, cu atat mai bune sansele de a primi fundita de aur!"
-                  rows={5}
-                  className="resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm"
-                />
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-muted-foreground">
-                    Sfat: un raspuns complet si detaliat are mai multe sanse sa primeasca fundita de aur (+50 pts)
-                  </p>
-                  <Button
-                    type="submit"
-                    className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold shadow-sm hover:opacity-90"
-                    disabled={!answerContent.trim() || createAnswer.isPending}
-                  >
-                    {createAnswer.isPending ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Se trimite...
-                      </div>
-                    ) : "Trimite raspuns"}
-                  </Button>
+            isQuestionAuthor ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">You asked this question</p>
+                  <p className="text-xs text-amber-700 mt-0.5">You cannot answer your own question. Wait for others to help — then award the best answer with a Gold Ribbon!</p>
                 </div>
-              </form>
-            </div>
+              </div>
+            ) : alreadyAnswered ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">You've already answered this question</p>
+                  <p className="text-xs text-blue-700 mt-0.5">One answer per question per user. You can edit or delete your existing answer above.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-border/60 overflow-hidden shadow-xs">
+                <div className="px-5 py-3.5 border-b border-border/50 bg-gray-50/50">
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Write your answer
+                    <span className="ml-auto text-xs text-muted-foreground font-normal">+10 points on post</span>
+                  </h3>
+                </div>
+                <form onSubmit={handleSubmitAnswer} className="p-5">
+                  <Textarea
+                    value={answerContent}
+                    onChange={e => setAnswerContent(e.target.value)}
+                    placeholder="Explain step by step... The clearer and more detailed your answer, the better your chances of winning the Gold Ribbon!"
+                    rows={5}
+                    className={`resize-none rounded-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
+                  />
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="text-xs text-muted-foreground">
+                      {answerContent.length > 0 && !answerOk
+                        ? <span className="text-amber-600 font-medium">{MIN_ANSWER - answerContent.trim().length} more characters needed</span>
+                        : <span>Tip: detailed answers earn the Gold Ribbon (+50 pts)</span>
+                      }
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs ${answerContent.length > 9800 ? "text-red-500" : "text-muted-foreground"}`}>{answerContent.length}/10000</span>
+                      <Button type="submit" className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold shadow-sm hover:opacity-90"
+                        disabled={!answerOk || createAnswer.isPending}>
+                        {createAnswer.isPending ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            Posting...
+                          </div>
+                        ) : "Post Answer"}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )
           ) : (
             <div className="bg-white rounded-xl border border-border/60 p-6 text-center">
               <div className="w-10 h-10 bg-primary/8 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <MessageCircle className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-semibold text-foreground mb-1">Autentifica-te pentru a raspunde</p>
-              <p className="text-sm text-muted-foreground mb-4">Ajuta alti studenti si castiga puncte!</p>
+              <p className="font-semibold text-foreground mb-1">Sign in to answer</p>
+              <p className="text-sm text-muted-foreground mb-4">Help other students and earn points!</p>
               <div className="flex justify-center gap-3">
-                <Link href="/login"><Button variant="outline" className="h-9 px-5 rounded-xl">Autentificare</Button></Link>
-                <Link href="/register"><Button className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold">Inregistrare gratuita</Button></Link>
+                <Link href="/login"><Button variant="outline" className="h-9 px-5 rounded-xl">Sign In</Button></Link>
+                <Link href="/register"><Button className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold">Sign Up Free</Button></Link>
               </div>
             </div>
           )}
@@ -418,14 +420,13 @@ export default function QuestionDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Question stats */}
           <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Statistici intrebare</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Question Stats</h3>
             <div className="space-y-2.5">
               {[
-                { label: "Voturi pozitive", value: question.upvotes, color: "text-emerald-600" },
-                { label: "Raspunsuri", value: question.answers.length, color: "text-blue-600" },
-                { label: "Scor total", value: score, color: score >= 0 ? "text-primary" : "text-red-500" },
+                { label: "Upvotes", value: question.upvotes, color: "text-emerald-600" },
+                { label: "Answers", value: question.answers.length, color: "text-blue-600" },
+                { label: "Score", value: score, color: score >= 0 ? "text-primary" : "text-red-500" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{stat.label}</span>
@@ -435,9 +436,8 @@ export default function QuestionDetailPage() {
             </div>
           </div>
 
-          {/* Author card */}
           <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Intrebare pusa de</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Asked by</h3>
             <Link href={`/profile/${question.authorId}`}>
               <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
                 <Avatar className="h-10 w-10">
@@ -446,24 +446,32 @@ export default function QuestionDetailPage() {
                 </Avatar>
                 <div>
                   <p className="text-sm font-semibold">{question.authorDisplayName}</p>
-                  <p className="text-xs text-primary font-medium">{question.authorPoints.toLocaleString()} puncte</p>
+                  <p className="text-xs text-primary font-medium">{question.authorPoints.toLocaleString()} points</p>
                 </div>
               </div>
             </Link>
           </div>
 
-          {/* Tips */}
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <Award className="h-4 w-4 text-amber-600" />
-              <p className="text-xs font-bold text-amber-800">Fundita de aur</p>
+              <p className="text-xs font-bold text-amber-800">Gold Ribbon Award</p>
             </div>
             <p className="text-xs text-amber-700 leading-relaxed">
               {isQuestionAuthor
-                ? "Ca autor al intrebarii, poti acorda fundita de aur celui mai bun raspuns. Acesta primeste 50 puncte bonus!"
-                : "Autorul intrebarii poate acorda fundita de aur celui mai bun raspuns, oferind 50 de puncte bonus."}
+                ? "As the question author, you can award the Gold Ribbon to the best answer. That user receives 50 bonus points!"
+                : "The question author can award the Gold Ribbon to the best answer, granting 50 bonus points."}
             </p>
           </div>
+
+          {imageUrls.length > 0 && (
+            <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-semibold text-muted-foreground">{imageUrls.length} image{imageUrls.length > 1 ? "s" : ""} attached</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

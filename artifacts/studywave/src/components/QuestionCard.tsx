@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle2, MessageCircle, ThumbsUp, Award, ArrowUp, Eye, Clock } from "lucide-react";
+import { CheckCircle2, MessageCircle, Award, ArrowUp, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Question {
@@ -21,17 +21,17 @@ interface Question {
 }
 
 const SUBJECT_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
-  Mathematics:       { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
-  Physics:           { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
-  Chemistry:         { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
-  Biology:           { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
-  History:           { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
-  Geography:         { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
-  Literature:        { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
-  "Computer Science":{ bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
-  Economics:         { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
-  Languages:         { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
-  Other:             { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
+  Mathematics:        { bg: "bg-blue-50",    text: "text-blue-700",   dot: "bg-blue-400" },
+  Physics:            { bg: "bg-purple-50",  text: "text-purple-700", dot: "bg-purple-400" },
+  Chemistry:          { bg: "bg-emerald-50", text: "text-emerald-700",dot: "bg-emerald-400" },
+  Biology:            { bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
+  History:            { bg: "bg-amber-50",   text: "text-amber-700",  dot: "bg-amber-400" },
+  Geography:          { bg: "bg-orange-50",  text: "text-orange-700", dot: "bg-orange-400" },
+  Literature:         { bg: "bg-rose-50",    text: "text-rose-700",   dot: "bg-rose-400" },
+  "Computer Science": { bg: "bg-cyan-50",    text: "text-cyan-700",   dot: "bg-cyan-400" },
+  Economics:          { bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
+  Languages:          { bg: "bg-pink-50",    text: "text-pink-700",   dot: "bg-pink-400" },
+  Other:              { bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
 };
 
 export default function QuestionCard({ question }: { question: Question }) {
@@ -64,12 +64,12 @@ export default function QuestionCard({ question }: { question: Question }) {
               </span>
               {question.isSolved && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" /> Rezolvata
+                  <CheckCircle2 className="h-3 w-3" /> Solved
                 </span>
               )}
               {question.hasAwardedAnswer && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  <Award className="h-3 w-3" /> Fundita acordata
+                  <Award className="h-3 w-3" /> Best Answer Awarded
                 </span>
               )}
             </div>
@@ -103,7 +103,7 @@ export default function QuestionCard({ question }: { question: Question }) {
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1 font-medium">
                   <MessageCircle className="h-3.5 w-3.5" />
-                  {question.answerCount} {question.answerCount === 1 ? "rasp." : "rasp."}
+                  {question.answerCount} {question.answerCount === 1 ? "answer" : "answers"}
                 </span>
               </div>
             </div>

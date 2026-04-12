@@ -23,12 +23,27 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Key Features
 
 - Questions with subject filter, search, sort, pagination
+- **Image URLs**: Up to 5 image URLs per question (stored as JSON in `image_urls` column), displayed inline
 - Answers with voting (upvote/downvote) 
-- Award system: question author can award ONE answer with "fundița de aur" (+50pts to answerer)
+- Award system: question author can award ONE answer with Gold Ribbon (+50pts to answerer, min 5 min wait)
 - Points: ask=+5, answer=+10, award=+50
 - Badges auto-assigned on point thresholds
 - Leaderboard with podium display
 - Admin panel: stats, user management (block/unblock), question moderation, badge CRUD
+
+## Anti-Abuse Rules
+
+- **Daily question limit**: 5 questions/day per user (HTTP 429 if exceeded)
+- **Daily answer limit**: 15 answers/day per user (HTTP 429 if exceeded)
+- **Min title length**: 15 characters
+- **Min content length**: 50 characters
+- **Min answer length**: 30 characters
+- **No self-answering**: Users cannot answer their own questions
+- **No duplicate answers**: One answer per user per question; edit existing instead
+- **No self-voting**: Users cannot vote on their own questions or answers
+- **Gold Ribbon cooldown**: Question must be at least 5 minutes old before awarding
+- **No self-awarding**: Question author cannot award their own answer
+- **`GET /api/my-limits`**: Returns daily usage counts and remaining quota for logged-in user
 
 ## Pages
 

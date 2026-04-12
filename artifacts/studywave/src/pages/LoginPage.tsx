@@ -24,7 +24,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate("/");
     } catch (err: any) {
-      toast({ title: err.message || "Autentificare esecuata", variant: "destructive" });
+      toast({ title: err.message || "Sign in failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -47,18 +47,18 @@ export default function LoginPage() {
           </Link>
 
           <h2 className="text-3xl font-extrabold text-foreground mb-3 leading-tight tracking-tight">
-            Bun venit<br />inapoi!
+            Welcome<br />back!
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            Continua calatoria ta de invatare. Comunitatea te asteapta cu noi intrebari si raspunsuri.
+            Continue your learning journey. The community is waiting with new questions and answers.
           </p>
 
           <div className="mt-8 space-y-3">
             {[
-              { icon: CheckCircle2, text: "Raspunsuri verificate de comunitate", color: "text-emerald-500" },
-              { icon: Users, text: "Comunitate de mii de studenti", color: "text-blue-500" },
-              { icon: Award, text: "Sistem de premii si recompense unic", color: "text-amber-500" },
-              { icon: Sparkles, text: "Continut de calitate pe toate subiectele", color: "text-violet-500" },
+              { icon: CheckCircle2, text: "Community-verified answers", color: "text-emerald-500" },
+              { icon: Users, text: "Thousands of students worldwide", color: "text-blue-500" },
+              { icon: Award, text: "Unique rewards & recognition system", color: "text-amber-500" },
+              { icon: Sparkles, text: "Quality content across all subjects", color: "text-violet-500" },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3">
                 <item.icon className={`h-4.5 w-4.5 flex-shrink-0 ${item.color}`} />
@@ -71,14 +71,14 @@ export default function LoginPage() {
         <div className="relative">
           <div className="p-4 bg-white/80 backdrop-blur rounded-xl border border-border/60 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">D</div>
+              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">A</div>
               <div>
-                <p className="text-xs font-semibold">Dan Constantin</p>
-                <p className="text-xs text-muted-foreground">1,240 puncte · Top 3</p>
+                <p className="text-xs font-semibold">Alex Johnson</p>
+                <p className="text-xs text-muted-foreground">1,240 pts · Top 3</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground italic">
-              "StudyWave m-a ajutat sa inteleg matematica cu adevarat. Raspunsurile sunt clare si detaliate!"
+              "StudyWave helped me truly understand calculus. The answers are clear, detailed, and always helpful!"
             </p>
           </div>
         </div>
@@ -88,32 +88,30 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-[400px]">
           <div className="text-center mb-8 lg:text-left">
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Autentificare</h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">Introdu datele contului tau pentru a continua</p>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Sign In</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">Enter your credentials to continue</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-semibold text-foreground mb-1.5 block">Adresa de email</label>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Email address</label>
               <Input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="email@exemplu.com"
+                placeholder="you@example.com"
                 required
                 className="h-11 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
               />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-semibold text-foreground">Parola</label>
-              </div>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Password</label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Parola ta secreta"
+                  placeholder="Your password"
                   required
                   className="h-11 rounded-xl border-border/70 bg-white shadow-xs pr-12 focus-visible:ring-primary/30"
                 />
@@ -135,16 +133,16 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Se autentifica...
+                  Signing in...
                 </div>
               ) : (
-                <>Autentificare <ArrowRight className="h-4.5 w-4.5" /></>
+                <>Sign In <ArrowRight className="h-4.5 w-4.5" /></>
               )}
             </Button>
           </form>
 
           <div className="mt-4 p-3.5 bg-gray-50 border border-border/60 rounded-xl">
-            <p className="text-xs font-semibold text-foreground mb-1.5">Conturi demo:</p>
+            <p className="text-xs font-semibold text-foreground mb-1.5">Demo accounts:</p>
             <button onClick={() => { setEmail("admin@studywave.com"); setPassword("admin123"); }}
               className="text-xs text-muted-foreground hover:text-primary transition-colors block">
               Admin: admin@studywave.com / admin123
@@ -156,9 +154,9 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Nu ai cont?{" "}
+            Don't have an account?{" "}
             <Link href="/register" className="text-primary font-semibold hover:underline">
-              Inregistreaza-te gratuit
+              Sign up for free
             </Link>
           </p>
         </div>

@@ -8,6 +8,7 @@ export const questionsTable = pgTable("questions", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   subject: text("subject").notNull(),
+  imageUrls: text("image_urls").default("[]"),
   authorId: integer("author_id").notNull().references(() => usersTable.id),
   upvotes: integer("upvotes").notNull().default(0),
   downvotes: integer("downvotes").notNull().default(0),
