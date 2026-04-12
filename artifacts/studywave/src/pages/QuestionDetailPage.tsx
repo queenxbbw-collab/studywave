@@ -178,21 +178,21 @@ export default function QuestionDetailPage() {
               </div>
 
               {/* Images */}
-              {imageUrls.length > 0 && (
+              {imageUrls.filter((_, idx) => !imageErrors.has(idx)).length > 0 && (
                 <div className="mt-5 pt-4 border-t border-border/40">
                   <div className="flex items-center gap-1.5 mb-3 text-xs font-medium text-muted-foreground">
                     <ImageIcon className="h-3.5 w-3.5" />
-                    Attached images ({imageUrls.length})
+                    Attached images ({imageUrls.filter((_, idx) => !imageErrors.has(idx)).length})
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : imageUrls.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
                     {imageUrls.map((url, idx) =>
                       imageErrors.has(idx) ? null : (
                         <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                          className="block rounded-xl overflow-hidden border border-border/60 hover:border-primary/40 transition-colors shadow-xs group">
+                          className="block rounded-xl overflow-hidden border border-border/60 hover:border-primary/40 transition-colors shadow-xs group bg-gray-50">
                           <img
                             src={url}
                             alt={`Image ${idx + 1}`}
-                            className="max-h-56 max-w-xs object-contain bg-gray-50 group-hover:opacity-90 transition-opacity"
+                            className="w-full h-48 object-contain group-hover:opacity-90 transition-opacity"
                             onError={() => setImageErrors(prev => new Set([...prev, idx]))}
                           />
                         </a>
@@ -486,14 +486,6 @@ export default function QuestionDetailPage() {
             </p>
           </div>
 
-          {imageUrls.length > 0 && (
-            <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground">{imageUrls.length} image{imageUrls.length > 1 ? "s" : ""} attached</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

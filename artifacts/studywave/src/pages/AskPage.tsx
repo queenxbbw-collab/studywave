@@ -259,15 +259,21 @@ export default function AskPage() {
                 </label>
 
                 {imageUrls.length > 0 && (
-                  <div className="space-y-2 mb-3">
+                  <div className={`grid gap-2 mb-3 ${imageUrls.length === 1 ? "grid-cols-1" : imageUrls.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
                     {imageUrls.map((url, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-border/50 group">
-                        <img src={url} alt="" className="w-10 h-8 object-cover rounded-md border border-border/50 flex-shrink-0"
-                          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        <span className="text-xs text-muted-foreground truncate flex-1">{url}</span>
-                        <button type="button" onClick={() => removeImageUrl(idx)}
-                          className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
-                          <X className="h-3.5 w-3.5" />
+                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-border/50 bg-gray-50">
+                        <img
+                          src={url}
+                          alt={`Preview ${idx + 1}`}
+                          className="w-full h-36 object-contain"
+                          onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImageUrl(idx)}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                        >
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
