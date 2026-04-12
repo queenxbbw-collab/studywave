@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "StudyWave"
+version = "1.0.0"
+id = "artifacts/studywave"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19840
+
+[services.development]
+run = "pnpm --filter @workspace/studywave run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/studywave", "run", "build" ]
+publicDir = "artifacts/studywave/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19840"
+BASE_PATH = "/"

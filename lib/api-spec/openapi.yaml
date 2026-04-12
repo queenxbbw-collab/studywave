@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: StudyWave Q&A Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: questions
+    description: Question operations
+  - name: answers
+    description: Answer operations
+  - name: badges
+    description: Badge operations
+  - name: admin
+    description: Admin operations
+  - name: stats
+    description: Statistics and aggregates
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,710 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}/questions:
+    get:
+      operationId: getUserQuestions
+      tags: [users]
+      summary: Get questions by user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /users/{id}/answers:
+    get:
+      operationId: getUserAnswers
+      tags: [users]
+      summary: Get answers by user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of answers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Answer"
+
+  /users/settings:
+    patch:
+      operationId: updateSettings
+      tags: [users]
+      summary: Update current user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/avatar:
+    post:
+      operationId: uploadAvatar
+      tags: [users]
+      summary: Upload avatar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadAvatarBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List all questions
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedQuestions"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get a question with answers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question with answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestionBody"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /questions/{id}/vote:
+    post:
+      operationId: voteQuestion
+      tags: [questions]
+      summary: Vote on a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteBody"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /answers:
+    post:
+      operationId: createAnswer
+      tags: [answers]
+      summary: Create an answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAnswerBody"
+      responses:
+        "201":
+          description: Created answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /answers/{id}:
+    patch:
+      operationId: updateAnswer
+      tags: [answers]
+      summary: Update an answer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAnswerBody"
+      responses:
+        "200":
+          description: Updated answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+    delete:
+      operationId: deleteAnswer
+      tags: [answers]
+      summary: Delete an answer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /answers/{id}/vote:
+    post:
+      operationId: voteAnswer
+      tags: [answers]
+      summary: Vote on an answer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteBody"
+      responses:
+        "200":
+          description: Updated answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+
+  /answers/{id}/award:
+    post:
+      operationId: awardAnswer
+      tags: [answers]
+      summary: Award an answer as best (like a ribbon/funda)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Awarded answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /badges:
+    get:
+      operationId: listBadges
+      tags: [badges]
+      summary: List all badges
+      responses:
+        "200":
+          description: List of badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Badge"
+
+  /stats/platform:
+    get:
+      operationId: getPlatformStats
+      tags: [stats]
+      summary: Get platform-wide stats
+      responses:
+        "200":
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  /stats/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [stats]
+      summary: Get top users leaderboard
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /stats/subjects:
+    get:
+      operationId: getSubjectStats
+      tags: [stats]
+      summary: Get question counts by subject
+      responses:
+        "200":
+          description: Subject stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubjectStat"
+
+  /stats/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Get recent platform activity
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: Admin - list all users
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedUsers"
+
+  /admin/users/{id}:
+    patch:
+      operationId: adminUpdateUser
+      tags: [admin]
+      summary: Admin - update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: adminDeleteUser
+      tags: [admin]
+      summary: Admin - delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/questions:
+    get:
+      operationId: adminListQuestions
+      tags: [admin]
+      summary: Admin - list all questions
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedQuestions"
+
+  /admin/questions/{id}:
+    delete:
+      operationId: adminDeleteQuestion
+      tags: [admin]
+      summary: Admin - delete a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/badges:
+    post:
+      operationId: adminCreateBadge
+      tags: [admin]
+      summary: Admin - create a badge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBadgeBody"
+      responses:
+        "201":
+          description: Created badge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Badge"
+
+  /admin/badges/{id}:
+    patch:
+      operationId: adminUpdateBadge
+      tags: [admin]
+      summary: Admin - update a badge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBadgeBody"
+      responses:
+        "200":
+          description: Updated badge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Badge"
+    delete:
+      operationId: adminDeleteBadge
+      tags: [admin]
+      summary: Admin - delete a badge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Admin - get detailed platform stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +751,608 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterBody:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        displayName:
+          type: string
+      required:
+        - username
+        - email
+        - password
+        - displayName
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        points:
+          type: integer
+        role:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - username
+        - email
+        - displayName
+        - points
+        - role
+        - isActive
+        - createdAt
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        points:
+          type: integer
+        role:
+          type: string
+        createdAt:
+          type: string
+        questionCount:
+          type: integer
+        answerCount:
+          type: integer
+        awardedAnswerCount:
+          type: integer
+        badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Badge"
+      required:
+        - id
+        - username
+        - displayName
+        - points
+        - role
+        - createdAt
+        - questionCount
+        - answerCount
+        - awardedAnswerCount
+        - badges
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: string
+        email:
+          type: string
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+
+    UploadAvatarBody:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+      required:
+        - avatarUrl
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        subject:
+          type: string
+        authorId:
+          type: integer
+        authorUsername:
+          type: string
+        authorDisplayName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        upvotes:
+          type: integer
+        downvotes:
+          type: integer
+        answerCount:
+          type: integer
+        hasAwardedAnswer:
+          type: boolean
+        isSolved:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - content
+        - subject
+        - authorId
+        - authorUsername
+        - authorDisplayName
+        - upvotes
+        - downvotes
+        - answerCount
+        - hasAwardedAnswer
+        - isSolved
+        - createdAt
+        - updatedAt
+
+    QuestionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        subject:
+          type: string
+        authorId:
+          type: integer
+        authorUsername:
+          type: string
+        authorDisplayName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        authorPoints:
+          type: integer
+        upvotes:
+          type: integer
+        downvotes:
+          type: integer
+        hasAwardedAnswer:
+          type: boolean
+        isSolved:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Answer"
+      required:
+        - id
+        - title
+        - content
+        - subject
+        - authorId
+        - authorUsername
+        - authorDisplayName
+        - authorPoints
+        - upvotes
+        - downvotes
+        - hasAwardedAnswer
+        - isSolved
+        - createdAt
+        - updatedAt
+        - answers
+
+    PaginatedQuestions:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - questions
+        - total
+        - page
+        - limit
+        - totalPages
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        subject:
+          type: string
+      required:
+        - title
+        - content
+        - subject
+
+    UpdateQuestionBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        subject:
+          type: string
+
+    VoteBody:
+      type: object
+      properties:
+        type:
+          type: string
+      required:
+        - type
+
+    Answer:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        questionId:
+          type: integer
+        authorId:
+          type: integer
+        authorUsername:
+          type: string
+        authorDisplayName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        authorPoints:
+          type: integer
+        upvotes:
+          type: integer
+        downvotes:
+          type: integer
+        isAwarded:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - content
+        - questionId
+        - authorId
+        - authorUsername
+        - authorDisplayName
+        - authorPoints
+        - upvotes
+        - downvotes
+        - isAwarded
+        - createdAt
+        - updatedAt
+
+    CreateAnswerBody:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        content:
+          type: string
+      required:
+        - questionId
+        - content
+
+    UpdateAnswerBody:
+      type: object
+      properties:
+        content:
+          type: string
+
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        pointsRequired:
+          type: integer
+        category:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - icon
+        - color
+        - pointsRequired
+        - category
+        - createdAt
+
+    CreateBadgeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        pointsRequired:
+          type: integer
+        category:
+          type: string
+      required:
+        - name
+        - description
+        - icon
+        - color
+        - pointsRequired
+        - category
+
+    UpdateBadgeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        pointsRequired:
+          type: integer
+        category:
+          type: string
+
+    PlatformStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalQuestions:
+          type: integer
+        totalAnswers:
+          type: integer
+        totalAwardedAnswers:
+          type: integer
+        solvedQuestions:
+          type: integer
+        activeUsersToday:
+          type: integer
+      required:
+        - totalUsers
+        - totalQuestions
+        - totalAnswers
+        - totalAwardedAnswers
+        - solvedQuestions
+        - activeUsersToday
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        points:
+          type: integer
+        answerCount:
+          type: integer
+        awardedAnswerCount:
+          type: integer
+        rank:
+          type: integer
+      required:
+        - id
+        - username
+        - displayName
+        - points
+        - answerCount
+        - awardedAnswerCount
+        - rank
+
+    SubjectStat:
+      type: object
+      properties:
+        subject:
+          type: string
+        count:
+          type: integer
+        solvedCount:
+          type: integer
+      required:
+        - subject
+        - count
+        - solvedCount
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        userId:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        questionId:
+          type: ["integer", "null"]
+        questionTitle:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - userId
+        - username
+        - displayName
+        - createdAt
+
+    PaginatedUsers:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - users
+        - total
+        - page
+        - limit
+        - totalPages
+
+    AdminUpdateUserBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        points:
+          type: integer
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalQuestions:
+          type: integer
+        totalAnswers:
+          type: integer
+        totalAwardedAnswers:
+          type: integer
+        solvedQuestions:
+          type: integer
+        activeUsersToday:
+          type: integer
+        newUsersThisWeek:
+          type: integer
+        newQuestionsThisWeek:
+          type: integer
+        newAnswersThisWeek:
+          type: integer
+        totalBadges:
+          type: integer
+        topSubjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectStat"
+      required:
+        - totalUsers
+        - totalQuestions
+        - totalAnswers
+        - totalAwardedAnswers
+        - solvedQuestions
+        - activeUsersToday
+        - newUsersThisWeek
+        - newQuestionsThisWeek
+        - newAnswersThisWeek
+        - totalBadges
+        - topSubjects
