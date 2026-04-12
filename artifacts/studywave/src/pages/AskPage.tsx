@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth";
@@ -9,7 +10,6 @@ import { ChevronLeft, HelpCircle, Lightbulb, CheckCircle2, Zap, ArrowRight, X, I
 import { usePageTitle } from "@/hooks/use-page-title";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
-import { useUpload } from "@workspace/object-storage-web";
 import MarkdownToolbar from "@/components/MarkdownToolbar";
 
 const SUBJECTS = [
@@ -53,16 +53,46 @@ export default function AskPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { uploadFile, isUploading, progress } = useUpload({
-    onSuccess: (response) => {
-      const servingUrl = `${window.location.origin}/api/storage${response.objectPath}`;
-      setImageUrls(prev => [...prev, servingUrl]);
-      toast({ title: "Image uploaded successfully" });
-    },
-    onError: (error) => {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const [isUploading, setIsUploading] = useState(false);
+
+  const processImageFile = (file: File): Promise<void> => {
+    return new Promise((resolve) => {
+      setIsUploading(true);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { setIsUploading(false); resolve(); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setImageUrls(prev => [...prev, dataUrl]);
+          setIsUploading(false);
+          toast({ title: "Image added" });
+          resolve();
+        };
+        img.onerror = () => {
+          setIsUploading(false);
+          toast({ title: "Could not read image", variant: "destructive" });
+          resolve();
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.onerror = () => {
+        setIsUploading(false);
+        toast({ title: "Could not read file", variant: "destructive" });
+        resolve();
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,7 +105,7 @@ export default function AskPage() {
       toast({ title: "Please select an image file", variant: "destructive" });
       return;
     }
-    await uploadFile(file);
+    await processImageFile(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -336,7 +366,7 @@ export default function AskPage() {
                       {isUploading ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          Uploading… {progress}%
+                          Processing…
                         </>
                       ) : (
                         <>
