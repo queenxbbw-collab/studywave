@@ -4,7 +4,7 @@ import { eq, count, sql, and, gte } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { UpdateAnswerBody, VoteAnswerBody } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
-import { createNotification } from "./notifications";
+import { createNotification, parseMentions } from "./notifications";
 
 // --- Limits ---
 const DAILY_ANSWER_LIMIT = 15;
@@ -75,8 +75,8 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
   await db.update(usersTable).set({ points: sql`${usersTable.points} + 10` }).where(eq(usersTable.id, req.userId!));
   await checkAndAwardBadges(req.userId!);
   // Notify question author
+  const [answerer] = await db.select({ displayName: usersTable.displayName }).from(usersTable).where(eq(usersTable.id, req.userId!));
   if (question.authorId !== req.userId) {
-    const [answerer] = await db.select({ displayName: usersTable.displayName }).from(usersTable).where(eq(usersTable.id, req.userId!));
     await createNotification(
       question.authorId,
       "new_answer",
@@ -85,6 +85,8 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
       questionId
     );
   }
+  // Parse @mentions in answer content
+  await parseMentions(content, req.userId!, answerer?.displayName ?? "Someone", questionId);
 
   res.status(201).json({
     id: answer.id,
