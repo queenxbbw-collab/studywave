@@ -15,6 +15,7 @@ const CATEGORY_MAP: Record<string, string> = {
   answer_upvote: "activity",
   question_upvote: "activity",
   new_comment: "activity",
+  mention: "activity",
 };
 
 function getCategory(type: string): string {
@@ -115,6 +116,37 @@ router.get("/referrals", authenticate, async (req, res): Promise<void> => {
     total: referrals.rows.length,
   });
 });
+
+export async function parseMentions(
+  content: string,
+  authorId: number,
+  authorName: string,
+  questionId?: number
+): Promise<void> {
+  const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+  const usernames = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = mentionRegex.exec(content)) !== null) {
+    usernames.add(match[1].toLowerCase());
+  }
+  if (usernames.size === 0) return;
+
+  for (const username of usernames) {
+    try {
+      const [mentioned] = (await db.execute(sql`
+        SELECT id FROM users WHERE LOWER(username) = ${username} LIMIT 1
+      `)).rows as any[];
+      if (!mentioned || mentioned.id === authorId) continue;
+      await createNotification(
+        mentioned.id,
+        "mention",
+        `${authorName} mentioned you`,
+        `You were mentioned in a post: "${content.slice(0, 80)}..."`,
+        questionId
+      );
+    } catch {}
+  }
+}
 
 export async function createNotification(
   userId: number,
