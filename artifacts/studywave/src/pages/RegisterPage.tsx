@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
@@ -14,6 +15,7 @@ const PERKS = [
 ];
 
 export default function RegisterPage() {
+  usePageTitle("Sign Up");
   const { register, user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
