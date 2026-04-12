@@ -1,5 +1,5 @@
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGetLeaderboard } from "@workspace/api-client-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "wouter";
@@ -42,6 +42,15 @@ export default function LeaderboardPage() {
   const [sugDesc, setSugDesc] = useState("");
   const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [mySuggestions, setMySuggestions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/suggestions/mine", { headers: getAuthHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then(setMySuggestions)
+      .catch(() => {});
+  }, [user, submitted]);
 
   const top3 = leaderboard?.slice(0, 3) || [];
   const podiumOrder = [1, 0, 2];
@@ -290,6 +299,42 @@ export default function LeaderboardPage() {
           )}
         </div>
       </div>
+
+      {/* My Suggestions */}
+      {user && mySuggestions.length > 0 && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="bg-white rounded-2xl border border-border/60 shadow-xs overflow-hidden">
+            <div className="px-5 py-4 border-b border-border/50 bg-gray-50/50 flex items-center justify-between">
+              <h2 className="font-bold text-sm flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-amber-500" />
+                My Feature Suggestions
+              </h2>
+              <span className="text-xs text-muted-foreground">{mySuggestions.length} submitted</span>
+            </div>
+            <div className="divide-y divide-border/40">
+              {mySuggestions.map((s: any) => {
+                const cfg = STATUS_CONFIG[s.status] || { label: s.status, color: "bg-gray-50 text-gray-600 border-gray-200" };
+                return (
+                  <div key={s.id} className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground break-words">{s.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1 break-words line-clamp-2">{s.description}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1.5">
+                          Submitted {new Date(s.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <span className={`flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Suggest a Feature Modal */}
       <Dialog open={modalOpen} onOpenChange={closeModal}>
