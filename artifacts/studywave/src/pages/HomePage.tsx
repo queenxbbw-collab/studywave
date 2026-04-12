@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
 import { useListQuestions, useGetPlatformStats, useGetRecentActivity, useGetSubjectStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
 };
 
 export default function HomePage() {
+  usePageTitle("Home");
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("all");
