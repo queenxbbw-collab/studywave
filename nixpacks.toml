@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "nodePackages.pnpm"]
+nixPkgs = ["nodejs_22", "nodePackages.pnpm"]
 
 [phases.install]
 cmds = ["pnpm install"]
@@ -11,4 +11,4 @@ cmds = [
 ]
 
 [start]
-cmd = "NODE_ENV=production pnpm --filter @workspace/api-server run start"
+cmd = "NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs"
