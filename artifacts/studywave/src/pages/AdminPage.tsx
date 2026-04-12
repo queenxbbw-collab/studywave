@@ -269,7 +269,8 @@ export default function AdminPage() {
       });
       if (!r.ok) throw new Error((await r.json()).error);
       toast({ title: "Points updated successfully" });
-      queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
+      await queryClient.invalidateQueries();
+      await queryClient.refetchQueries({ type: "active" });
       setPointsValue("");
     } catch (e: any) {
       toast({ title: "Failed to set points", description: e.message, variant: "destructive" });
