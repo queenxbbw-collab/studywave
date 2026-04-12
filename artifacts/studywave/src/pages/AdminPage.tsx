@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useAdminGetStats, useAdminListUsers, useAdminListQuestions, useListBadges,
   useAdminUpdateUser, useAdminDeleteUser, useAdminDeleteQuestion,
@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { getAuthHeaders } from "@/lib/auth";
 import { useLocation, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,20 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, HelpCircle, Star, BarChart2, Trash2, Ban, CheckCircle2,
   Plus, ChevronLeft, ChevronRight, TrendingUp, Award, MessageCircle,
-  ArrowUpRight, Activity, Search, BookOpen
+  ArrowUpRight, Activity, Search, BookOpen, Flag
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+interface Report {
+  id: number;
+  targetType: string;
+  targetId: number;
+  reason: string;
+  details: string | null;
+  status: string;
+  createdAt: string;
+  reporter: { id: number; username: string; displayName: string };
+}
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -34,6 +46,29 @@ export default function AdminPage() {
   const [newBadge, setNewBadge] = useState({
     name: "", description: "", icon: "Star", color: "#6366f1", pointsRequired: 0, category: "general"
   });
+  const [reports, setReports] = useState<Report[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+
+  const fetchReports = async () => {
+    setReportsLoading(true);
+    try {
+      const res = await fetch("/api/reports", { headers: getAuthHeaders() });
+      if (res.ok) setReports(await res.json());
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const updateReportStatus = async (id: number, status: string) => {
+    const res = await fetch(`/api/reports/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    }
+  };
 
   const { data: stats } = useAdminGetStats();
   const { data: usersData } = useAdminListUsers({ page: userPage, limit: 12, search: userSearch || undefined });
@@ -107,13 +142,14 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="stats">
+      <Tabs defaultValue="stats" onValueChange={v => { if (v === "reports") fetchReports(); }}>
         <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs mb-6 w-full flex">
           {[
-            { value: "stats", icon: BarChart2, label: "Statistici" },
-            { value: "users", icon: Users, label: "Utilizatori" },
-            { value: "questions", icon: HelpCircle, label: "Intrebari" },
-            { value: "badges", icon: Star, label: "Badge-uri" },
+            { value: "stats", icon: BarChart2, label: "Stats" },
+            { value: "users", icon: Users, label: "Users" },
+            { value: "questions", icon: HelpCircle, label: "Questions" },
+            { value: "badges", icon: Star, label: "Badges" },
+            { value: "reports", icon: Flag, label: "Reports" },
           ].map(tab => (
             <TabsTrigger key={tab.value} value={tab.value} className="flex-1 gap-2 rounded-lg text-sm data-[state=active]:shadow-sm">
               <tab.icon className="h-4 w-4" />
@@ -486,6 +522,104 @@ export default function AdminPage() {
                 </Button>
               </form>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* REPORTS TAB */}
+        <TabsContent value="reports">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Flag className="h-5 w-5 text-red-500" /> User Reports
+              </h2>
+              <Button variant="outline" size="sm" onClick={fetchReports} className="h-8 rounded-lg text-xs">
+                Refresh
+              </Button>
+            </div>
+
+            {reportsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-border/60 p-4 animate-pulse h-20"></div>
+                ))}
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="bg-white rounded-xl border border-dashed border-border p-12 text-center">
+                <Flag className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="font-semibold text-muted-foreground">No reports yet</p>
+                <p className="text-sm text-muted-foreground/60 mt-1">Reports from users will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Filter by status */}
+                <div className="flex gap-2">
+                  {["all", "pending", "reviewed", "dismissed"].map(status => {
+                    const count = status === "all" ? reports.length : reports.filter(r => r.status === status).length;
+                    return (
+                      <span key={status} className="text-xs px-2.5 py-1 rounded-full bg-white border border-border/60 text-muted-foreground font-medium">
+                        {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {reports.map(report => (
+                  <div key={report.id} className={`bg-white rounded-xl border overflow-hidden shadow-xs ${
+                    report.status === "pending" ? "border-amber-200" : "border-border/60"
+                  }`}>
+                    <div className="flex items-start justify-between p-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            report.status === "pending" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                            report.status === "reviewed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                            "bg-gray-50 text-gray-600 border border-gray-200"
+                          }`}>
+                            {report.status.toUpperCase()}
+                          </span>
+                          <span className="text-xs font-semibold text-primary bg-primary/6 px-2 py-0.5 rounded-full">
+                            {report.targetType}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            #{report.targetId}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground mb-0.5">
+                          {report.reason.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                        </p>
+                        {report.details && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">"{report.details}"</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          <span>By <strong>{report.reporter.displayName}</strong> (@{report.reporter.username})</span>
+                          <span>{formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+                      {report.status === "pending" && (
+                        <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateReportStatus(report.id, "reviewed")}
+                            className="h-8 px-3 rounded-lg text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Review
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateReportStatus(report.id, "dismissed")}
+                            className="h-8 px-3 rounded-lg text-xs text-muted-foreground"
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

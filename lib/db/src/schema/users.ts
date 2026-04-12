@@ -13,6 +13,9 @@ export const usersTable = pgTable("users", {
   points: integer("points").notNull().default(0),
   role: text("role").notNull().default("user"),
   isActive: boolean("is_active").notNull().default(true),
+  referralCode: text("referral_code").unique(),
+  referredBy: integer("referred_by"),
+  questionBonusPool: integer("question_bonus_pool").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

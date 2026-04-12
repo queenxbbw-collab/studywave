@@ -7,6 +7,7 @@ import answersRouter from "./answers";
 import badgesRouter from "./badges";
 import statsRouter from "./stats";
 import adminRouter from "./admin";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(answersRouter);
 router.use(badgesRouter);
 router.use(statsRouter);
 router.use(adminRouter);
+router.use(reportsRouter);
 
 export default router;

@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Eye, EyeOff, ArrowRight, CheckCircle2, Sparkles, Zap, Award } from "lucide-react";
+import { BookOpen, Eye, EyeOff, ArrowRight, CheckCircle2, Sparkles, Zap, Award, Gift } from "lucide-react";
 
 const PERKS = [
   { icon: Sparkles, text: "+5 points for every question you ask", color: "text-violet-600 bg-violet-50" },
@@ -17,11 +17,19 @@ export default function RegisterPage() {
   const { register, user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [form, setForm] = useState({ username: "", email: "", password: "", displayName: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", displayName: "", referralCode: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
   const [loading, setLoading] = useState(false);
 
   if (user) { navigate("/"); return null; }
+
+  // Pre-fill referral code from URL param
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlRef = urlParams.get("ref");
+  if (urlRef && !form.referralCode) {
+    setForm(f => ({ ...f, referralCode: urlRef }));
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +39,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(form.username, form.email, form.password, form.displayName);
+      await register(form.username, form.email, form.password, form.displayName, form.referralCode || undefined);
       navigate("/");
     } catch (err: any) {
       toast({ title: err.message || "Registration failed", variant: "destructive" });
@@ -101,10 +109,35 @@ export default function RegisterPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
+
+            {/* Referral code */}
+            {(showReferral || urlRef) ? (
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block flex items-center gap-2">
+                  <Gift className="h-3.5 w-3.5 text-emerald-500" />
+                  Referral code <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  value={form.referralCode}
+                  onChange={e => setForm(f => ({ ...f, referralCode: e.target.value.toUpperCase() }))}
+                  placeholder="e.g. JOHN1A2B3C"
+                  className="h-10 rounded-xl border-emerald-200 bg-emerald-50/40 focus-visible:border-emerald-400 shadow-xs font-mono uppercase"
+                />
+                <p className="text-xs text-emerald-600 mt-1">Your friend will receive +25 points when you join!</p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowReferral(true)}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+              >
+                <Gift className="h-3.5 w-3.5" /> Have a referral code? Click to enter it
+              </button>
+            )}
 
             <Button
               type="submit"
@@ -117,7 +150,7 @@ export default function RegisterPage() {
                   Creating account...
                 </div>
               ) : (
-                <>Create Free Account <ArrowRight className="h-4.5 w-4.5" /></>
+                <>Create Free Account <ArrowRight className="h-4 w-4" /></>
               )}
             </Button>
 
@@ -162,10 +195,10 @@ export default function RegisterPage() {
             ))}
           </div>
 
-          <div className="p-4 bg-primary/6 border border-primary/15 rounded-xl">
-            <p className="text-xs font-semibold text-primary mb-1">Always free — always!</p>
-            <p className="text-xs text-muted-foreground">
-              StudyWave has no subscription costs. Learning should never have a price tag.
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <p className="text-xs font-semibold text-emerald-700 mb-1">Referral bonus</p>
+            <p className="text-xs text-emerald-600">
+              Invite friends with your unique referral link and earn <strong>+25 points</strong> each time someone joins!
             </p>
           </div>
         </div>

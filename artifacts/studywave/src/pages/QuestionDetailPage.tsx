@@ -12,10 +12,11 @@ import { useAuth } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
-  MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle
+  MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import ReportModal from "@/components/ReportModal";
 
 const MIN_ANSWER = 30;
 
@@ -42,6 +43,7 @@ export default function QuestionDetailPage() {
   const [, navigate] = useLocation();
   const [answerContent, setAnswerContent] = useState("");
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const [reportTarget, setReportTarget] = useState<{ type: "question" | "answer" | "user"; id: number; label: string } | null>(null);
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) },
@@ -240,11 +242,22 @@ export default function QuestionDetailPage() {
                 </span>
               </div>
 
-              {(isQuestionAuthor || user?.role === "admin") && (
-                <button onClick={handleDeleteQuestion} className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              <div className="flex items-center gap-1">
+                {user && !isQuestionAuthor && (
+                  <button
+                    onClick={() => setReportTarget({ type: "question", id: questionId, label: `Question: "${question.title.slice(0, 40)}..."` })}
+                    title="Report this question"
+                    className="p-2 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-50 transition-colors"
+                  >
+                    <Flag className="h-4 w-4" />
+                  </button>
+                )}
+                {(isQuestionAuthor || user?.role === "admin") && (
+                  <button onClick={handleDeleteQuestion} className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -327,6 +340,15 @@ export default function QuestionDetailPage() {
                               {isQuestionAuthor && !question.hasAwardedAnswer && !answer.isAwarded && answer.authorId !== user?.id && (
                                 <button onClick={() => handleAwardAnswer(answer.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors text-xs font-semibold shadow-xs">
                                   <Award className="h-3 w-3" /> Award Gold Ribbon
+                                </button>
+                              )}
+                              {user && user.id !== answer.authorId && (
+                                <button
+                                  onClick={() => setReportTarget({ type: "answer", id: answer.id, label: `Answer by ${answer.authorDisplayName}` })}
+                                  title="Report this answer"
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-50 transition-colors"
+                                >
+                                  <Flag className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {(user?.id === answer.authorId || user?.role === "admin") && (
@@ -474,6 +496,15 @@ export default function QuestionDetailPage() {
           )}
         </div>
       </div>
+
+      {reportTarget && (
+        <ReportModal
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          targetLabel={reportTarget.label}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }

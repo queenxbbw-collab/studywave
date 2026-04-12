@@ -1,16 +1,15 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { User } from "@workspace/api-client-react";
-
-const BASE_URL = import.meta.env.BASE_URL || "/";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, displayName: string) => Promise<void>;
+  register: (username: string, email: string, password: string, displayName: string, referralCode?: string) => Promise<void>;
   logout: () => void;
-  updateUser: (u: User) => void;
+  updateUser: (u: Partial<User> & { id?: number }) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,27 +23,47 @@ export function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function fetchMe(token: string): Promise<User | null> {
+  try {
+    const r = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    const t = localStorage.getItem("studywave_token");
+    if (!t) return;
+    const data = await fetchMe(t);
+    if (data) setUser(data);
+  }, []);
+
   useEffect(() => {
     const savedToken = localStorage.getItem("studywave_token");
     if (savedToken) {
       setToken(savedToken);
-      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${savedToken}` } })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data) setUser(data);
-          else localStorage.removeItem("studywave_token");
-        })
-        .catch(() => localStorage.removeItem("studywave_token"))
-        .finally(() => setIsLoading(false));
+      fetchMe(savedToken).then(data => {
+        if (data) setUser(data);
+        else localStorage.removeItem("studywave_token");
+      }).finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }
   }, []);
+
+  // Poll for real-time points every 30s
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(refreshUser, 30_000);
+    return () => clearInterval(interval);
+  }, [token, refreshUser]);
 
   const login = async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {
@@ -62,11 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (username: string, email: string, password: string, displayName: string) => {
+  const register = async (username: string, email: string, password: string, displayName: string, referralCode?: string) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password, displayName }),
+      body: JSON.stringify({ username, email, password, displayName, ...(referralCode ? { referralCode } : {}) }),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -84,10 +103,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const updateUser = (u: User) => setUser(u);
+  const updateUser = (u: Partial<User> & { id?: number }) => {
+    setUser(prev => prev ? { ...prev, ...u } : (u as User));
+  };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
