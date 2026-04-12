@@ -33,13 +33,19 @@ export default function AnnouncementBanner() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
+  const loadAnnouncements = () => {
     fetch("/api/announcements")
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.announcements) setAnnouncements(data.announcements);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
+    window.addEventListener("announcementsUpdated", loadAnnouncements);
+    return () => window.removeEventListener("announcementsUpdated", loadAnnouncements);
   }, []);
 
   const visible = announcements.filter(a => !dismissed.has(a.id));

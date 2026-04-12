@@ -86,6 +86,8 @@ export default function AdminPage() {
     }
   };
 
+  const notifyAnnouncementsChanged = () => window.dispatchEvent(new CustomEvent("announcementsUpdated"));
+
   const createAnnouncement = async () => {
     if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) return;
     const res = await fetch("/api/admin/announcements", {
@@ -97,6 +99,7 @@ export default function AdminPage() {
       toast({ title: "Announcement created" });
       setNewAnnouncement({ title: "", content: "", type: "info" });
       fetchAnnouncements();
+      notifyAnnouncementsChanged();
     }
   };
 
@@ -107,6 +110,7 @@ export default function AdminPage() {
       body: JSON.stringify({ isActive }),
     });
     fetchAnnouncements();
+    notifyAnnouncementsChanged();
   };
 
   const fetchSuggestions = async () => {
@@ -154,6 +158,7 @@ export default function AdminPage() {
     if (!confirm("Delete this announcement?")) return;
     await fetch(`/api/admin/announcements/${id}`, { method: "DELETE", headers: getAuthHeaders() });
     setAnnouncements(a => a.filter(x => x.id !== id));
+    notifyAnnouncementsChanged();
   };
 
   const updateReportStatus = async (id: number, status: string) => {
