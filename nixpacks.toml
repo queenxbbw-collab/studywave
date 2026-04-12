@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+cmds = ["npm install -g pnpm@9"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = [
+  "BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/studywave run build",
+  "pnpm --filter @workspace/api-server run build"
+]
+
+[start]
+cmd = "NODE_ENV=production pnpm --filter @workspace/api-server run start"
