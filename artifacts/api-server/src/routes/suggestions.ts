@@ -30,6 +30,22 @@ router.post("/suggestions", authenticate, async (req, res): Promise<void> => {
   res.status(201).json({ id: s.id, title: s.title, description: s.description, status: s.status, createdAt: s.created_at });
 });
 
+router.get("/suggestions/mine", authenticate, async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT id, title, description, status, created_at
+    FROM suggestions
+    WHERE user_id = ${req.userId}
+    ORDER BY created_at DESC
+  `);
+  res.json(rows.rows.map((s: any) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    status: s.status,
+    createdAt: s.created_at,
+  })));
+});
+
 router.get("/admin/suggestions", authenticate, requireAdmin, async (_req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT s.id, s.title, s.description, s.status, s.created_at,
