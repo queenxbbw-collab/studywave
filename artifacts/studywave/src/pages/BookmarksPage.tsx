@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState, useEffect } from "react";
 import { getAuthHeaders } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
@@ -36,6 +37,7 @@ const SUBJECT_COLORS: Record<string, string> = {
 };
 
 export default function BookmarksPage() {
+  usePageTitle("Bookmarks");
   const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const [bookmarks, setBookmarks] = useState<BookmarkedQuestion[]>([]);
