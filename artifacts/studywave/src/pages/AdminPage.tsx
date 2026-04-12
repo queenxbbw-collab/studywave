@@ -19,13 +19,23 @@ import {
   Shield, Users, HelpCircle, Star, BarChart2, Trash2, Ban, CheckCircle2,
   Plus, ChevronLeft, ChevronRight, TrendingUp, Award, MessageCircle,
   ArrowUpRight, Activity, Search, BookOpen, Flag, Megaphone, Eye, EyeOff,
-  Lightbulb, ChevronDown, ClipboardList, RefreshCw, AlertTriangle, Zap
+  Lightbulb, ChevronDown, ClipboardList, RefreshCw, AlertTriangle, Zap,
+  Trophy, Flame, Crown, Target, Medal, CheckCircle, Brain, Rocket, Heart, Sparkles
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { usePageTitle } from "@/hooks/use-page-title";
+
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts";
+
+const ADMIN_ICON_MAP: Record<string, LucideIcon> = {
+  Trophy, Star, Award, Shield, Flame, Zap, Crown,
+  BookOpen, HelpCircle, MessageCircle, Target, Medal,
+  CheckCircle, Lightbulb, Brain, Rocket, Heart, Sparkles,
+};
 
 interface Report {
   id: number;
@@ -39,6 +49,7 @@ interface Report {
 }
 
 export default function AdminPage() {
+  usePageTitle("Admin Panel");
   const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -639,10 +650,10 @@ export default function AdminPage() {
                 {badges?.map(badge => (
                   <div key={badge.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors group">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: badge.color + "15", border: `1.5px solid ${badge.color}25` }}
                     >
-                      {({ Trophy: "🏆", Star: "⭐", Award: "🎖️", Shield: "🛡️", Flame: "🔥", Zap: "⚡", Crown: "👑", BookOpen: "📖" } as Record<string, string>)[badge.icon] || "🏅"}
+                      {(() => { const I = ADMIN_ICON_MAP[badge.icon] || Star; return <I className="h-4.5 w-4.5" style={{ color: badge.color }} />; })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold" style={{ color: badge.color }}>{badge.name}</p>
@@ -676,10 +687,10 @@ export default function AdminPage() {
                 {/* Preview */}
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-border/60">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: newBadge.color + "15", border: `1.5px solid ${newBadge.color}30` }}
                   >
-                    {({ Trophy: "🏆", Star: "⭐", Award: "🎖️", Shield: "🛡️", Flame: "🔥", Zap: "⚡", Crown: "👑" } as Record<string, string>)[newBadge.icon] || "🏅"}
+                    {(() => { const I = ADMIN_ICON_MAP[newBadge.icon] || Star; return <I className="h-5 w-5" style={{ color: newBadge.color }} />; })()}
                   </div>
                   <div>
                     <p className="text-sm font-bold" style={{ color: newBadge.color }}>
