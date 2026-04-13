@@ -562,6 +562,7 @@ export const AdminUpdateUserBody = zod.object({
   role: zod.string().optional(),
   isActive: zod.boolean().optional(),
   points: zod.number().optional(),
+  isPremium: zod.boolean().optional(),
 });
 
 export const AdminUpdateUserResponse = zod.object({

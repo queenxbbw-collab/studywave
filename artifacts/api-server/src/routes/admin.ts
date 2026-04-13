@@ -64,6 +64,7 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
   if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
   if (parsed.data.points !== undefined) updateData.points = parsed.data.points;
+  if (parsed.data.isPremium !== undefined) updateData.isPremium = parsed.data.isPremium;
 
   const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, id)).returning();
 

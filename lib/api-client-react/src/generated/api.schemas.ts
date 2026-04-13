@@ -252,6 +252,7 @@ export interface AdminUpdateUserBody {
   role?: string;
   isActive?: boolean;
   points?: number;
+  isPremium?: boolean;
 }
 
 export interface AdminStats {

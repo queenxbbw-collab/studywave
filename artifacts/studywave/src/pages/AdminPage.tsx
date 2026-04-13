@@ -215,6 +215,15 @@ export default function AdminPage() {
     });
   };
 
+  const handleTogglePremium = (userId: number, isPremium: boolean) => {
+    updateUser.mutate({ id: userId, data: { isPremium: !isPremium } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
+        toast({ title: isPremium ? "Premium removed" : "Premium activated!", description: isPremium ? "User is no longer premium." : "User now has Premium access." });
+      },
+    });
+  };
+
   const handleDeleteQuestion = (questionId: number) => {
     if (!confirm("Delete this question and all its answers?")) return;
     deleteQuestion.mutate({ id: questionId }, {
@@ -541,19 +550,32 @@ export default function AdminPage() {
                         {formatDistanceToNow(new Date(u.createdAt), { addSuffix: true })}
                       </td>
                       <td className="px-4 py-3.5">
-                        {u.id !== user.id && (
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() => handleToggleUser(u.id, u.isActive)}
+                            onClick={() => handleTogglePremium(u.id, u.isPremium ?? false)}
                             className={`p-1.5 rounded-lg transition-colors ${
-                              u.isActive
-                                ? "text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                                : "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
+                              u.isPremium
+                                ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50"
+                                : "text-muted-foreground hover:text-amber-500 hover:bg-amber-50"
                             }`}
-                            title={u.isActive ? "Suspend user" : "Unsuspend user"}
+                            title={u.isPremium ? "Remove Premium" : "Grant Premium"}
                           >
-                            {u.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                            <Crown className="h-4 w-4" />
                           </button>
-                        )}
+                          {u.id !== user.id && (
+                            <button
+                              onClick={() => handleToggleUser(u.id, u.isActive)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                u.isActive
+                                  ? "text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                                  : "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
+                              }`}
+                              title={u.isActive ? "Suspend user" : "Unsuspend user"}
+                            >
+                              {u.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
