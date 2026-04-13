@@ -15,7 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
   MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag,
-  Bookmark, BookmarkCheck, Eye, Send, ChevronRight, Share2, Pencil, X, Check, EyeOff
+  Bookmark, BookmarkCheck, Eye, Send, ChevronRight, Share2, Pencil, X, Check, EyeOff, Crown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -626,7 +626,10 @@ export default function QuestionDetailPage() {
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{question.authorDisplayName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-xs font-semibold text-foreground">{question.authorDisplayName}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-semibold text-foreground">{question.authorDisplayName}</p>
+                        {(question as any).authorIsPremium && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
+                      </div>
                       <p className="text-xs text-primary">{question.authorPoints.toLocaleString()} pts</p>
                     </div>
                   </div>
@@ -770,7 +773,10 @@ export default function QuestionDetailPage() {
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{answer.authorDisplayName.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="text-xs font-semibold">{answer.authorDisplayName}</p>
+                                  <div className="flex items-center gap-1">
+                                    <p className="text-xs font-semibold">{answer.authorDisplayName}</p>
+                                    {(answer as any).authorIsPremium && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
+                                  </div>
                                   <p className="text-xs text-primary">{answer.authorPoints.toLocaleString()} pts</p>
                                 </div>
                               </div>
@@ -953,7 +959,10 @@ export default function QuestionDetailPage() {
                   <AvatarFallback className="gradient-primary text-white font-bold">{question.authorDisplayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-semibold">{question.authorDisplayName}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-semibold">{question.authorDisplayName}</p>
+                    {(question as any).authorIsPremium && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                  </div>
                   <p className="text-xs text-primary font-medium">{question.authorPoints.toLocaleString()} points</p>
                 </div>
               </div>
