@@ -664,6 +664,20 @@ export default function SettingsPage() {
               </div>
               {(user as any).isPremium ? (
                 <div className="p-6 space-y-6">
+                  {/* Expiry info */}
+                  <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2.5">
+                    <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700">Premium active</p>
+                      {(user as any).premiumExpiresAt ? (
+                        <p className="text-xs text-amber-600/80">
+                          Expires {new Date((user as any).premiumExpiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-600/80">Active subscription</p>
+                      )}
+                    </div>
+                  </div>
                   <div>
                     <p className="text-sm font-semibold mb-3 flex items-center gap-2">
                       <Palette className="h-4 w-4 text-amber-500" /> Profile Banner Color

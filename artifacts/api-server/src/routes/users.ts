@@ -69,6 +69,7 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     followersCount: Number(followersCount.count),
     followingCount: Number(followingCount.count),
     isPremium: user.isPremium ?? false,
+    premiumExpiresAt: user.premiumExpiresAt?.toISOString() ?? null,
     bannerColor: user.bannerColor,
     badges,
   });
@@ -214,6 +215,7 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
     role: updated.role,
     isActive: updated.isActive,
     isPremium: updated.isPremium ?? false,
+    premiumExpiresAt: updated.premiumExpiresAt?.toISOString() ?? null,
     bannerColor: updated.bannerColor,
     createdAt: updated.createdAt.toISOString(),
   });
