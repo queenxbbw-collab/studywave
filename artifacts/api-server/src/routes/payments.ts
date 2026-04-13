@@ -65,7 +65,7 @@ router.post("/payments/subscribe", authenticate, async (req: Request, res: Respo
       quantity: 1,
     }],
     metadata: { userId: String(user.id), type: "premium_subscription" },
-    success_url: `${origin}/buy-points?premium_success=1`,
+    success_url: `${origin}/buy-points?premium_success=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/buy-points?canceled=1`,
   });
 
@@ -128,6 +128,47 @@ router.post("/payments/checkout", authenticate, async (req: Request, res: Respon
   });
 
   res.json({ url: session.url });
+});
+
+router.post("/payments/verify-premium", authenticate, async (req: Request, res: Response): Promise<void> => {
+  const stripe = getStripe();
+  if (!stripe) {
+    res.status(503).json({ error: "Payment system not configured" });
+    return;
+  }
+
+  const { sessionId } = req.body as { sessionId?: string };
+  if (!sessionId) {
+    res.status(400).json({ error: "sessionId required" });
+    return;
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const userId = parseInt(session.metadata?.userId ?? "0");
+    const type = session.metadata?.type;
+
+    if (session.payment_status !== "paid" && session.status !== "complete") {
+      res.status(400).json({ error: "Payment not completed" });
+      return;
+    }
+
+    if (type !== "premium_subscription" || !userId || userId !== req.userId) {
+      res.status(403).json({ error: "Invalid session" });
+      return;
+    }
+
+    const subId = session.subscription as string;
+    await db.update(usersTable)
+      .set({ isPremium: true, stripeSubscriptionId: subId ?? null })
+      .where(eq(usersTable.id, userId));
+
+    const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    res.json({ success: true, isPremium: updatedUser.isPremium });
+  } catch (err: any) {
+    console.error("[Stripe] verify-premium error:", err.message);
+    res.status(500).json({ error: "Failed to verify payment" });
+  }
 });
 
 export async function handleStripeWebhook(payload: Buffer, signature: string): Promise<void> {

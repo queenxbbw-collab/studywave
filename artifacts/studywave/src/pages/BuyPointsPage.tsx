@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/lib/auth";
 import { useLocation, Link } from "wouter";
@@ -32,7 +32,7 @@ const PACKAGE_COLORS: Record<string, string> = {
 
 export default function BuyPointsPage() {
   usePageTitle("Buy Points");
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [packages, setPackages] = useState<PointPackage[]>([]);
@@ -41,6 +41,7 @@ export default function BuyPointsPage() {
   const [success, setSuccess] = useState(false);
   const [successPoints, setSuccessPoints] = useState(0);
   const [premiumSuccess, setPremiumSuccess] = useState(false);
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -52,10 +53,31 @@ export default function BuyPointsPage() {
       setSuccess(true);
       setSuccessPoints(parseInt(params.get("points") || "0"));
       window.history.replaceState({}, "", "/buy-points");
+      refreshUser();
     }
     if (params.get("premium_success")) {
-      setPremiumSuccess(true);
+      const sessionId = params.get("session_id");
       window.history.replaceState({}, "", "/buy-points");
+      if (sessionId && !verifiedRef.current) {
+        verifiedRef.current = true;
+        fetch(`${getBaseUrl()}/payments/verify-premium`, {
+          method: "POST",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              setPremiumSuccess(true);
+              refreshUser();
+            }
+          })
+          .catch(() => {
+            setPremiumSuccess(true);
+          });
+      } else {
+        setPremiumSuccess(true);
+      }
     }
     fetch(`${getBaseUrl()}/payments/packages`)
       .then(r => r.json())
@@ -179,18 +201,27 @@ export default function BuyPointsPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              onClick={handleSubscribe}
-              disabled={loadingSubscribe}
-              className="w-full bg-white text-amber-600 hover:bg-amber-50 font-bold rounded-xl border-0 shadow-sm h-10"
-            >
-              {loadingSubscribe ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing...</>
-              ) : (
-                <><Crown className="h-4 w-4 mr-2" /> Upgrade to Premium</>
-              )}
-            </Button>
-            <p className="text-amber-200 text-xs text-center mt-2">Cancel anytime. Billed monthly.</p>
+            {user.isPremium ? (
+              <div className="w-full bg-white/20 border border-white/30 rounded-xl h-10 flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-white" />
+                <span className="font-bold text-white text-sm">You're already Premium!</span>
+              </div>
+            ) : (
+              <>
+                <Button
+                  onClick={handleSubscribe}
+                  disabled={loadingSubscribe}
+                  className="w-full bg-white text-amber-600 hover:bg-amber-50 font-bold rounded-xl border-0 shadow-sm h-10"
+                >
+                  {loadingSubscribe ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing...</>
+                  ) : (
+                    <><Crown className="h-4 w-4 mr-2" /> Upgrade to Premium</>
+                  )}
+                </Button>
+                <p className="text-amber-200 text-xs text-center mt-2">Cancel anytime. Billed monthly.</p>
+              </>
+            )}
           </div>
         </div>
       </div>

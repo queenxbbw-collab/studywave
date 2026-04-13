@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb, ShoppingCart
+  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb, ShoppingCart, GraduationCap
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -16,6 +16,7 @@ import AnnouncementBanner from "./AnnouncementBanner";
 const NAV_ITEMS = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/questions", icon: HelpCircle, label: "Questions" },
+  { href: "/clase", icon: GraduationCap, label: "Clase" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/badges", icon: Star, label: "Badges" },
 ];
