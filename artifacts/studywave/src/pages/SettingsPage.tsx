@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
-import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users, Upload, Loader2 } from "lucide-react";
+import { Settings, User, Lock, Camera, ChevronLeft, CheckCircle2, Shield, Zap, Gift, Copy, Check, Globe, Twitter, Github, Linkedin, Users, Upload, Loader2, Crown, Palette, Sparkles } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
 
 interface Referral {
@@ -20,11 +20,25 @@ interface Referral {
   joinedAt: string;
 }
 
+const BANNER_PRESETS = [
+  { label: "Violet Dream", value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
+  { label: "Sunset", value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
+  { label: "Ocean", value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
+  { label: "Forest", value: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" },
+  { label: "Fire", value: "linear-gradient(135deg, #f77062 0%, #fe5196 100%)" },
+  { label: "Midnight", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" },
+  { label: "Gold", value: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)" },
+  { label: "Arctic", value: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)" },
+  { label: "Emerald", value: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)" },
+  { label: "Rose", value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" },
+];
+
 const NAV_ITEMS = [
   { id: "profile", icon: User, label: "Profile" },
   { id: "avatar", icon: Camera, label: "Profile Picture" },
   { id: "password", icon: Lock, label: "Password" },
   { id: "referral", icon: Gift, label: "Referral" },
+  { id: "premium", icon: Crown, label: "Premium" },
 ];
 
 export default function SettingsPage() {
@@ -55,6 +69,7 @@ export default function SettingsPage() {
   const [referralsLoaded, setReferralsLoaded] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
+  const [bannerColor, setBannerColor] = useState<string>((user as any)?.bannerColor || "");
 
   const processAvatarFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -165,6 +180,25 @@ export default function SettingsPage() {
       },
       onError: e => toast({ title: e.message, variant: "destructive" }),
     });
+  };
+
+  const handlePremiumSave = () => {
+    setSaving(true);
+    fetch("/api/users/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ bannerColor }),
+    })
+      .then(r => r.json())
+      .then(updated => {
+        updateUser(updated);
+        toast({ title: "Profile customization saved!" });
+        setSaving(false);
+      })
+      .catch(() => {
+        toast({ title: "Failed to save", variant: "destructive" });
+        setSaving(false);
+      });
   };
 
   return (
@@ -617,6 +651,89 @@ export default function SettingsPage() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Premium Customization tab */}
+          {activeTab === "premium" && (
+            <div className="bg-white rounded-2xl border border-border/60 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50">
+                <h2 className="font-bold flex items-center gap-2 text-amber-700">
+                  <Crown className="h-4 w-4 text-amber-500" /> Premium Customization
+                </h2>
+              </div>
+              {(user as any).isPremium ? (
+                <div className="p-6 space-y-6">
+                  <div>
+                    <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-amber-500" /> Profile Banner Color
+                    </p>
+                    <div
+                      className={`h-16 rounded-xl mb-4 relative overflow-hidden border border-border/40${!bannerColor ? " gradient-hero" : ""}`}
+                      style={bannerColor ? { background: bannerColor } : undefined}
+                    >
+                      <div className="absolute inset-0 dot-bg opacity-40"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-white/90 text-xs font-semibold drop-shadow">Preview</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2 mb-3">
+                      {BANNER_PRESETS.map(p => (
+                        <button
+                          key={p.value}
+                          onClick={() => setBannerColor(p.value)}
+                          style={{ background: p.value }}
+                          title={p.label}
+                          className={`h-10 rounded-lg border-2 transition-all hover:scale-105 ${bannerColor === p.value ? "border-primary shadow-md scale-105" : "border-transparent"}`}
+                        />
+                      ))}
+                    </div>
+                    {bannerColor && (
+                      <button
+                        onClick={() => setBannerColor("")}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        Reset to default
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handlePremiumSave}
+                    disabled={saving}
+                    className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold shadow-sm hover:opacity-90"
+                  >
+                    {saving ? "Saving..." : "Save customization"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-10 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+                    <Crown className="h-8 w-8 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Unlock Premium Perks</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Upgrade to Premium to customize your profile banner, get an exclusive avatar ring, and more.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto text-left">
+                    {[
+                      { icon: "🎨", text: "Custom banner colors" },
+                      { icon: "👑", text: "Premium avatar ring" },
+                      { icon: "∞", text: "Unlimited questions/day" },
+                      { icon: "⚡", text: "Unlimited answers/day" },
+                    ].map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{f.icon}</span> {f.text}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => window.location.href = "/buy-points"}
+                    className="gradient-primary text-white border-0 h-9 px-6 rounded-xl font-semibold shadow-sm hover:opacity-90"
+                  >
+                    <Sparkles className="h-4 w-4 mr-1" /> Upgrade to Premium — $4.99/mo
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

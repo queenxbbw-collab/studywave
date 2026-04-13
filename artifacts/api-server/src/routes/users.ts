@@ -69,6 +69,7 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     followersCount: Number(followersCount.count),
     followingCount: Number(followingCount.count),
     isPremium: user.isPremium ?? false,
+    bannerColor: user.bannerColor,
     badges,
   });
 });
@@ -160,6 +161,7 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
   }
 
   const { displayName, bio, email, currentPassword, newPassword, website, twitter, github, linkedin } = parsed.data;
+  const bannerColor = typeof (req.body as any).bannerColor === "string" ? (req.body as any).bannerColor : undefined;
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
   if (!user) {
@@ -182,6 +184,7 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
   if (twitter !== undefined) updateData.twitter = twitter;
   if (github !== undefined) updateData.github = github;
   if (linkedin !== undefined) updateData.linkedin = linkedin;
+  if (bannerColor !== undefined) updateData.bannerColor = bannerColor;
   if (email) {
     const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
     if (existing && existing.id !== user.id) {
@@ -210,6 +213,8 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
     points: updated.points,
     role: updated.role,
     isActive: updated.isActive,
+    isPremium: updated.isPremium ?? false,
+    bannerColor: updated.bannerColor,
     createdAt: updated.createdAt.toISOString(),
   });
 });

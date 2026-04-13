@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle2, MessageCircle, Award, ArrowUp, Clock } from "lucide-react";
+import { CheckCircle2, MessageCircle, Award, ArrowUp, Clock, Crown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Question {
@@ -12,6 +12,7 @@ interface Question {
   authorUsername: string;
   authorDisplayName: string;
   authorAvatarUrl?: string | null;
+  authorIsPremium?: boolean;
   upvotes: number;
   downvotes: number;
   answerCount: number;
@@ -103,6 +104,7 @@ export default function QuestionCard({ question }: { question: Question }) {
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-xs font-medium text-foreground/70">{question.authorDisplayName}</span>
+                {question.authorIsPremium && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
                 <span className="text-xs text-muted-foreground/60">·</span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />

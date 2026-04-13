@@ -54,13 +54,16 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  // Daily answer rate limit
-  const todayStart = startOfTodayUTC();
-  const [todayCount] = await db.select({ cnt: count() }).from(answersTable)
-    .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
-  if (Number(todayCount.cnt) >= DAILY_ANSWER_LIMIT) {
-    res.status(429).json({ error: `You've reached the daily limit of ${DAILY_ANSWER_LIMIT} answers. Come back tomorrow!` });
-    return;
+  // Daily answer rate limit (Premium users have unlimited answers)
+  const [userRow] = await db.select({ isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
+  if (!userRow?.isPremium) {
+    const todayStart = startOfTodayUTC();
+    const [todayCount] = await db.select({ cnt: count() }).from(answersTable)
+      .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
+    if (Number(todayCount.cnt) >= DAILY_ANSWER_LIMIT) {
+      res.status(429).json({ error: `You've reached the daily limit of ${DAILY_ANSWER_LIMIT} answers. Upgrade to Premium for unlimited answers!` });
+      return;
+    }
   }
 
   const [answer] = await db.insert(answersTable).values({

@@ -69,7 +69,7 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
   const total = Number(totalRow.count);
 
   const questions = await db
-    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
+    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, isPremium: usersTable.isPremium } })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
     .where(whereClause)
@@ -98,6 +98,7 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
       authorUsername: author.username,
       authorDisplayName: author.displayName,
       authorAvatarUrl: author.avatarUrl,
+      authorIsPremium: author.isPremium ?? false,
       upvotes: q.upvotes,
       downvotes: q.downvotes,
       answerCount: answerCountMap.get(q.id) || 0,
@@ -177,7 +178,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   const [questionRow] = await db
-    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points } })
+    .select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points, isPremium: usersTable.isPremium } })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
     .where(eq(questionsTable.id, id));
@@ -185,7 +186,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
   if (!questionRow) { res.status(404).json({ error: "Question not found" }); return; }
 
   const answers = await db
-    .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points } })
+    .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points, isPremium: usersTable.isPremium } })
     .from(answersTable)
     .innerJoin(usersTable, eq(answersTable.authorId, usersTable.id))
     .where(eq(answersTable.questionId, id))
@@ -206,6 +207,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     authorDisplayName: author.displayName,
     authorAvatarUrl: author.avatarUrl,
     authorPoints: author.points,
+    authorIsPremium: author.isPremium ?? false,
     upvotes: q.upvotes,
     downvotes: q.downvotes,
     views: (q as any).views ?? 0,
@@ -222,6 +224,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
       authorDisplayName: aa.displayName,
       authorAvatarUrl: aa.avatarUrl,
       authorPoints: aa.points,
+      authorIsPremium: aa.isPremium ?? false,
       upvotes: a.upvotes,
       downvotes: a.downvotes,
       isAwarded: a.isAwarded,
@@ -346,8 +349,8 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
     questionsRemaining: premium ? 999 : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt)),
     questionBonusPool: 0,
     answersToday: Number(aCount.cnt),
-    answerLimit: 15,
-    answersRemaining: Math.max(0, 15 - Number(aCount.cnt)),
+    answerLimit: premium ? null : 15,
+    answersRemaining: premium ? 999 : Math.max(0, 15 - Number(aCount.cnt)),
     points: userRow?.points ?? 0,
     isPremium: premium,
   });

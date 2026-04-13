@@ -142,20 +142,34 @@ export default function ProfilePage() {
       {/* Profile header */}
       <div className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-xs mb-6">
         {/* Cover gradient */}
-        <div className="h-24 gradient-hero relative overflow-hidden">
-          <div className="absolute inset-0 dot-bg opacity-60"></div>
-          <div className="absolute right-0 top-0 w-48 h-48 bg-primary/8 rounded-full blur-2xl"></div>
+        <div
+          className={`h-24 relative overflow-hidden${!(profile as any).bannerColor ? " gradient-hero" : ""}`}
+          style={(profile as any).bannerColor ? { background: (profile as any).bannerColor } : undefined}
+        >
+          <div className="absolute inset-0 dot-bg opacity-40"></div>
+          <div className="absolute right-0 top-0 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
         </div>
 
         <div className="px-6 pb-6">
           <div className="flex items-end justify-between -mt-10 mb-4">
             <div className="relative">
-              <Avatar className="h-20 w-20 border-4 border-white shadow-md">
-                <AvatarImage src={profile.avatarUrl || undefined} />
-                <AvatarFallback className="gradient-primary text-white text-2xl font-black">
-                  {profile.displayName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {(profile as any).isPremium ? (
+                <div className="h-20 w-20 rounded-full p-[3px] bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 shadow-lg shadow-amber-200/60">
+                  <Avatar className="h-full w-full border-2 border-white">
+                    <AvatarImage src={profile.avatarUrl || undefined} />
+                    <AvatarFallback className="gradient-primary text-white text-2xl font-black">
+                      {profile.displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              ) : (
+                <Avatar className="h-20 w-20 border-4 border-white shadow-md">
+                  <AvatarImage src={profile.avatarUrl || undefined} />
+                  <AvatarFallback className="gradient-primary text-white text-2xl font-black">
+                    {profile.displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
             </div>
             <div className="flex items-center gap-2">
