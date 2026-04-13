@@ -32,6 +32,9 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     longestStreak: u.longestStreak ?? u.longest_streak ?? 0,
     lastActivityDate: u.lastActivityDate ?? u.last_activity_date ?? null,
     createdAt: user.createdAt.toISOString(),
+    isPremium: user.isPremium ?? false,
+    premiumExpiresAt: user.premiumExpiresAt ? user.premiumExpiresAt.toISOString() : null,
+    bannerColor: u.bannerColor ?? u.banner_color ?? null,
   };
 }
 

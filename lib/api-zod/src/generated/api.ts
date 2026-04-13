@@ -44,6 +44,14 @@ export const LoginResponse = zod.object({
     role: zod.string(),
     isActive: zod.boolean(),
     createdAt: zod.string(),
+    isPremium: zod.boolean().optional(),
+    premiumExpiresAt: zod.string().nullish(),
+    bannerColor: zod.string().nullish(),
+    referralCode: zod.string().optional(),
+    questionBonusPool: zod.number().optional(),
+    currentStreak: zod.number().optional(),
+    longestStreak: zod.number().optional(),
+    lastActivityDate: zod.string().nullish(),
   }),
   token: zod.string(),
 });
@@ -69,6 +77,14 @@ export const GetMeResponse = zod.object({
   role: zod.string(),
   isActive: zod.boolean(),
   createdAt: zod.string(),
+  isPremium: zod.boolean().optional(),
+  premiumExpiresAt: zod.string().nullish(),
+  bannerColor: zod.string().nullish(),
+  referralCode: zod.string().optional(),
+  questionBonusPool: zod.number().optional(),
+  currentStreak: zod.number().optional(),
+  longestStreak: zod.number().optional(),
+  lastActivityDate: zod.string().nullish(),
 });
 
 /**

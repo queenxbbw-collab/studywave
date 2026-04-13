@@ -42,6 +42,17 @@ export interface User {
   role: string;
   isActive: boolean;
   createdAt: string;
+  isPremium?: boolean;
+  /** @nullable */
+  premiumExpiresAt?: string | null;
+  /** @nullable */
+  bannerColor?: string | null;
+  referralCode?: string;
+  questionBonusPool?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  /** @nullable */
+  lastActivityDate?: string | null;
 }
 
 export interface AuthResponse {
