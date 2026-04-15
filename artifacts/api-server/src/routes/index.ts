@@ -15,6 +15,8 @@ import announcementsRouter from "./announcements";
 import suggestionsRouter from "./suggestions";
 import adminRouter from "./admin";
 import paymentsRouter from "./payments";
+import verificationRouter from "./verification";
+import quizRouter from "./quiz";
 
 const router: IRouter = Router();
 
@@ -33,6 +35,8 @@ router.use(notificationsRouter);
 router.use(announcementsRouter);
 router.use(suggestionsRouter);
 router.use(paymentsRouter);
+router.use(verificationRouter);
+router.use(quizRouter);
 router.use(adminRouter);
 
 export default router;

@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import {
   BookOpen, Brain, FileText, ChevronRight, CheckCircle2, Circle,
   Printer, GraduationCap, X, ChevronLeft, ChevronRight as ChevronRightIcon,
-  Lightbulb, PenLine, FlaskConical, Star, ArrowRight
+  Lightbulb, PenLine, FlaskConical, Star, ArrowRight, Timer, Lock, Trophy, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose
 } from "@/components/ui/dialog";
+import { useAuth, getAuthHeaders } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 type Tab = "invatat" | "quiz" | "fise";
 
@@ -2378,51 +2380,214 @@ function WorksheetModal({ ws, cls, open, onClose }: {
   );
 }
 
+const QUESTION_TIME = 30;
+
 function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: ClassData }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
   const [submitted, setSubmitted] = useState(false);
-  const score = submitted ? questions.filter((q, i) => answers[i] === q.answer).length : 0;
+  const [saving, setSaving] = useState(false);
+  const [pastResult, setPastResult] = useState<{ score: number; total: number; timeTaken?: number } | null>(null);
+  const [loadingResult, setLoadingResult] = useState(true);
+  const [animating, setAnimating] = useState(false);
+  const startTime = useRef(Date.now());
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gradeKey = String(cls.grade);
+
+  useEffect(() => {
+    if (!user) { setLoadingResult(false); return; }
+    fetch("/api/quiz/my-results", { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        const found = (data.results ?? []).find((r: any) => r.classGrade === gradeKey);
+        if (found) setPastResult({ score: found.score, total: found.total, timeTaken: found.timeTaken });
+      })
+      .catch(() => {})
+      .finally(() => setLoadingResult(false));
+  }, [user, gradeKey]);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimeLeft(QUESTION_TIME);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          goNext(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    if (!submitted && !pastResult && !loadingResult) startTimer();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [current, submitted, pastResult, loadingResult]);
+
+  const goNext = useCallback((forced = false) => {
+    if (animating) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent(prev => {
+        if (prev < questions.length - 1) {
+          startTimer();
+          return prev + 1;
+        }
+        if (timerRef.current) clearInterval(timerRef.current);
+        setSubmitted(true);
+        return prev;
+      });
+      setAnimating(false);
+    }, 300);
+  }, [animating, questions.length, startTimer]);
+
+  useEffect(() => {
+    if (submitted && user) {
+      const finalScore = questions.filter((q, i) => answers[i] === q.answer).length;
+      const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
+      setSaving(true);
+      fetch("/api/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ classGrade: gradeKey, score: finalScore, total: questions.length, timeTaken }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.result) {
+            setPastResult({ score: finalScore, total: questions.length, timeTaken });
+          }
+        })
+        .catch(() => {})
+        .finally(() => setSaving(false));
+    }
+  }, [submitted]);
+
+  if (loadingResult) {
+    return <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Se încarcă...</div>;
+  }
+
+  if (pastResult && !submitted) {
+    const pct = Math.round((pastResult.score / pastResult.total) * 100);
+    return (
+      <div className="bg-white rounded-2xl border border-border/60 p-8 text-center shadow-xs space-y-3">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm font-medium mb-1">
+          <Lock className="h-4 w-4" /> Quiz completat
+        </div>
+        <div className="text-5xl font-black text-foreground">{pastResult.score}<span className="text-2xl text-muted-foreground font-semibold">/{pastResult.total}</span></div>
+        <div className="text-sm text-muted-foreground">{pct}% corect{pastResult.timeTaken ? ` · ${pastResult.timeTaken}s` : ""}</div>
+        <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${pct === 100 ? "bg-emerald-100 text-emerald-700" : pct >= 70 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+          {pct === 100 ? "🏆 Perfect!" : pct >= 70 ? "👍 Bine!" : "📚 Mai studiază"}
+        </div>
+        <p className="text-xs text-muted-foreground">Quizul poate fi dat o singură dată per clasă.</p>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    const finalScore = questions.filter((q, i) => answers[i] === q.answer).length;
+    const pct = Math.round((finalScore / questions.length) * 100);
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-2xl border border-border/60 p-8 text-center shadow-xs space-y-3">
+          <Trophy className="h-10 w-10 text-amber-500 mx-auto" />
+          <div className="text-5xl font-black text-foreground">{finalScore}<span className="text-2xl text-muted-foreground font-semibold">/{questions.length}</span></div>
+          <div className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${pct === 100 ? "bg-emerald-100 text-emerald-700" : pct >= 70 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+            {pct === 100 ? "🏆 Excelent! Ai răspuns corect la toate!" : pct >= 70 ? "👍 Bine! Mai exersează puțin." : "📚 Mai trebuie să înveți. Nu te descuraja!"}
+          </div>
+          {saving && <p className="text-xs text-muted-foreground">Se salvează rezultatul...</p>}
+          {!saving && <p className="text-xs text-muted-foreground">Rezultatul a fost salvat. Quizul nu mai poate fi refăcut.</p>}
+        </div>
+        <div className="space-y-3">
+          {questions.map((q, qi) => (
+            <div key={qi} className="bg-white rounded-2xl border border-border/60 p-4 shadow-xs">
+              <p className="font-semibold text-foreground mb-2 text-sm">{qi + 1}. {q.q}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {q.options.map((opt, oi) => {
+                  const isCorrect = oi === q.answer;
+                  const isChosen = answers[qi] === oi;
+                  return (
+                    <div key={oi} className={`px-4 py-2.5 rounded-xl border text-sm font-medium ${isCorrect ? "bg-emerald-50 border-emerald-300 text-emerald-700" : isChosen ? "bg-red-50 border-red-300 text-red-700" : "border-border/40 text-muted-foreground/60"}`}>
+                      <span className="mr-2 font-bold">{String.fromCharCode(65 + oi)}.</span>{opt}
+                      {isCorrect && <span className="ml-1 text-emerald-600 font-bold">✓</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const q = questions[current];
+  const selected = answers[current];
+  const timerPct = (timeLeft / QUESTION_TIME) * 100;
+  const timerColor = timeLeft > 15 ? "bg-emerald-500" : timeLeft > 7 ? "bg-amber-500" : "bg-red-500";
 
   return (
     <div className="space-y-4">
-      {questions.map((q, qi) => (
-        <div key={qi} className="bg-white rounded-2xl border border-border/60 p-5 shadow-xs">
-          <p className="font-semibold text-foreground mb-3 text-sm">{qi + 1}. {q.q}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {q.options.map((opt, oi) => {
-              const selected = answers[qi] === oi;
-              const isCorrect = submitted && oi === q.answer;
-              const isWrong = submitted && selected && oi !== q.answer;
-              return (
-                <button
-                  key={oi}
-                  onClick={() => !submitted && setAnswers(prev => ({ ...prev, [qi]: oi }))}
-                  className={`text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${isCorrect ? "bg-emerald-50 border-emerald-300 text-emerald-700" : isWrong ? "bg-red-50 border-red-300 text-red-700" : selected ? "bg-primary/8 border-primary text-primary" : "border-border/60 hover:border-border hover:bg-gray-50 text-muted-foreground"}`}
-                >
-                  <span className="mr-2 font-bold">{String.fromCharCode(65 + oi)}.</span>{opt}
-                </button>
-              );
-            })}
-          </div>
-          {submitted && (
-            <p className={`text-xs mt-2 font-medium ${answers[qi] === q.answer ? "text-emerald-600" : "text-red-600"}`}>
-              {answers[qi] === q.answer ? "✓ Corect!" : `✗ Răspuns corect: ${q.options[q.answer]}`}
-            </p>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold text-muted-foreground">{current + 1} / {questions.length}</span>
+        <div className="flex items-center gap-1.5">
+          <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className={`text-xs font-bold tabular-nums ${timeLeft <= 7 ? "text-red-600" : "text-muted-foreground"}`}>{timeLeft}s</span>
+        </div>
+      </div>
+      <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+        <div className={`h-1.5 rounded-full transition-all duration-1000 ${timerColor}`} style={{ width: `${timerPct}%` }} />
+      </div>
+      <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+        <div className="h-1 rounded-full bg-primary transition-all duration-300" style={{ width: `${((current) / questions.length) * 100}%` }} />
+      </div>
+
+      <div className={`bg-white rounded-2xl border border-border/60 p-5 shadow-xs transition-opacity duration-300 ${animating ? "opacity-0" : "opacity-100"}`}>
+        <p className="font-bold text-foreground mb-4 text-base leading-snug">{q.q}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {q.options.map((opt, oi) => (
+            <button
+              key={oi}
+              onClick={() => setAnswers(prev => ({ ...prev, [current]: oi }))}
+              className={`text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all ${selected === oi ? "bg-primary/8 border-primary text-primary ring-1 ring-primary/30 scale-[1.01]" : "border-border/60 hover:border-border hover:bg-gray-50 text-muted-foreground"}`}
+            >
+              <span className="mr-2 font-black text-xs">{String.fromCharCode(65 + oi)}.</span>{opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {current > 0 && (
+          <Button variant="outline" size="sm" onClick={() => { setAnimating(true); setTimeout(() => { setCurrent(c => c - 1); startTimer(); setAnimating(false); }, 300); }} className="rounded-xl">
+            <ChevronLeft className="h-4 w-4 mr-1" /> Înapoi
+          </Button>
+        )}
+        <Button
+          onClick={() => {
+            if (current === questions.length - 1) {
+              if (timerRef.current) clearInterval(timerRef.current);
+              setSubmitted(true);
+            } else {
+              goNext();
+            }
+          }}
+          disabled={selected === undefined || animating}
+          className="flex-1 gradient-primary text-white border-0 rounded-xl font-bold shadow-sm hover:opacity-90"
+        >
+          {current === questions.length - 1 ? (
+            <><Zap className="h-4 w-4 mr-1.5" />Finalizează quiz-ul</>
+          ) : (
+            <>Următoarea <ChevronRightIcon className="h-4 w-4 ml-1" /></>
           )}
-        </div>
-      ))}
-      {!submitted ? (
-        <Button onClick={() => setSubmitted(true)} disabled={Object.keys(answers).length < questions.length} className="w-full gradient-primary text-white border-0 rounded-xl font-bold shadow-sm hover:opacity-90">
-          Verifică răspunsurile ({Object.keys(answers).length}/{questions.length} răspunse)
         </Button>
-      ) : (
-        <div className="bg-white rounded-2xl border border-border/60 p-5 text-center shadow-xs">
-          <p className="text-3xl font-black text-foreground">{score}/{questions.length}</p>
-          <p className="text-muted-foreground text-sm mt-1">
-            {score === questions.length ? "Excelent! 🎉 Ai răspuns corect la toate!" : score >= Math.ceil(questions.length * 0.7) ? "Bine! Mai exersează puțin." : "Mai trebuie să înveți. Nu te descuraja!"}
-          </p>
-          <Button onClick={() => { setAnswers({}); setSubmitted(false); }} variant="outline" className="mt-3 rounded-xl text-sm">Încearcă din nou</Button>
-        </div>
+      </div>
+      {!user && (
+        <p className="text-xs text-center text-muted-foreground">Autentifică-te pentru a-ți salva rezultatele.</p>
       )}
     </div>
   );

@@ -76,6 +76,31 @@ export default function AdminPage() {
   const [logsTotalPages, setLogsTotalPages] = useState(1);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsCategory, setLogsCategory] = useState("all");
+  const [verifications, setVerifications] = useState<any[]>([]);
+  const [verificationsLoading, setVerificationsLoading] = useState(false);
+
+  const fetchVerifications = async () => {
+    setVerificationsLoading(true);
+    try {
+      const r = await fetch("/api/admin/verification-requests", { headers: getAuthHeaders() });
+      if (r.ok) setVerifications((await r.json()).requests ?? []);
+    } catch {} finally { setVerificationsLoading(false); }
+  };
+
+  const handleVerificationAction = async (id: number, action: "approve" | "reject") => {
+    try {
+      const r = await fetch(`/api/admin/verification-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ action }),
+      });
+      if (r.ok) {
+        toast({ title: action === "approve" ? "✅ Cerere aprobată" : "❌ Cerere respinsă" });
+        fetchVerifications();
+      }
+    } catch { toast({ title: "Eroare", variant: "destructive" }); }
+  };
+
   // Danger Zone
   const [dangerLoading, setDangerLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -321,6 +346,7 @@ export default function AdminPage() {
         if (v === "announcements") fetchAnnouncements();
         if (v === "suggestions") fetchSuggestions();
         if (v === "logs") { setLogsPage(1); fetchLogs(1, logsCategory); }
+        if (v === "verifications") fetchVerifications();
       }}>
         <div className="overflow-x-auto mb-6 pb-1">
           <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs flex w-max min-w-full gap-0.5">
@@ -333,6 +359,7 @@ export default function AdminPage() {
               { value: "announcements", icon: Megaphone, label: "Announcements" },
               { value: "suggestions", icon: Lightbulb, label: "Suggestions" },
               { value: "logs", icon: ClipboardList, label: "Audit Log" },
+              { value: "verifications", icon: CheckCircle, label: "Verificări" },
               { value: "danger", icon: AlertTriangle, label: "Danger Zone" },
             ].map(tab => (
               <TabsTrigger key={tab.value} value={tab.value} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm data-[state=active]:shadow-sm whitespace-nowrap">
@@ -1226,6 +1253,63 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* VERIFICĂRI TAB */}
+        <TabsContent value="verifications">
+          <div className="space-y-4">
+            <div>
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-blue-600" /> Cereri de verificare
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Aprobă sau respinge cererile de verificare ale utilizatorilor.</p>
+            </div>
+            {verificationsLoading ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">Se încarcă...</div>
+            ) : verifications.length === 0 ? (
+              <div className="bg-white border border-border/60 rounded-2xl p-8 text-center shadow-xs">
+                <CheckCircle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Nicio cerere de verificare momentan.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {verifications.map((v: any) => (
+                  <div key={v.id} className="bg-white border border-border/60 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{v.displayName ?? v.username}</span>
+                        <span className="text-xs text-muted-foreground">@{v.username}</span>
+                        <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${v.status === "pending" ? "bg-amber-100 text-amber-700" : v.status === "approved" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {v.status === "pending" ? "În așteptare" : v.status === "approved" ? "Aprobat" : "Respins"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{v.firstName} {v.lastName} · Clasa {v.grade}</p>
+                      <p className="text-xs text-foreground/75 italic">"{v.favoriteFeature}"</p>
+                    </div>
+                    {v.status === "pending" && (
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold border-0"
+                          onClick={() => handleVerificationAction(v.id, "approve")}
+                        >
+                          ✓ Aprobă
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl text-xs font-semibold border-red-200 text-red-600 hover:bg-red-50"
+                          onClick={() => handleVerificationAction(v.id, "reject")}
+                        >
+                          ✗ Respinge
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

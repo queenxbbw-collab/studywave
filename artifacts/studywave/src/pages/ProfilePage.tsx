@@ -15,11 +15,16 @@ import {
   Settings, Trophy, HelpCircle, MessageCircle, Award, Calendar, Shield,
   Star, Zap, TrendingUp, Lock, Sparkles, Flame, Globe, Twitter, Github, Linkedin, ExternalLink,
   Crown, BookOpen, Target, Medal, CheckCircle, Lightbulb, Brain, Rocket, Heart,
-  UserPlus, UserCheck, Users
+  UserPlus, UserCheck, Users, BadgeCheck, ShieldCheck
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Trophy, Star, Award, Shield, Flame, Zap, Crown,
@@ -48,6 +53,21 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [followLoading, setFollowLoading] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyForm, setVerifyForm] = useState({ firstName: "", lastName: "", grade: "", favoriteFeature: "" });
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
+
+  const fetchVerifyStatus = async () => {
+    if (!currentUser) return;
+    try {
+      const r = await fetch("/api/verification/my-status", { headers: getAuthHeaders() });
+      if (r.ok) {
+        const data = await r.json();
+        if (data.request) setVerifyStatus(data.request.status);
+      }
+    } catch {}
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["user-profile", rawParam],
@@ -186,11 +206,23 @@ export default function ProfilePage() {
                 </Button>
               )}
               {isOwnProfile && (
-                <Link href="/settings">
-                  <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
-                    <Settings className="h-3.5 w-3.5" /> Edit Profile
-                  </Button>
-                </Link>
+                <>
+                  <Link href="/settings">
+                    <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
+                      <Settings className="h-3.5 w-3.5" /> Edit Profile
+                    </Button>
+                  </Link>
+                  {!(profile as any).isVerified && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold border-blue-200 text-blue-600 hover:bg-blue-50"
+                      onClick={() => { fetchVerifyStatus(); setShowVerifyModal(true); }}
+                    >
+                      <BadgeCheck className="h-3.5 w-3.5" /> Cere verificare
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -208,6 +240,11 @@ export default function ProfilePage() {
                   </span>
                 )}
               </>
+            )}
+            {(profile as any).isVerified && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                <BadgeCheck className="h-3 w-3" /> Verificat
+              </span>
             )}
             {profile.role === "admin" && (
               <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">
@@ -385,6 +422,107 @@ export default function ProfilePage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={showVerifyModal} onOpenChange={setShowVerifyModal}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <BadgeCheck className="h-5 w-5 text-blue-600" /> Cerere de verificare
+            </DialogTitle>
+          </DialogHeader>
+          {verifyStatus === "pending" ? (
+            <div className="py-4 text-center space-y-2">
+              <ShieldCheck className="h-10 w-10 text-amber-500 mx-auto" />
+              <p className="font-semibold text-sm">Cererea ta este în curs de procesare</p>
+              <p className="text-xs text-muted-foreground">Un admin va revizui cererea ta în curând.</p>
+            </div>
+          ) : verifyStatus === "rejected" ? (
+            <div className="py-4 text-center space-y-2">
+              <p className="font-semibold text-sm text-red-600">Cererea ta a fost respinsă</p>
+              <p className="text-xs text-muted-foreground">Poți trimite o nouă cerere completând formularul de mai jos.</p>
+            </div>
+          ) : (
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                setVerifyLoading(true);
+                try {
+                  const r = await fetch("/api/verification/request", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                    body: JSON.stringify(verifyForm),
+                  });
+                  const data = await r.json();
+                  if (r.ok) {
+                    toast({ title: "Cerere trimisă!", description: "Un admin va revizui cererea ta." });
+                    setVerifyStatus("pending");
+                    setShowVerifyModal(false);
+                  } else {
+                    toast({ title: data.error ?? "Eroare", variant: "destructive" });
+                    if (data.status) setVerifyStatus(data.status);
+                  }
+                } catch {
+                  toast({ title: "Ceva a mers prost", variant: "destructive" });
+                } finally {
+                  setVerifyLoading(false);
+                }
+              }}
+              className="space-y-3 pt-1"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Prenume</label>
+                  <Input
+                    value={verifyForm.firstName}
+                    onChange={e => setVerifyForm(f => ({ ...f, firstName: e.target.value }))}
+                    placeholder="Ex: Maria"
+                    required
+                    className="rounded-xl h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Nume</label>
+                  <Input
+                    value={verifyForm.lastName}
+                    onChange={e => setVerifyForm(f => ({ ...f, lastName: e.target.value }))}
+                    placeholder="Ex: Popescu"
+                    required
+                    className="rounded-xl h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Clasa ta</label>
+                <Input
+                  value={verifyForm.grade}
+                  onChange={e => setVerifyForm(f => ({ ...f, grade: e.target.value }))}
+                  placeholder="Ex: a 7-a B"
+                  required
+                  className="rounded-xl h-9 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Ce îți place cel mai mult la platformă?</label>
+                <Textarea
+                  value={verifyForm.favoriteFeature}
+                  onChange={e => setVerifyForm(f => ({ ...f, favoriteFeature: e.target.value }))}
+                  placeholder="Ex: Îmi place sistemul de puncte și că pot pune întrebări..."
+                  required
+                  rows={3}
+                  className="rounded-xl text-sm resize-none"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={verifyLoading}
+                className="w-full gradient-primary text-white border-0 rounded-xl font-bold h-9 text-sm"
+              >
+                {verifyLoading ? "Se trimite..." : "Trimite cererea"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

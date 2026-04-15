@@ -10,3 +10,5 @@ export * from "./notifications";
 export * from "./announcements";
 export * from "./suggestions";
 export * from "./admin_logs";
+export * from "./verification_requests";
+export * from "./quiz_results";
