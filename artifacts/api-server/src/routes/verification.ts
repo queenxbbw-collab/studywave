@@ -6,7 +6,7 @@ import { authenticate, requireAdmin } from "../middlewares/authenticate";
 const router = Router();
 
 router.post("/verification/request", authenticate, async (req, res): Promise<void> => {
-  const userId = (req as any).user.id;
+  const userId = req.userId!;
 
   const { firstName, lastName, grade, favoriteFeature } = req.body;
 
@@ -35,7 +35,7 @@ router.post("/verification/request", authenticate, async (req, res): Promise<voi
 });
 
 router.get("/verification/my-status", authenticate, async (req, res): Promise<void> => {
-  const userId = (req as any).user.id;
+  const userId = req.userId!;
 
   const [request] = await db
     .select()
@@ -72,7 +72,7 @@ router.get("/admin/verification-requests", authenticate, requireAdmin, async (re
 router.patch("/admin/verification-requests/:id", authenticate, requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const { action } = req.body;
-  const adminId = (req as any).user.id;
+  const adminId = req.userId!;
 
   if (!["approve", "reject"].includes(action)) {
     res.status(400).json({ error: "Acțiune invalidă." });
@@ -97,17 +97,10 @@ router.patch("/admin/verification-requests/:id", authenticate, requireAdmin, asy
     .set({ status: newStatus, reviewedBy: adminId, reviewedAt: new Date() })
     .where(eq(verificationRequestsTable.id, id));
 
-  if (action === "approve") {
-    await db
-      .update(usersTable)
-      .set({ isVerified: true })
-      .where(eq(usersTable.id, request.userId));
-  } else {
-    await db
-      .update(usersTable)
-      .set({ isVerified: false })
-      .where(eq(usersTable.id, request.userId));
-  }
+  await db
+    .update(usersTable)
+    .set({ isVerified: action === "approve" })
+    .where(eq(usersTable.id, request.userId));
 
   res.json({ success: true, status: newStatus });
 });

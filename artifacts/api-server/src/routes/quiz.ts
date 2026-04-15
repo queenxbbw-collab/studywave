@@ -6,7 +6,7 @@ import { authenticate } from "../middlewares/authenticate";
 const router = Router();
 
 router.post("/quiz/submit", authenticate, async (req, res): Promise<void> => {
-  const userId = (req as any).user.id;
+  const userId = req.userId!;
   const { classGrade, score, total, timeTaken } = req.body;
 
   if (!classGrade || score === undefined || total === undefined) {
@@ -34,7 +34,7 @@ router.post("/quiz/submit", authenticate, async (req, res): Promise<void> => {
 });
 
 router.get("/quiz/my-results", authenticate, async (req, res): Promise<void> => {
-  const userId = (req as any).user.id;
+  const userId = req.userId!;
 
   const results = await db
     .select()

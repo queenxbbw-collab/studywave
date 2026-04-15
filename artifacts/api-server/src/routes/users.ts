@@ -71,6 +71,7 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     isPremium: user.isPremium ?? false,
     premiumExpiresAt: user.premiumExpiresAt?.toISOString() ?? null,
     bannerColor: user.bannerColor,
+    isVerified: user.isVerified ?? false,
     badges,
   });
 });
