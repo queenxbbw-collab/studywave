@@ -14,12 +14,12 @@ interface ReportModalProps {
 }
 
 const REASONS = [
-  { value: "spam", label: "Spam or advertising" },
-  { value: "harassment", label: "Harassment or bullying" },
-  { value: "inappropriate_content", label: "Inappropriate content" },
-  { value: "misinformation", label: "Incorrect or misleading information" },
-  { value: "off_topic", label: "Off-topic or irrelevant" },
-  { value: "other", label: "Other" },
+  { value: "spam", label: "Spam sau publicitate" },
+  { value: "harassment", label: "Hărțuire sau intimidare" },
+  { value: "inappropriate_content", label: "Conținut inadecvat" },
+  { value: "misinformation", label: "Informații incorecte sau înșelătoare" },
+  { value: "off_topic", label: "În afara subiectului" },
+  { value: "other", label: "Altele" },
 ];
 
 export default function ReportModal({ targetType, targetId, targetLabel, onClose }: ReportModalProps) {
@@ -41,7 +41,7 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason) {
-      toast({ title: "Please select a reason", variant: "destructive" });
+      toast({ title: "Te rugăm să selectezi un motiv", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -53,7 +53,7 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Failed to submit report", variant: "destructive" });
+        toast({ title: data.error || "Raportarea a eșuat", variant: "destructive" });
         return;
       }
       setSubmitted(true);
@@ -75,7 +75,7 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
               <Flag className="h-4 w-4 text-red-500" />
             </div>
             <div>
-              <h2 className="font-bold text-foreground text-sm">Report Content</h2>
+              <h2 className="font-bold text-foreground text-sm">Raportează Conținut</h2>
               {targetLabel && <p className="text-xs text-muted-foreground">{targetLabel}</p>}
             </div>
           </div>
@@ -89,12 +89,12 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
             <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
               <Flag className="h-6 w-6 text-emerald-500" />
             </div>
-            <h3 className="font-bold text-foreground mb-2">Report submitted</h3>
+            <h3 className="font-bold text-foreground mb-2">Raport trimis</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Thank you for helping keep StudyWave safe. Our team will review this report.
+              Mulțumim că ajuți la menținerea StudyWave în siguranță. Echipa noastră va analiza acest raport.
             </p>
             <Button onClick={onClose} className="gradient-primary text-white border-0 h-9 px-6 rounded-xl font-semibold">
-              Close
+              Închide
             </Button>
           </div>
         ) : (
@@ -102,13 +102,13 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
             <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2.5">
               <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-700">
-                Please only report content that genuinely violates our community guidelines. Abuse of the report system may lead to account suspension.
+                Te rugăm să raportezi doar conținut care încalcă cu adevărat regulile comunității. Abuzul sistemului de raportare poate duce la suspendarea contului.
               </p>
             </div>
 
             {/* Reason selection */}
             <div>
-              <label className="text-sm font-semibold text-foreground mb-3 block">Why are you reporting this?</label>
+              <label className="text-sm font-semibold text-foreground mb-3 block">De ce raportezi acest conținut?</label>
               <div className="space-y-2">
                 {REASONS.map(r => (
                   <label
@@ -136,12 +136,12 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
             {/* Optional details */}
             <div>
               <label className="text-sm font-semibold text-foreground mb-2 block">
-                Additional details <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                Detalii suplimentare <span className="text-xs font-normal text-muted-foreground">(opțional)</span>
               </label>
               <Textarea
                 value={details}
                 onChange={e => setDetails(e.target.value)}
-                placeholder="Provide any additional context that may help our team..."
+                placeholder="Oferă orice context suplimentar care poate ajuta echipa noastră..."
                 rows={3}
                 className="resize-none rounded-xl border-border/70 text-sm"
                 maxLength={500}
@@ -155,14 +155,14 @@ export default function ReportModal({ targetType, targetId, targetLabel, onClose
                 onClick={onClose}
                 className="flex-1 h-9 rounded-xl font-semibold"
               >
-                Cancel
+                Anulează
               </Button>
               <Button
                 type="submit"
                 className="flex-1 h-9 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm"
                 disabled={loading || !reason}
               >
-                {loading ? "Submitting..." : "Submit Report"}
+                {loading ? "Se trimite..." : "Trimite Raport"}
               </Button>
             </div>
           </form>

@@ -14,11 +14,11 @@ import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
 
 const NAV_ITEMS = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/questions", icon: HelpCircle, label: "Questions" },
+  { href: "/", icon: Home, label: "Acasă" },
+  { href: "/questions", icon: HelpCircle, label: "Întrebări" },
   { href: "/clase", icon: GraduationCap, label: "Clase" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
-  { href: "/badges", icon: Star, label: "Badges" },
+  { href: "/leaderboard", icon: Trophy, label: "Clasament" },
+  { href: "/badges", icon: Star, label: "Insigne" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -69,7 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/ask" className="hidden md:block">
                     <Button size="sm" className="gap-2 shadow-sm gradient-primary text-white border-0 h-8 px-3.5 rounded-lg font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
                       <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-                      Ask a Question
+                      Pune o Întrebare
                     </Button>
                   </Link>
 
@@ -86,7 +86,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </Avatar>
                         <div className="hidden sm:block text-left max-w-[100px]">
                           <p className="text-xs font-semibold text-foreground leading-tight truncate">{user.displayName}</p>
-                          <p className="text-xs text-primary font-medium">{user.points?.toLocaleString()} pts</p>
+                          <p className="text-xs text-primary font-medium">{user.points?.toLocaleString("ro-RO")} pct</p>
                         </div>
                         <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block flex-shrink-0" />
                       </button>
@@ -105,33 +105,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         </div>
                         <div className="mt-2.5 flex items-center gap-2 p-2 rounded-lg bg-primary/6 border border-primary/10">
                           <Zap className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-xs font-medium text-primary">{user.points?.toLocaleString()} points earned</span>
+                          <span className="text-xs font-medium text-primary">{user.points?.toLocaleString("ro-RO")} puncte câștigate</span>
                         </div>
                       </div>
                       <DropdownMenuSeparator className="my-1" />
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
-                        <Link href={`/profile/${user.id}`}>Public Profile</Link>
+                        <Link href={`/profile/${user.id}`}>Profil Public</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/bookmarks">
-                          <Bookmark className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Bookmarks
+                          <Bookmark className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Marcaje
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/leaderboard#suggest">
                           <Lightbulb className="h-3.5 w-3.5 mr-2 text-amber-500" />
-                          <span className="text-amber-600 font-medium">Suggest a Feature</span>
+                          <span className="text-amber-600 font-medium">Sugerează o Funcție</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/buy-points">
                           <ShoppingCart className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                          <span className="text-emerald-600 font-medium">Buy Points</span>
+                          <span className="text-emerald-600 font-medium">Cumpără Puncte</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/settings">
-                          <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Account Settings
+                          <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Setări Cont
                         </Link>
                       </DropdownMenuItem>
                       {user.role === "admin" && (
@@ -140,7 +140,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                           <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                             <Link href="/admin">
                               <Shield className="h-3.5 w-3.5 mr-2 text-primary" />
-                              <span className="text-primary font-medium">Admin Panel</span>
+                              <span className="text-primary font-medium">Panou Admin</span>
                             </Link>
                           </DropdownMenuItem>
                         </>
@@ -150,7 +150,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         onClick={logout}
                         className="rounded-lg py-2 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                       >
-                        <LogOut className="h-3.5 w-3.5 mr-2" /> Sign Out
+                        <LogOut className="h-3.5 w-3.5 mr-2" /> Deconectare
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -159,18 +159,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <>
                   <Link href="/login">
                     <Button variant="ghost" size="sm" className="text-sm font-medium h-8 px-3.5">
-                      Sign In
+                      Autentifică-te
                     </Button>
                   </Link>
                   <Link href="/register">
                     <Button size="sm" className="gradient-primary text-white border-0 h-8 px-4 rounded-lg font-semibold shadow-sm hover:opacity-90 transition-opacity">
-                      Sign Up Free
+                      Înregistrare Gratuită
                     </Button>
                   </Link>
                 </>
               )}
 
-              {/* Mobile menu toggle — visible below lg */}
+              {/* Mobile menu toggle */}
               <button
                 className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
                 onClick={() => setMobileOpen(!mobileOpen)}
@@ -181,10 +181,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Announcement banner — inside sticky header so it doesn't push page content */}
         <AnnouncementBanner />
 
-        {/* Mobile / tablet menu (below lg) */}
+        {/* Mobile menu */}
         {mobileOpen && (
           <div className="lg:hidden border-t border-border/60 bg-background">
             <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
@@ -202,12 +201,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <>
                   <Link href="/ask" onClick={() => setMobileOpen(false)}>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/8">
-                      <Plus className="h-4 w-4" /> Ask a Question
+                      <Plus className="h-4 w-4" /> Pune o Întrebare
                     </button>
                   </Link>
                   <Link href="/leaderboard" onClick={() => setMobileOpen(false)}>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-amber-600 bg-amber-50">
-                      <Lightbulb className="h-4 w-4" /> Suggest a Feature
+                      <Lightbulb className="h-4 w-4" /> Sugerează o Funcție
                     </button>
                   </Link>
                 </>
@@ -230,9 +229,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <BookOpen className="h-3.5 w-3.5 text-white" />
               </div>
               <span className="font-bold text-sm text-foreground">StudyWave</span>
-              <span className="text-muted-foreground text-sm">· Learn better, together</span>
+              <span className="text-muted-foreground text-sm">· Învață mai bine, împreună</span>
             </div>
-            <p className="text-xs text-muted-foreground">© 2026 StudyWave. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground">© 2026 StudyWave. Toate drepturile rezervate.</p>
           </div>
         </div>
       </footer>

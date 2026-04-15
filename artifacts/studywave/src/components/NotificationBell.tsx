@@ -6,6 +6,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { getAuthHeaders } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
+import { ro } from "date-fns/locale";
 import { Link } from "wouter";
 
 interface Notification {
@@ -44,12 +45,19 @@ const TYPE_BG: Record<string, string> = {
 };
 
 const CATEGORIES = [
-  { key: "all",      label: "All" },
-  { key: "activity", label: "Activity" },
-  { key: "rewards",  label: "Rewards" },
+  { key: "all",      label: "Toate" },
+  { key: "activity", label: "Activitate" },
+  { key: "rewards",  label: "Recompense" },
   { key: "social",   label: "Social" },
-  { key: "system",   label: "System" },
+  { key: "system",   label: "Sistem" },
 ];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  activity: "activitate",
+  rewards: "recompense",
+  social: "social",
+  system: "sistem",
+};
 
 export default function NotificationBell() {
   const { user } = useAuth();
@@ -125,7 +133,7 @@ export default function NotificationBell() {
           if (!open) fetchNotifications(activeCategory);
         }}
         className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
-        title="Notifications"
+        title="Notificări"
       >
         {unread > 0 ? (
           <BellDot className="h-5 w-5 text-primary" />
@@ -145,7 +153,7 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
             <h3 className="font-semibold text-sm flex items-center gap-2">
               <Bell className="h-4 w-4 text-primary" />
-              Notifications
+              Notificări
               {unread > 0 && (
                 <span className="ml-1 min-w-[20px] h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
                   {unread}
@@ -157,7 +165,7 @@ export default function NotificationBell() {
                 onClick={markAllRead}
                 className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
               >
-                <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+                <CheckCheck className="h-3.5 w-3.5" /> Marchează tot ca citit
               </button>
             )}
           </div>
@@ -184,11 +192,11 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground text-sm">
                 <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="font-medium">No notifications yet</p>
+                <p className="font-medium">Nicio notificare</p>
                 <p className="text-xs mt-1 opacity-70">
                   {activeCategory !== "all"
-                    ? `No ${activeCategory} notifications`
-                    : "You're all caught up!"}
+                    ? `Nicio notificare de ${CATEGORY_LABELS[activeCategory] || activeCategory}`
+                    : "Ești la zi cu tot!"}
                 </p>
               </div>
             ) : (
@@ -233,10 +241,11 @@ export default function NotificationBell() {
                       <p className="text-[11px] text-muted-foreground/70">
                         {formatDistanceToNow(new Date(n.createdAt), {
                           addSuffix: true,
+                          locale: ro,
                         })}
                       </p>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium capitalize">
-                        {n.category}
+                        {CATEGORY_LABELS[n.category] || n.category}
                       </span>
                     </div>
                   </div>
@@ -251,7 +260,7 @@ export default function NotificationBell() {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-border/40 bg-gray-50/60">
             <p className="text-[11px] text-muted-foreground/60 text-center">
-              Showing up to 30 recent notifications
+              Se afișează până la 30 de notificări recente
             </p>
           </div>
         </div>

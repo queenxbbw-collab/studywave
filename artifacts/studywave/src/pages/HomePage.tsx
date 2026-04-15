@@ -11,13 +11,8 @@ import {
   TrendingUp, Activity, ArrowRight, Sparkles, Award, Star, Zap, Shield
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-const SUBJECTS = [
-  "all","Mathematics","Physics","Chemistry","Biology","History","Geography",
-  "Literature","Computer Science","Economics","Languages",
-  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
-  "Other"
-];
+import { ro } from "date-fns/locale";
+import { SUBJECTS_LIST, subjectLabel } from "@/lib/subjects";
 
 const ACTIVITY_ICONS: Record<string, React.FC<{className?: string}>> = {
   question_asked: HelpCircle,
@@ -26,9 +21,9 @@ const ACTIVITY_ICONS: Record<string, React.FC<{className?: string}>> = {
 };
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  question_asked: "asked a question",
-  answer_posted: "posted an answer",
-  answer_awarded: "received a best answer award",
+  question_asked: "a pus o întrebare",
+  answer_posted: "a postat un răspuns",
+  answer_awarded: "a primit Panglica de Aur",
 };
 
 const ACTIVITY_COLORS: Record<string, string> = {
@@ -37,8 +32,10 @@ const ACTIVITY_COLORS: Record<string, string> = {
   answer_awarded: "bg-amber-100 text-amber-600",
 };
 
+const SUBJECTS = ["all", ...SUBJECTS_LIST];
+
 export default function HomePage() {
-  usePageTitle("Home");
+  usePageTitle("Acasă");
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("all");
@@ -71,28 +68,28 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 border border-primary/15 text-primary text-sm font-semibold mb-6 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              The #1 collaborative learning platform
+              Platforma #1 de învățare colaborativă
             </div>
 
             <h1 className="text-5xl sm:text-6xl font-extrabold text-foreground tracking-tight mb-6 leading-[1.1]">
-              Learn smarter,{" "}
-              <span className="text-gradient">together</span>
+              Învață mai inteligent,{" "}
+              <span className="text-gradient">împreună</span>
             </h1>
 
             <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-10">
-              Ask tough questions, get quality answers, earn points and climb the leaderboard on StudyWave — the international Q&A platform for ambitious students worldwide.
+              Pune întrebări dificile, primește răspunsuri de calitate, câștigă puncte și urcă în clasament pe StudyWave — platforma românească de Q&amp;A pentru elevi ambițioși.
             </p>
 
             {user ? (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link href="/ask">
                   <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
-                    <Plus className="h-5 w-5" /> Ask a Question
+                    <Plus className="h-5 w-5" /> Pune o Întrebare
                   </Button>
                 </Link>
                 <Link href="/questions">
                   <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base gap-2 border-border/80">
-                    Browse Questions <ArrowRight className="h-4 w-4" />
+                    Explorează Întrebările <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -100,12 +97,12 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link href="/register">
                   <Button size="lg" className="gradient-primary text-white border-0 h-12 px-8 rounded-xl font-semibold shadow-md hover:shadow-lg hover:opacity-95 transition-all gap-2 text-base">
-                    <Sparkles className="h-5 w-5" /> Get Started Free
+                    <Sparkles className="h-5 w-5" /> Înregistrare Gratuită
                   </Button>
                 </Link>
                 <Link href="/login">
                   <Button variant="outline" size="lg" className="h-12 px-8 rounded-xl font-semibold text-base border-border/80">
-                    Sign In
+                    Autentifică-te
                   </Button>
                 </Link>
               </div>
@@ -115,17 +112,17 @@ export default function HomePage() {
               <div className="mt-10 flex items-center justify-center gap-6 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-primary" />
-                  <strong className="text-foreground">{stats.totalUsers.toLocaleString()}</strong> students
+                  <strong className="text-foreground">{stats.totalUsers.toLocaleString("ro-RO")}</strong> elevi
                 </span>
                 <span className="w-1 h-1 rounded-full bg-border"></span>
                 <span className="flex items-center gap-1.5">
                   <HelpCircle className="h-4 w-4 text-primary" />
-                  <strong className="text-foreground">{stats.totalQuestions.toLocaleString()}</strong> questions
+                  <strong className="text-foreground">{stats.totalQuestions.toLocaleString("ro-RO")}</strong> întrebări
                 </span>
                 <span className="w-1 h-1 rounded-full bg-border"></span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <strong className="text-foreground">{stats.solvedQuestions.toLocaleString()}</strong> solved
+                  <strong className="text-foreground">{stats.solvedQuestions.toLocaleString("ro-RO")}</strong> rezolvate
                 </span>
               </div>
             )}
@@ -139,17 +136,17 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Users, label: "Active Students", value: stats.totalUsers, color: "text-blue-600", bg: "bg-blue-50" },
-                { icon: HelpCircle, label: "Questions Asked", value: stats.totalQuestions, color: "text-violet-600", bg: "bg-violet-50" },
-                { icon: MessageCircle, label: "Answers Given", value: stats.totalAnswers, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { icon: Award, label: "Best Answers Awarded", value: stats.totalAwardedAnswers || 0, color: "text-amber-600", bg: "bg-amber-50" },
+                { icon: Users, label: "Elevi Activi", value: stats.totalUsers, color: "text-blue-600", bg: "bg-blue-50" },
+                { icon: HelpCircle, label: "Întrebări Puse", value: stats.totalQuestions, color: "text-violet-600", bg: "bg-violet-50" },
+                { icon: MessageCircle, label: "Răspunsuri Date", value: stats.totalAnswers, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { icon: Award, label: "Răspunsuri Premiate", value: stats.totalAwardedAnswers || 0, color: "text-amber-600", bg: "bg-amber-50" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-gray-50/50">
                   <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center flex-shrink-0`}>
                     <stat.icon className={`h-4.5 w-4.5 ${stat.color}`} />
                   </div>
                   <div>
-                    <p className="text-xl font-extrabold text-foreground leading-none">{stat.value.toLocaleString()}</p>
+                    <p className="text-xl font-extrabold text-foreground leading-none">{stat.value.toLocaleString("ro-RO")}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
                   </div>
                 </div>
@@ -171,12 +168,12 @@ export default function HomePage() {
                 <Input
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
-                  placeholder="Search questions, topics, authors..."
+                  placeholder="Caută întrebări, subiecte, autori..."
                   className="pl-10 h-10 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
                 />
               </div>
               <Button type="submit" className="h-10 px-5 rounded-xl gradient-primary text-white border-0 font-semibold shadow-sm">
-                Search
+                Caută
               </Button>
             </form>
 
@@ -192,7 +189,7 @@ export default function HomePage() {
                       : "bg-white text-muted-foreground border-border/70 hover:border-primary/40 hover:text-primary"
                   }`}
                 >
-                  {s === "all" ? "All" : s}
+                  {subjectLabel(s)}
                 </button>
               ))}
             </div>
@@ -201,16 +198,16 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground">
                 {search ? (
-                  <span>Results for <span className="text-primary">"{search}"</span></span>
+                  <span>Rezultate pentru <span className="text-primary">"{search}"</span></span>
                 ) : subject !== "all" ? (
-                  <span>Questions · <span className="text-primary">{subject}</span></span>
+                  <span>Întrebări · <span className="text-primary">{subjectLabel(subject)}</span></span>
                 ) : (
-                  "Recent Questions"
+                  "Întrebări Recente"
                 )}
               </h2>
               <Link href="/questions">
                 <button className="text-xs font-semibold text-primary flex items-center gap-1 hover:gap-2 transition-all">
-                  All questions <ArrowRight className="h-3.5 w-3.5" />
+                  Toate întrebările <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </Link>
             </div>
@@ -236,12 +233,12 @@ export default function HomePage() {
                 <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <HelpCircle className="h-7 w-7 text-muted-foreground/60" />
                 </div>
-                <p className="text-base font-semibold text-foreground">No questions found</p>
-                <p className="text-sm text-muted-foreground mt-1">Be the first to ask one!</p>
+                <p className="text-base font-semibold text-foreground">Nicio întrebare găsită</p>
+                <p className="text-sm text-muted-foreground mt-1">Fii primul care întreabă!</p>
                 {user && (
                   <Link href="/ask" className="inline-block mt-4">
                     <Button size="sm" className="gradient-primary text-white border-0">
-                      <Plus className="h-4 w-4 mr-2" /> Ask a Question
+                      <Plus className="h-4 w-4 mr-2" /> Pune o Întrebare
                     </Button>
                   </Link>
                 )}
@@ -264,13 +261,13 @@ export default function HomePage() {
                   <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center mb-3 shadow-sm">
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="font-bold text-foreground mb-1">Join the community</h3>
+                  <h3 className="font-bold text-foreground mb-1">Alătură-te comunității</h3>
                   <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                    Sign up free and start learning alongside thousands of students worldwide.
+                    Înregistrează-te gratuit și începe să înveți alături de mii de elevi din România.
                   </p>
                   <Link href="/register">
                     <Button className="w-full gradient-primary text-white border-0 h-9 rounded-lg font-semibold text-sm">
-                      Create Free Account
+                      Creează Cont Gratuit
                     </Button>
                   </Link>
                 </div>
@@ -282,7 +279,7 @@ export default function HomePage() {
               <div className="px-4 py-3.5 border-b border-border/50 flex items-center justify-between">
                 <h3 className="font-bold text-sm flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  Live Activity
+                  Activitate Live
                 </h3>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></span>
               </div>
@@ -298,13 +295,13 @@ export default function HomePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-foreground leading-snug">
                           <span className="font-semibold">{a.displayName}</span>{" "}
-                          <span className="text-muted-foreground">{ACTIVITY_LABELS[a.type] || "was active"}</span>
+                          <span className="text-muted-foreground">{ACTIVITY_LABELS[a.type] || "a fost activ"}</span>
                         </p>
                         {a.questionTitle && (
                           <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">{a.questionTitle}</p>
                         )}
                         <p className="text-xs text-muted-foreground/60 mt-1">
-                          {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: ro })}
                         </p>
                       </div>
                     </div>
@@ -318,7 +315,7 @@ export default function HomePage() {
               <div className="px-4 py-3.5 border-b border-border/50">
                 <h3 className="font-bold text-sm flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Popular Subjects
+                  Materii Populare
                 </h3>
               </div>
               <div className="p-3 space-y-1">
@@ -330,7 +327,7 @@ export default function HomePage() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-5 h-5 rounded-md bg-primary/8 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
-                      <span className="text-sm font-medium text-foreground/80 group-hover:text-primary transition-colors">{s.subject}</span>
+                      <span className="text-sm font-medium text-foreground/80 group-hover:text-primary transition-colors">{subjectLabel(s.subject)}</span>
                     </div>
                     <span className="text-xs font-semibold text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">{s.count}</span>
                   </button>
@@ -340,13 +337,13 @@ export default function HomePage() {
 
             {/* Why StudyWave */}
             <div className="bg-white rounded-xl border border-border/60 p-4">
-              <h3 className="font-bold text-sm mb-3">Why StudyWave?</h3>
+              <h3 className="font-bold text-sm mb-3">De ce StudyWave?</h3>
               <div className="space-y-2.5">
                 {[
-                  { icon: Zap, text: "Earn points for every contribution", color: "text-amber-500 bg-amber-50" },
-                  { icon: Award, text: "Gold Ribbon for the best answer", color: "text-rose-500 bg-rose-50" },
-                  { icon: Shield, text: "Moderated by a dedicated team", color: "text-blue-500 bg-blue-50" },
-                  { icon: Star, text: "Exclusive badges & titles", color: "text-violet-500 bg-violet-50" },
+                  { icon: Zap, text: "Câștigă puncte pentru fiecare contribuție", color: "text-amber-500 bg-amber-50" },
+                  { icon: Award, text: "Panglica de Aur pentru cel mai bun răspuns", color: "text-rose-500 bg-rose-50" },
+                  { icon: Shield, text: "Moderat de o echipă dedicată", color: "text-blue-500 bg-blue-50" },
+                  { icon: Star, text: "Insigne și titluri exclusive de deblocat", color: "text-violet-500 bg-violet-50" },
                 ].map(item => (
                   <div key={item.text} className="flex items-center gap-2.5">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>

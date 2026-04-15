@@ -11,18 +11,12 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
 import MarkdownToolbar from "@/components/MarkdownToolbar";
-
-const SUBJECTS = [
-  "Mathematics","Physics","Chemistry","Biology","History","Geography",
-  "Literature","Computer Science","Economics","Languages",
-  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
-  "Other"
-];
+import { SUBJECTS_LIST, subjectLabel } from "@/lib/subjects";
 
 const TIPS = [
-  { icon: CheckCircle2, text: "Be specific — title must be at least 15 characters", color: "text-emerald-600 bg-emerald-50" },
-  { icon: Lightbulb, text: "Describe what you've tried (min 50 characters)", color: "text-amber-600 bg-amber-50" },
-  { icon: Zap, text: "Add image URLs for diagrams or screenshots (up to 5)", color: "text-blue-600 bg-blue-50" },
+  { icon: CheckCircle2, text: "Fii specific — titlul trebuie să aibă cel puțin 15 caractere", color: "text-emerald-600 bg-emerald-50" },
+  { icon: Lightbulb, text: "Descrie ce ai încercat deja (minim 50 de caractere)", color: "text-amber-600 bg-amber-50" },
+  { icon: Zap, text: "Adaugă imagini cu diagrame sau capturi de ecran (până la 5)", color: "text-blue-600 bg-blue-50" },
 ];
 
 const MIN_TITLE = 15;
@@ -50,7 +44,6 @@ export default function AskPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
-
   const [isUploading, setIsUploading] = useState(false);
 
   const processImageFile = (file: File): Promise<void> => {
@@ -73,19 +66,19 @@ export default function AskPage() {
           const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
           setImageUrls(prev => [...prev, dataUrl]);
           setIsUploading(false);
-          toast({ title: "Image added" });
+          toast({ title: "Imagine adăugată" });
           resolve();
         };
         img.onerror = () => {
           setIsUploading(false);
-          toast({ title: "Could not read image", variant: "destructive" });
+          toast({ title: "Imaginea nu a putut fi citită", variant: "destructive" });
           resolve();
         };
         img.src = ev.target?.result as string;
       };
       reader.onerror = () => {
         setIsUploading(false);
-        toast({ title: "Could not read file", variant: "destructive" });
+        toast({ title: "Fișierul nu a putut fi citit", variant: "destructive" });
         resolve();
       };
       reader.readAsDataURL(file);
@@ -96,11 +89,11 @@ export default function AskPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (imageUrls.length >= 5) {
-      toast({ title: "Maximum 5 images per question", variant: "destructive" });
+      toast({ title: "Maxim 5 imagini per întrebare", variant: "destructive" });
       return;
     }
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Please select an image file", variant: "destructive" });
+      toast({ title: "Te rugăm să selectezi un fișier imagine", variant: "destructive" });
       return;
     }
     await processImageFile(file);
@@ -121,7 +114,7 @@ export default function AskPage() {
     if (!authLoading && !user) navigate("/login");
   }, [authLoading, user, navigate]);
 
-  usePageTitle("Ask a Question");
+  usePageTitle("Pune o Întrebare");
 
   if (authLoading || !user) return null;
 
@@ -135,7 +128,7 @@ export default function AskPage() {
     e.preventDefault();
     if (!canSubmit) return;
     if (limits && limits.questionsRemaining <= 0) {
-      toast({ title: `Daily limit reached (${DAILY_LIMIT} questions/day). Come back tomorrow!`, variant: "destructive" });
+      toast({ title: `Limita zilnică atinsă (${DAILY_LIMIT} întrebări/zi). Revino mâine!`, variant: "destructive" });
       return;
     }
 
@@ -149,13 +142,13 @@ export default function AskPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Failed to publish", variant: "destructive" });
+        toast({ title: data.error || "Publicarea a eșuat", variant: "destructive" });
         return;
       }
-      toast({ title: "Question published! +5 points added." });
+      toast({ title: "Întrebare publicată! +5 puncte adăugate." });
       navigate(`/questions/${data.id}`);
     } catch {
-      toast({ title: "Network error. Please try again.", variant: "destructive" });
+      toast({ title: "Eroare de rețea. Încearcă din nou.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -168,11 +161,11 @@ export default function AskPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link href="/questions">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="h-4 w-4" /> Questions
+            <ChevronLeft className="h-4 w-4" /> Întrebări
           </button>
         </Link>
         <span className="text-muted-foreground/40">/</span>
-        <span className="text-sm text-muted-foreground">New Question</span>
+        <span className="text-sm text-muted-foreground">Întrebare Nouă</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
@@ -183,21 +176,20 @@ export default function AskPage() {
                 <HelpCircle className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold tracking-tight">Ask a Question</h1>
-                <p className="text-sm text-muted-foreground">+5 points on publish</p>
+                <h1 className="text-2xl font-extrabold tracking-tight">Pune o Întrebare</h1>
+                <p className="text-sm text-muted-foreground">+5 puncte la publicare</p>
               </div>
             </div>
           </div>
 
-          {/* Daily limit warning + Premium CTA */}
           {limitReached && (
             <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <div className="flex items-start gap-3 mb-3">
                 <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">Daily limit reached</p>
+                  <p className="text-sm font-semibold text-amber-800">Limită zilnică atinsă</p>
                   <p className="text-xs text-amber-700 mt-0.5">
-                    You've used all {DAILY_LIMIT} questions for today. Come back tomorrow or upgrade to Premium.
+                    Ai folosit toate cele {DAILY_LIMIT} întrebări de azi. Revino mâine sau fă upgrade la Premium.
                   </p>
                 </div>
               </div>
@@ -208,18 +200,17 @@ export default function AskPage() {
                     className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5 bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-sm"
                   >
                     <Crown className="h-3.5 w-3.5" />
-                    Upgrade to Premium — unlimited questions
+                    Upgrade la Premium — întrebări nelimitate
                   </Button>
                 </Link>
               </div>
             </div>
           )}
 
-          {/* Premium badge */}
           {limits?.isPremium && (
             <div className="mb-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
               <Crown className="h-4 w-4 text-amber-500" />
-              <p className="text-xs text-amber-700 font-semibold">Premium — unlimited questions per day</p>
+              <p className="text-xs text-amber-700 font-semibold">Premium — întrebări nelimitate pe zi</p>
             </div>
           )}
 
@@ -228,14 +219,16 @@ export default function AskPage() {
               {/* Subject */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">
-                  Subject <span className="text-red-500">*</span>
+                  Materie <span className="text-red-500">*</span>
                 </label>
                 <Select value={subject} onValueChange={setSubject}>
                   <SelectTrigger className="h-11 rounded-xl border-border/70 text-sm bg-gray-50/50 focus:bg-white">
-                    <SelectValue placeholder="Choose a subject..." />
+                    <SelectValue placeholder="Alege o materie..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    {SUBJECTS.map(s => <SelectItem key={s} value={s} className="rounded-lg">{s}</SelectItem>)}
+                    {SUBJECTS_LIST.map(s => (
+                      <SelectItem key={s} value={s} className="rounded-lg">{subjectLabel(s)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -243,18 +236,18 @@ export default function AskPage() {
               {/* Title */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">
-                  Question title <span className="text-red-500">*</span>
+                  Titlul întrebării <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  placeholder="e.g. How do I find the derivative of a product of functions?"
+                  placeholder="ex. Cum calculez derivata unui produs de funcții?"
                   maxLength={200}
                   className={`h-11 rounded-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm ${title.length > 0 && !titleOk ? "border-amber-400 focus:border-amber-500" : ""}`}
                 />
                 <div className="flex items-center justify-between mt-1.5">
                   <p className={`text-xs ${title.length > 0 && !titleOk ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
-                    {title.length > 0 && !titleOk ? `${MIN_TITLE - title.length} more characters needed` : "Be concise and specific"}
+                    {title.length > 0 && !titleOk ? `Mai sunt necesare ${MIN_TITLE - title.length} caractere` : "Fii concis și specific"}
                   </p>
                   <p className={`text-xs ${title.length > 180 ? "text-red-500" : "text-muted-foreground"}`}>{title.length}/200</p>
                 </div>
@@ -263,7 +256,7 @@ export default function AskPage() {
               {/* Content */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">
-                  Question details <span className="text-red-500">*</span>
+                  Detalii întrebare <span className="text-red-500">*</span>
                 </label>
                 <MarkdownToolbar
                   textareaRef={contentTextareaRef}
@@ -274,23 +267,23 @@ export default function AskPage() {
                   ref={contentTextareaRef}
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  placeholder="Describe the problem in detail. Explain what you've tried, where you got stuck, and what you don't understand."
+                  placeholder="Descrie problema în detaliu. Explică ce ai încercat, unde te-ai blocat și ce nu înțelegi."
                   rows={9}
                   className={`resize-none rounded-t-none rounded-b-xl border-border/70 bg-gray-50/50 focus:bg-white text-sm leading-relaxed ${content.length > 0 && !contentOk ? "border-amber-400 focus:border-amber-500" : ""}`}
                 />
                 <div className="flex items-center justify-between mt-1.5">
                   <p className={`text-xs ${content.length > 0 && !contentOk ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
-                    {content.length > 0 && !contentOk ? `${MIN_CONTENT - content.length} more characters needed` : "More detail = better answers"}
+                    {content.length > 0 && !contentOk ? `Mai sunt necesare ${MIN_CONTENT - content.length} caractere` : "Mai mult detaliu = răspunsuri mai bune"}
                   </p>
                   <p className={`text-xs ${content.length > 9800 ? "text-red-500" : "text-muted-foreground"}`}>{content.length}/10000</p>
                 </div>
               </div>
 
-              {/* Image URLs */}
+              {/* Images */}
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                  Image URLs <span className="text-xs text-muted-foreground font-normal">(optional, max 5)</span>
+                  Imagini <span className="text-xs text-muted-foreground font-normal">(opțional, max 5)</span>
                 </label>
 
                 {imageUrls.length > 0 && (
@@ -299,7 +292,7 @@ export default function AskPage() {
                       <div key={idx} className="relative group rounded-xl overflow-hidden border border-border/50 bg-gray-50">
                         <img
                           src={url}
-                          alt={`Preview ${idx + 1}`}
+                          alt={`Previzualizare ${idx + 1}`}
                           className="w-full h-36 object-contain"
                           onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
                         />
@@ -335,25 +328,25 @@ export default function AskPage() {
                       {isUploading ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          Processing…
+                          Se procesează...
                         </>
                       ) : (
                         <>
                           <Upload className="h-4 w-4 text-primary" />
-                          Upload from computer
+                          Încarcă de pe calculator
                         </>
                       )}
                     </Button>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-1.5">Max 5 images — JPG, PNG, GIF, WebP supported.</p>
+                <p className="text-xs text-muted-foreground mt-1.5">Max 5 imagini — JPG, PNG, GIF, WebP acceptate.</p>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Zap className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                <span>You earn <span className="font-bold text-foreground">+5 points</span> on publish</span>
+                <span>Primești <span className="font-bold text-foreground">+5 puncte</span> la publicare</span>
                 {limits && (
                   limits.isPremium ? (
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 bg-amber-50 text-amber-600">
@@ -361,7 +354,7 @@ export default function AskPage() {
                     </span>
                   ) : (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
-                      {limits.questionsRemaining}/{limits.questionLimit} today
+                      {limits.questionsRemaining}/{limits.questionLimit} azi
                     </span>
                   )
                 )}
@@ -374,9 +367,9 @@ export default function AskPage() {
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Publishing...
+                    Se publică...
                   </div>
-                ) : <>Publish Question <ArrowRight className="h-4 w-4" /></>}
+                ) : <>Publică Întrebarea <ArrowRight className="h-4 w-4" /></>}
               </Button>
             </div>
           </form>
@@ -385,7 +378,7 @@ export default function AskPage() {
         {/* Tips sidebar */}
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-border/60 p-5 shadow-xs">
-            <h3 className="font-bold text-sm mb-4">Tips for a great question</h3>
+            <h3 className="font-bold text-sm mb-4">Sfaturi pentru o întrebare bună</h3>
             <div className="space-y-3">
               {TIPS.map((tip, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -401,20 +394,20 @@ export default function AskPage() {
           <div className="bg-primary/5 border border-primary/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4 text-primary" />
-              <p className="text-sm font-bold text-primary">Points System</p>
+              <p className="text-sm font-bold text-primary">Sistem de Puncte</p>
             </div>
             <div className="space-y-2 text-xs text-foreground/70">
               <div className="flex justify-between">
-                <span>Question published</span>
-                <span className="font-bold text-primary">+5 pts</span>
+                <span>Întrebare publicată</span>
+                <span className="font-bold text-primary">+5 pct</span>
               </div>
               <div className="flex justify-between">
-                <span>Answer posted</span>
-                <span className="font-bold text-primary">+10 pts</span>
+                <span>Răspuns postat</span>
+                <span className="font-bold text-primary">+10 pct</span>
               </div>
               <div className="flex justify-between">
-                <span>Gold Ribbon awarded</span>
-                <span className="font-bold text-amber-600">+50 pts</span>
+                <span>Panglica de Aur acordată</span>
+                <span className="font-bold text-amber-600">+50 pct</span>
               </div>
             </div>
           </div>
@@ -422,35 +415,35 @@ export default function AskPage() {
           <div className="bg-white rounded-xl border border-border/60 p-5 shadow-xs">
             <div className="flex items-center gap-2 mb-3">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-bold text-sm">Fair Use Policy</h3>
+              <h3 className="font-bold text-sm">Politică de Utilizare Corectă</h3>
             </div>
             <div className="space-y-1.5 text-xs text-muted-foreground">
               <div className="flex justify-between">
-                <span>Max questions/day</span>
+                <span>Max întrebări/zi</span>
                 <span className="font-semibold text-foreground">5</span>
               </div>
               <div className="flex justify-between">
-                <span>Max answers/day</span>
+                <span>Max răspunsuri/zi</span>
                 <span className="font-semibold text-foreground">15</span>
               </div>
               <div className="flex justify-between">
-                <span>Min title length</span>
-                <span className="font-semibold text-foreground">15 chars</span>
+                <span>Titlu minim</span>
+                <span className="font-semibold text-foreground">15 caractere</span>
               </div>
               <div className="flex justify-between">
-                <span>Min answer length</span>
-                <span className="font-semibold text-foreground">30 chars</span>
+                <span>Răspuns minim</span>
+                <span className="font-semibold text-foreground">30 caractere</span>
               </div>
             </div>
           </div>
 
           {subject && (
             <div className="bg-white rounded-xl border border-border/60 p-5 shadow-xs">
-              <h3 className="font-bold text-sm mb-3">Subject preview</h3>
-              <p className="text-xs text-muted-foreground mb-2">Your question will appear in:</p>
+              <h3 className="font-bold text-sm mb-3">Previzualizare materie</h3>
+              <p className="text-xs text-muted-foreground mb-2">Întrebarea ta va apărea la:</p>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-700">
                 <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                {subject}
+                {subjectLabel(subject)}
               </span>
             </div>
           )}

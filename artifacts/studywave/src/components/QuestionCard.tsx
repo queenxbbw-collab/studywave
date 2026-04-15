@@ -2,6 +2,8 @@ import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, MessageCircle, Award, ArrowUp, Clock, Crown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { ro } from "date-fns/locale";
+import { subjectLabel } from "@/lib/subjects";
 
 interface Question {
   id: number;
@@ -48,6 +50,11 @@ export default function QuestionCard({ question }: { question: Question }) {
   const score = question.upvotes - question.downvotes;
   const subjectStyle = SUBJECT_CONFIG[question.subject] || SUBJECT_CONFIG["Other"];
 
+  const answerText = (count: number) => {
+    if (count === 1) return "1 răspuns";
+    return `${count} răspunsuri`;
+  };
+
   return (
     <Link href={`/questions/${question.id}`}>
       <article className="group bg-white rounded-xl border border-border/60 p-5 hover:border-primary/30 hover:shadow-md transition-all duration-200 cursor-pointer">
@@ -70,16 +77,16 @@ export default function QuestionCard({ question }: { question: Question }) {
             <div className="flex flex-wrap items-center gap-2 mb-2.5">
               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${subjectStyle.bg} ${subjectStyle.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${subjectStyle.dot}`}></span>
-                {question.subject}
+                {subjectLabel(question.subject)}
               </span>
               {question.isSolved && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" /> Solved
+                  <CheckCircle2 className="h-3 w-3" /> Rezolvat
                 </span>
               )}
               {question.hasAwardedAnswer && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  <Award className="h-3 w-3" /> Best Answer Awarded
+                  <Award className="h-3 w-3" /> Cel Mai Bun Răspuns
                 </span>
               )}
             </div>
@@ -108,13 +115,13 @@ export default function QuestionCard({ question }: { question: Question }) {
                 <span className="text-xs text-muted-foreground/60">·</span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true, locale: ro })}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1 font-medium">
                   <MessageCircle className="h-3.5 w-3.5" />
-                  {question.answerCount} {question.answerCount === 1 ? "answer" : "answers"}
+                  {answerText(question.answerCount)}
                 </span>
               </div>
             </div>

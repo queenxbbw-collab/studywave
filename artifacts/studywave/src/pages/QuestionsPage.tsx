@@ -8,13 +8,7 @@ import QuestionCard from "@/components/QuestionCard";
 import { useAuth } from "@/lib/auth";
 import { Link } from "wouter";
 import { Search, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
-
-const SUBJECTS = [
-  "all","Mathematics","Physics","Chemistry","Biology","History","Geography",
-  "Literature","Computer Science","Economics","Languages",
-  "Philosophy","Psychology","Music","Art","Engineering","Medicine","Environment","Law","Sports",
-  "Other"
-];
+import { SUBJECTS_LIST, subjectLabel } from "@/lib/subjects";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -25,8 +19,10 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+const SUBJECTS_WITH_ALL = ["all", ...SUBJECTS_LIST];
+
 export default function QuestionsPage() {
-  usePageTitle("Questions");
+  usePageTitle("Întrebări");
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [subject, setSubject] = useState("all");
@@ -43,26 +39,34 @@ export default function QuestionsPage() {
     limit: 15,
   });
 
-  // Reset to page 1 when filters change
   useEffect(() => { setPage(1); }, [debouncedSearch, subject, sort]);
 
   const hasFilters = !!debouncedSearch || subject !== "all" || sort !== "newest";
+
+  const sortLabel = (s: string) => {
+    if (s === "newest") return "Cele mai noi";
+    if (s === "oldest") return "Cele mai vechi";
+    if (s === "most-voted") return "Cele mai votate";
+    if (s === "unsolved") return "Nerezolvate";
+    if (s === "trending") return "Trending";
+    return s;
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Questions</h1>
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Întrebări</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {data ? (
-              <span><strong className="text-foreground">{data.total.toLocaleString()}</strong> questions published</span>
-            ) : "Loading..."}
+              <span><strong className="text-foreground">{data.total.toLocaleString("ro-RO")}</strong> întrebări publicate</span>
+            ) : "Se încarcă..."}
           </p>
         </div>
         {user && (
           <Link href="/ask">
             <Button className="gradient-primary text-white border-0 gap-2 h-9 px-4 rounded-xl font-semibold shadow-sm hover:opacity-90">
-              <Plus className="h-4 w-4" strokeWidth={2.5} /> Ask a Question
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Pune o Întrebare
             </Button>
           </Link>
         )}
@@ -76,7 +80,7 @@ export default function QuestionsPage() {
             <Input
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              placeholder="Search questions, authors... (live)"
+              placeholder="Caută întrebări, autori... (live)"
               className="pl-10 h-9 rounded-lg border-border/70 bg-gray-50 focus-visible:bg-white"
             />
             {inputValue && (
@@ -91,46 +95,45 @@ export default function QuestionsPage() {
           <div className="flex gap-2">
             <Select value={subject} onValueChange={v => setSubject(v)}>
               <SelectTrigger className="h-9 w-44 rounded-lg border-border/70 text-sm">
-                <SelectValue placeholder="Subject" />
+                <SelectValue placeholder="Materie" />
               </SelectTrigger>
               <SelectContent>
-                {SUBJECTS.map(s => (
-                  <SelectItem key={s} value={s}>{s === "all" ? "All subjects" : s}</SelectItem>
+                {SUBJECTS_WITH_ALL.map(s => (
+                  <SelectItem key={s} value={s}>{subjectLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={sort} onValueChange={v => setSort(v)}>
-              <SelectTrigger className="h-9 w-40 rounded-lg border-border/70 text-sm">
+              <SelectTrigger className="h-9 w-44 rounded-lg border-border/70 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest first</SelectItem>
-                <SelectItem value="oldest">Oldest first</SelectItem>
-                <SelectItem value="most-voted">Most voted</SelectItem>
-                <SelectItem value="unsolved">Unsolved</SelectItem>
+                <SelectItem value="newest">Cele mai noi</SelectItem>
+                <SelectItem value="oldest">Cele mai vechi</SelectItem>
+                <SelectItem value="most-voted">Cele mai votate</SelectItem>
+                <SelectItem value="unsolved">Nerezolvate</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Active filter chips */}
         {hasFilters && (
           <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/40">
             {debouncedSearch && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/8 text-primary border border-primary/20 px-2.5 py-1 rounded-full">
-                Search: "{debouncedSearch}"
+                Căutare: "{debouncedSearch}"
                 <button onClick={() => setInputValue("")} className="hover:text-primary/60"><X className="h-3 w-3" /></button>
               </span>
             )}
             {subject !== "all" && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/8 text-primary border border-primary/20 px-2.5 py-1 rounded-full">
-                {subject}
+                {subjectLabel(subject)}
                 <button onClick={() => setSubject("all")} className="hover:text-primary/60"><X className="h-3 w-3" /></button>
               </span>
             )}
             {sort !== "newest" && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-primary/8 text-primary border border-primary/20 px-2.5 py-1 rounded-full">
-                {sort === "oldest" ? "Oldest first" : sort === "most-voted" ? "Most voted" : "Unsolved"}
+                {sortLabel(sort)}
                 <button onClick={() => setSort("newest")} className="hover:text-primary/60"><X className="h-3 w-3" /></button>
               </span>
             )}
@@ -138,7 +141,7 @@ export default function QuestionsPage() {
               onClick={() => { setInputValue(""); setSubject("all"); setSort("newest"); }}
               className="text-xs text-muted-foreground hover:text-foreground underline"
             >
-              Clear all
+              Șterge tot
             </button>
           </div>
         )}
@@ -147,10 +150,10 @@ export default function QuestionsPage() {
       {/* Sort tabs */}
       <div className="flex gap-2 mb-5 flex-wrap">
         {[
-          { value: "newest", label: "Newest" },
+          { value: "newest", label: "Cele mai noi" },
           { value: "trending", label: "Trending" },
-          { value: "most-voted", label: "Most Voted" },
-          { value: "unsolved", label: "Unsolved" },
+          { value: "most-voted", label: "Cele mai votate" },
+          { value: "unsolved", label: "Nerezolvate" },
         ].map(tab => (
           <button
             key={tab.value}
@@ -176,8 +179,8 @@ export default function QuestionsPage() {
       ) : data?.questions.length === 0 ? (
         <div className="text-center py-16">
           <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="font-semibold text-foreground mb-1">No questions found</p>
-          <p className="text-sm text-muted-foreground">Try different search terms or filters</p>
+          <p className="font-semibold text-foreground mb-1">Nicio întrebare găsită</p>
+          <p className="text-sm text-muted-foreground">Încearcă alți termeni de căutare sau filtre diferite</p>
         </div>
       ) : (
         <div className="space-y-3">

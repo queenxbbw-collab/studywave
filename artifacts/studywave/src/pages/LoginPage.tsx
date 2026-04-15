@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle2, Users, Award } from "lucide-react";
 
 export default function LoginPage() {
-  usePageTitle("Sign In");
+  usePageTitle("Autentificare");
   const { login, user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -30,7 +30,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate("/");
     } catch (err: any) {
-      toast({ title: err.message || "Sign in failed", variant: "destructive" });
+      toast({ title: err.message || "Autentificare eșuată", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -53,18 +53,18 @@ export default function LoginPage() {
           </Link>
 
           <h2 className="text-3xl font-extrabold text-foreground mb-3 leading-tight tracking-tight">
-            Welcome<br />back!
+            Bine ai<br />revenit!
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            Continue your learning journey. The community is waiting with new questions and answers.
+            Continuă-ți călătoria de învățare. Comunitatea te așteaptă cu întrebări și răspunsuri noi.
           </p>
 
           <div className="mt-8 space-y-3">
             {[
-              { icon: CheckCircle2, text: "Community-verified answers", color: "text-emerald-500" },
-              { icon: Users, text: "Thousands of students worldwide", color: "text-blue-500" },
-              { icon: Award, text: "Unique rewards & recognition system", color: "text-amber-500" },
-              { icon: Sparkles, text: "Quality content across all subjects", color: "text-violet-500" },
+              { icon: CheckCircle2, text: "Răspunsuri verificate de comunitate", color: "text-emerald-500" },
+              { icon: Users, text: "Mii de elevi din România", color: "text-blue-500" },
+              { icon: Award, text: "Sistem unic de recompense și recunoaștere", color: "text-amber-500" },
+              { icon: Sparkles, text: "Conținut de calitate la toate materiile", color: "text-violet-500" },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3">
                 <item.icon className={`h-4.5 w-4.5 flex-shrink-0 ${item.color}`} />
@@ -79,12 +79,12 @@ export default function LoginPage() {
             <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">A</div>
               <div>
-                <p className="text-xs font-semibold">Alex Johnson</p>
-                <p className="text-xs text-muted-foreground">1,240 pts · Top 3</p>
+                <p className="text-xs font-semibold">Alexandru Ionescu</p>
+                <p className="text-xs text-muted-foreground">1.240 pct · Top 3</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground italic">
-              "StudyWave helped me truly understand calculus. The answers are clear, detailed, and always helpful!"
+              „StudyWave m-a ajutat să înțeleg cu adevărat matematica. Răspunsurile sunt clare, detaliate și mereu utile!"
             </p>
           </div>
         </div>
@@ -94,30 +94,30 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-[400px]">
           <div className="text-center mb-8 lg:text-left">
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Sign In</h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">Enter your credentials to continue</p>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Autentificare</h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">Introdu datele tale pentru a continua</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-semibold text-foreground mb-1.5 block">Email address</label>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Adresă de email</label>
               <Input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="tu@exemplu.com"
                 required
                 className="h-11 rounded-xl border-border/70 bg-white shadow-xs focus-visible:ring-primary/30"
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground mb-1.5 block">Password</label>
+              <label className="text-sm font-semibold text-foreground mb-1.5 block">Parolă</label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  placeholder="Parola ta"
                   required
                   className="h-11 rounded-xl border-border/70 bg-white shadow-xs pr-12 focus-visible:ring-primary/30"
                 />
@@ -139,35 +139,35 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Signing in...
+                  Se autentifică...
                 </div>
               ) : (
-                <>Sign In <ArrowRight className="h-4.5 w-4.5" /></>
+                <>Autentifică-te <ArrowRight className="h-4.5 w-4.5" /></>
               )}
             </Button>
           </form>
 
           <div className="mt-4 p-3.5 bg-gray-50 border border-border/60 rounded-xl">
-            <p className="text-xs font-semibold text-foreground mb-1.5">Demo accounts:</p>
+            <p className="text-xs font-semibold text-foreground mb-1.5">Conturi demo:</p>
             <button onClick={() => { setEmail("admin@studywave.com"); setPassword("admin123"); }}
               className="text-xs text-muted-foreground hover:text-primary transition-colors block">
               Admin: admin@studywave.com / admin123
             </button>
             <button onClick={() => { setEmail("alex@studywave.com"); setPassword("user123"); }}
               className="text-xs text-muted-foreground hover:text-primary transition-colors block mt-0.5">
-              User: alex@studywave.com / user123
+              Utilizator: alex@studywave.com / user123
             </button>
           </div>
 
           <div className="mt-5 flex flex-col items-center gap-2">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Nu ai cont?{" "}
               <Link href="/register" className="text-primary font-semibold hover:underline">
-                Sign up for free
+                Înregistrează-te gratuit
               </Link>
             </p>
             <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              Forgot your password?
+              Ai uitat parola?
             </Link>
           </div>
         </div>

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function ResetPasswordPage() {
-  usePageTitle("Reset Password");
+  usePageTitle("Resetare Parolă");
   const [, navigate] = useLocation();
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -27,15 +27,15 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError("");
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Parolele nu coincid");
       return;
     }
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError("Parola trebuie să aibă cel puțin 6 caractere");
       return;
     }
     if (!token.trim()) {
-      setError("Reset token is required");
+      setError("Tokenul de resetare este obligatoriu");
       return;
     }
     setLoading(true);
@@ -46,11 +46,11 @@ export default function ResetPasswordPage() {
         body: JSON.stringify({ token: token.trim(), newPassword }),
       });
       const data = await r.json();
-      if (!r.ok) { setError(data.error || "Reset failed. The token may be expired."); return; }
+      if (!r.ok) { setError(data.error || "Resetarea a eșuat. Tokenul poate fi expirat."); return; }
       setSuccess(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch {
-      setError("Network error. Please try again.");
+      setError("Eroare de rețea. Încearcă din nou.");
     } finally {
       setLoading(false);
     }
@@ -67,8 +67,8 @@ export default function ResetPasswordPage() {
                 <KeyRound className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-extrabold text-foreground">Set New Password</h1>
-                <p className="text-xs text-muted-foreground">Enter your reset token and new password</p>
+                <h1 className="text-lg font-extrabold text-foreground">Setează Parola Nouă</h1>
+                <p className="text-xs text-muted-foreground">Introdu tokenul de resetare și noua parolă</p>
               </div>
             </div>
 
@@ -78,41 +78,41 @@ export default function ResetPasswordPage() {
                   <CheckCircle2 className="h-7 w-7 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-foreground">Password updated!</p>
-                  <p className="text-sm text-muted-foreground mt-1">Redirecting to sign in...</p>
+                  <p className="font-bold text-foreground">Parola a fost actualizată!</p>
+                  <p className="text-sm text-muted-foreground mt-1">Redirecționare către autentificare...</p>
                 </div>
                 <Link href="/login">
                   <Button className="gradient-primary text-white border-0 rounded-xl font-semibold h-10 w-full">
-                    Sign In Now
+                    Autentifică-te Acum
                   </Button>
                 </Link>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold">Reset Token</Label>
+                  <Label className="text-sm font-semibold">Token de Resetare</Label>
                   <Input
                     type="text"
-                    placeholder="Paste your reset token here"
+                    placeholder="Lipește tokenul de resetare aici"
                     value={token}
                     onChange={e => setToken(e.target.value)}
                     className="h-11 rounded-xl border-border/70 focus-visible:border-primary font-mono text-sm"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Don't have a token?{" "}
+                    Nu ai un token?{" "}
                     <Link href="/forgot-password">
-                      <span className="text-primary hover:underline cursor-pointer">Request one here</span>
+                      <span className="text-primary hover:underline cursor-pointer">Solicită unul aici</span>
                     </Link>
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold">New Password</Label>
+                  <Label className="text-sm font-semibold">Parolă Nouă</Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="At least 6 characters"
+                      placeholder="Cel puțin 6 caractere"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       className="h-11 rounded-xl border-border/70 focus-visible:border-primary pr-10"
@@ -129,10 +129,10 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold">Confirm New Password</Label>
+                  <Label className="text-sm font-semibold">Confirmă Parola Nouă</Label>
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Repeat your new password"
+                    placeholder="Repetă noua parolă"
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     className={`h-11 rounded-xl border-border/70 focus-visible:border-primary ${confirmPassword && confirmPassword !== newPassword ? "border-red-400" : ""}`}
@@ -140,7 +140,7 @@ export default function ResetPasswordPage() {
                   />
                   {confirmPassword && confirmPassword !== newPassword && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> Passwords do not match
+                      <AlertCircle className="h-3 w-3" /> Parolele nu coincid
                     </p>
                   )}
                 </div>
@@ -159,15 +159,15 @@ export default function ResetPasswordPage() {
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Updating...
+                      Se actualizează...
                     </span>
-                  ) : "Update Password"}
+                  ) : "Actualizează Parola"}
                 </Button>
 
                 <div className="text-center text-sm text-muted-foreground">
-                  Remember your password?{" "}
+                  Îți amintești parola?{" "}
                   <Link href="/login">
-                    <span className="text-primary font-medium hover:underline cursor-pointer">Sign in</span>
+                    <span className="text-primary font-medium hover:underline cursor-pointer">Autentifică-te</span>
                   </Link>
                 </div>
               </form>

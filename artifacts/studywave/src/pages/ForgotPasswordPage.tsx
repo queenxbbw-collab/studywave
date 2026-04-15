@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, ArrowLeft, CheckCircle2, KeyRound } from "lucide-react";
 
 export default function ForgotPasswordPage() {
-  usePageTitle("Forgot Password");
+  usePageTitle("Parolă Uitată");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -25,12 +25,12 @@ export default function ForgotPasswordPage() {
       });
       const data = await r.json();
       if (!r.ok) {
-        setError(data.error || "Something went wrong. Please try again.");
+        setError(data.error || "Ceva nu a mers bine. Încearcă din nou.");
         return;
       }
       setSent(true);
     } catch {
-      setError("Network error. Please try again.");
+      setError("Eroare de rețea. Încearcă din nou.");
     } finally {
       setLoading(false);
     }
@@ -47,8 +47,8 @@ export default function ForgotPasswordPage() {
                 <KeyRound className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-extrabold text-foreground">Forgot Password</h1>
-                <p className="text-xs text-muted-foreground">We'll send a reset link to your email</p>
+                <h1 className="text-lg font-extrabold text-foreground">Parolă Uitată</h1>
+                <p className="text-xs text-muted-foreground">Îți vom trimite un link de resetare pe email</p>
               </div>
             </div>
 
@@ -57,35 +57,35 @@ export default function ForgotPasswordPage() {
                 <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800">Check your inbox</p>
+                    <p className="text-sm font-semibold text-emerald-800">Verifică-ți căsuța de email</p>
                     <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
-                      If <span className="font-medium">{email}</span> is registered on StudyWave, you'll receive a password reset link shortly. The link expires in 1 hour.
+                      Dacă <span className="font-medium">{email}</span> este înregistrat pe StudyWave, vei primi în scurt timp un link de resetare. Linkul expiră în 1 oră.
                     </p>
                   </div>
                 </div>
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
                   <p className="text-xs text-blue-700 leading-relaxed">
-                    <span className="font-semibold">Didn't receive the email?</span> Check your spam folder, or contact the platform administrator for assistance.
+                    <span className="font-semibold">Nu ai primit emailul?</span> Verifică folderul spam sau contactează administratorul platformei.
                   </p>
                 </div>
 
                 <Link href="/login">
                   <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <ArrowLeft className="h-4 w-4" /> Back to Sign In
+                    <ArrowLeft className="h-4 w-4" /> Înapoi la Autentificare
                   </button>
                 </Link>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-sm font-semibold">Email address</Label>
+                  <Label htmlFor="email" className="text-sm font-semibold">Adresă de email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="tu@exemplu.com"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       className="pl-9 h-11 rounded-xl border-border/70 focus-visible:border-primary"
@@ -106,15 +106,15 @@ export default function ForgotPasswordPage() {
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sending...
+                      Se trimite...
                     </span>
-                  ) : "Send Reset Link"}
+                  ) : "Trimite Link de Resetare"}
                 </Button>
 
                 <div className="text-center">
                   <Link href="/login">
                     <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto">
-                      <ArrowLeft className="h-4 w-4" /> Back to Sign In
+                      <ArrowLeft className="h-4 w-4" /> Înapoi la Autentificare
                     </button>
                   </Link>
                 </div>

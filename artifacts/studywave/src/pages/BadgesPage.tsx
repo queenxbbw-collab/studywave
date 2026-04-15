@@ -1,7 +1,7 @@
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useListBadges } from "@workspace/api-client-react";
 import {
-  Star, Lock, Sparkles, Trophy, Award, Shield, Flame, Zap,
+  Star, Sparkles, Trophy, Award, Shield, Flame, Zap,
   Crown, BookOpen, HelpCircle, MessageCircle, Target, Medal,
   CheckCircle, Lightbulb, Brain, Rocket, Heart
 } from "lucide-react";
@@ -14,11 +14,11 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: LucideIcon; desc: string; color: string }> = {
-  general:   { label: "General",   icon: Star,       desc: "Awarded for general activity on the platform", color: "text-violet-600 bg-violet-50 border-violet-200" },
-  points:    { label: "Points",    icon: Zap,        desc: "Awarded for accumulating points",              color: "text-amber-600 bg-amber-50 border-amber-200" },
-  questions: { label: "Questions", icon: HelpCircle, desc: "Awarded for publishing questions",             color: "text-blue-600 bg-blue-50 border-blue-200" },
-  answers:   { label: "Answers",   icon: MessageCircle, desc: "Awarded for quality answers",              color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
-  awards:    { label: "Awards",    icon: Trophy,     desc: "Awarded for Gold Ribbons received",            color: "text-orange-600 bg-orange-50 border-orange-200" },
+  general:   { label: "General",    icon: Star,          desc: "Acordate pentru activitate generală pe platformă", color: "text-violet-600 bg-violet-50 border-violet-200" },
+  points:    { label: "Puncte",     icon: Zap,           desc: "Acordate pentru acumularea de puncte",              color: "text-amber-600 bg-amber-50 border-amber-200" },
+  questions: { label: "Întrebări",  icon: HelpCircle,    desc: "Acordate pentru publicarea de întrebări",           color: "text-blue-600 bg-blue-50 border-blue-200" },
+  answers:   { label: "Răspunsuri", icon: MessageCircle, desc: "Acordate pentru răspunsuri de calitate",            color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+  awards:    { label: "Premii",     icon: Trophy,        desc: "Acordate pentru Panglici de Aur primite",           color: "text-orange-600 bg-orange-50 border-orange-200" },
 };
 
 const BADGE_COLOR_MAP: Record<string, string> = {
@@ -41,7 +41,7 @@ function BadgeIcon({ iconName, colorClass }: { iconName: string; colorClass: str
 }
 
 export default function BadgesPage() {
-  usePageTitle("Badges");
+  usePageTitle("Insigne");
   const { data: badges, isLoading } = useListBadges();
 
   const grouped = badges?.reduce((acc, badge) => {
@@ -57,9 +57,9 @@ export default function BadgesPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl gradient-primary shadow-md mb-4">
           <Trophy className="h-7 w-7 text-white" />
         </div>
-        <h1 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">Badges</h1>
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">Insigne</h1>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Earn exclusive badges through your activity on StudyWave. Every badge reflects an achievement!
+          Câștigă insigne exclusive prin activitatea ta pe StudyWave. Fiecare insignă reflectă o realizare!
         </p>
       </div>
 
@@ -68,17 +68,17 @@ export default function BadgesPage() {
         <div className="flex items-center justify-center gap-6 mb-8 p-4 bg-white rounded-xl border border-border/60 shadow-xs">
           <div className="text-center">
             <p className="text-2xl font-extrabold text-foreground">{badges.length}</p>
-            <p className="text-xs text-muted-foreground">Total badges</p>
+            <p className="text-xs text-muted-foreground">Total insigne</p>
           </div>
           <div className="w-px h-10 bg-border"></div>
           <div className="text-center">
             <p className="text-2xl font-extrabold text-foreground">{Object.keys(grouped || {}).length}</p>
-            <p className="text-xs text-muted-foreground">Categories</p>
+            <p className="text-xs text-muted-foreground">Categorii</p>
           </div>
           <div className="w-px h-10 bg-border"></div>
           <div className="text-center">
             <p className="text-2xl font-extrabold text-foreground">{badges.filter(b => b.pointsRequired === 0).length}</p>
-            <p className="text-xs text-muted-foreground">On registration</p>
+            <p className="text-xs text-muted-foreground">La înregistrare</p>
           </div>
         </div>
       )}
@@ -128,12 +128,12 @@ export default function BadgesPage() {
                         {badge.pointsRequired === 0 ? (
                           <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                             <Sparkles className="h-3 w-3" />
-                            On join
+                            La înregistrare
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
                             <Zap className="h-3 w-3" />
-                            {badge.pointsRequired.toLocaleString()} pts
+                            {badge.pointsRequired.toLocaleString("ro-RO")} pct
                           </div>
                         )}
                       </div>
