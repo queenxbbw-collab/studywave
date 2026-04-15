@@ -2459,10 +2459,12 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ classGrade: gradeKey, score: finalScore, total: questions.length, timeTaken }),
       })
-        .then(r => r.json())
-        .then(data => {
-          if (data.result) {
+        .then(async r => {
+          const data = await r.json();
+          if (r.ok && data.result) {
             setPastResult({ score: finalScore, total: questions.length, timeTaken });
+          } else if (r.status === 409 && data.result) {
+            setPastResult({ score: data.result.score, total: data.result.total, timeTaken: data.result.timeTaken });
           }
         })
         .catch(() => {})
