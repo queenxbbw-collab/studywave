@@ -2383,7 +2383,7 @@ function WorksheetModal({ ws, cls, open, onClose }: {
 const QUESTION_TIME = 30;
 
 function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: ClassData }) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -2398,16 +2398,19 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
   const gradeKey = String(cls.grade);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { setLoadingResult(false); return; }
+    setLoadingResult(true);
     fetch("/api/quiz/my-results", { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(data => {
         const found = (data.results ?? []).find((r: any) => r.classGrade === gradeKey);
         if (found) setPastResult({ score: found.score, total: found.total, timeTaken: found.timeTaken });
+        else setPastResult(null);
       })
       .catch(() => {})
       .finally(() => setLoadingResult(false));
-  }, [user, gradeKey]);
+  }, [user, gradeKey, authLoading]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -2425,9 +2428,9 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
   }, []);
 
   useEffect(() => {
-    if (!submitted && !pastResult && !loadingResult) startTimer();
+    if (!submitted && !pastResult && !loadingResult && !authLoading) startTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [current, submitted, pastResult, loadingResult]);
+  }, [current, submitted, pastResult, loadingResult, authLoading]);
 
   const goNext = useCallback((forced = false) => {
     if (animating) return;
@@ -2467,7 +2470,7 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
     }
   }, [submitted]);
 
-  if (loadingResult) {
+  if (loadingResult || authLoading) {
     return <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Se încarcă...</div>;
   }
 
