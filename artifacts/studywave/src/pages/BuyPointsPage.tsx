@@ -31,7 +31,7 @@ const PACKAGE_COLORS: Record<string, string> = {
 };
 
 export default function BuyPointsPage() {
-  usePageTitle("Buy Points");
+  usePageTitle("Cumpără Puncte");
   const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -94,12 +94,12 @@ export default function BuyPointsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Something went wrong", variant: "destructive" });
+        toast({ title: data.error || "Ceva nu a mers bine", variant: "destructive" });
         return;
       }
       if (data.url) window.location.href = data.url;
     } catch {
-      toast({ title: "Network error", variant: "destructive" });
+      toast({ title: "Eroare de rețea", variant: "destructive" });
     } finally {
       setLoadingSubscribe(false);
     }
@@ -115,12 +115,12 @@ export default function BuyPointsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Something went wrong", variant: "destructive" });
+        toast({ title: data.error || "Ceva nu a mers bine", variant: "destructive" });
         return;
       }
       if (data.url) window.location.href = data.url;
     } catch {
-      toast({ title: "Network error", variant: "destructive" });
+      toast({ title: "Eroare de rețea", variant: "destructive" });
     } finally {
       setLoadingPkg(null);
     }
@@ -132,18 +132,18 @@ export default function BuyPointsPage() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
         <Link href={`/profile/${user.id}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-          <ChevronLeft className="h-4 w-4" /> Back to Profile
+          <ChevronLeft className="h-4 w-4" /> Înapoi la Profil
         </Link>
-        <h1 className="text-2xl font-black text-foreground">Plans & Points</h1>
-        <p className="text-sm text-muted-foreground mt-1">Upgrade to Premium or purchase extra points.</p>
+        <h1 className="text-2xl font-black text-foreground">Planuri și Puncte</h1>
+        <p className="text-sm text-muted-foreground mt-1">Actualizează la Premium sau cumpără puncte suplimentare.</p>
       </div>
 
       {premiumSuccess && (
         <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <CheckCircle2 className="h-6 w-6 text-amber-500 flex-shrink-0" />
           <div>
-            <p className="font-bold text-amber-700">Welcome to Premium!</p>
-            <p className="text-sm text-amber-600">You now have unlimited questions per day and a Premium badge.</p>
+            <p className="font-bold text-amber-700">Bun venit la Premium!</p>
+            <p className="text-sm text-amber-600">Acum ai întrebări nelimitate pe zi și insigna Premium.</p>
           </div>
         </div>
       )}
@@ -152,8 +152,8 @@ export default function BuyPointsPage() {
         <div className="mb-6 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
           <CheckCircle2 className="h-6 w-6 text-emerald-500 flex-shrink-0" />
           <div>
-            <p className="font-bold text-emerald-700">Payment successful!</p>
-            <p className="text-sm text-emerald-600">{successPoints} points have been added to your account.</p>
+            <p className="font-bold text-emerald-700">Plată reușită!</p>
+            <p className="text-sm text-emerald-600">{successPoints} puncte au fost adăugate în contul tău.</p>
           </div>
         </div>
       )}
@@ -163,14 +163,14 @@ export default function BuyPointsPage() {
           <Zap className="h-5 w-5 text-white" />
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Your current balance</p>
-          <p className="text-xl font-black text-foreground">{user.points.toLocaleString()} <span className="text-sm font-semibold text-muted-foreground">points</span></p>
+          <p className="text-xs text-muted-foreground">Soldul tău curent</p>
+          <p className="text-xl font-black text-foreground">{user.points.toLocaleString()} <span className="text-sm font-semibold text-muted-foreground">puncte</span></p>
         </div>
       </div>
 
       {/* Premium Subscription Card */}
       <div className="mb-8">
-        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Premium Plan</h2>
+        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Plan Premium</h2>
         <div className="relative bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl overflow-hidden shadow-md">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
           <div className="p-6">
@@ -180,18 +180,18 @@ export default function BuyPointsPage() {
                   <Crown className="h-6 w-6 text-white" />
                   <span className="text-xl font-black text-white">Premium</span>
                 </div>
-                <p className="text-amber-100 text-sm">Everything you need, no limits</p>
+                <p className="text-amber-100 text-sm">Tot ce ai nevoie, fără limite</p>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-white">$4.99</p>
-                <p className="text-amber-200 text-xs">/month</p>
+                <p className="text-amber-200 text-xs">/lună</p>
               </div>
             </div>
             <ul className="space-y-2 mb-5">
               {[
-                { icon: Infinity, text: "Unlimited questions per day" },
-                { icon: Crown, text: "Exclusive Premium badge on your profile" },
-                { icon: Star, text: "Priority in community recognition" },
+                { icon: Infinity, text: "Întrebări nelimitate pe zi" },
+                { icon: Crown, text: "Insignă Premium exclusivă pe profil" },
+                { icon: Star, text: "Prioritate în recunoașterea comunității" },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2 text-white text-sm">
                   <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -204,7 +204,7 @@ export default function BuyPointsPage() {
             {user.isPremium ? (
               <div className="w-full bg-white/20 border border-white/30 rounded-xl h-10 flex items-center justify-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-white" />
-                <span className="font-bold text-white text-sm">You're already Premium!</span>
+                <span className="font-bold text-white text-sm">Ești deja Premium!</span>
               </div>
             ) : (
               <>
@@ -214,12 +214,12 @@ export default function BuyPointsPage() {
                   className="w-full bg-white text-amber-600 hover:bg-amber-50 font-bold rounded-xl border-0 shadow-sm h-10"
                 >
                   {loadingSubscribe ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing...</>
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Se procesează...</>
                   ) : (
-                    <><Crown className="h-4 w-4 mr-2" /> Upgrade to Premium</>
+                    <><Crown className="h-4 w-4 mr-2" /> Actualizare la Premium</>
                   )}
                 </Button>
-                <p className="text-amber-200 text-xs text-center mt-2">Cancel anytime. Billed monthly.</p>
+                <p className="text-amber-200 text-xs text-center mt-2">Anulezi oricând. Facturat lunar.</p>
               </>
             )}
           </div>
@@ -228,7 +228,7 @@ export default function BuyPointsPage() {
 
       {/* Point Packages */}
       <div>
-        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Buy Points</h2>
+        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Cumpără Puncte</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {packages.map(pkg => {
             const Icon = PACKAGE_ICONS[pkg.id] || Zap;
@@ -243,7 +243,7 @@ export default function BuyPointsPage() {
               >
                 {isBest && (
                   <div className="absolute top-3 right-3 text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full">
-                    BEST VALUE
+                    CEL MAI BUN PREȚ
                   </div>
                 )}
                 <div className={`bg-gradient-to-br ${gradient} p-5`}>
@@ -255,7 +255,7 @@ export default function BuyPointsPage() {
                   <div className="flex items-end justify-between mb-3">
                     <div>
                       <span className="text-2xl font-black text-foreground">{pkg.points.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground ml-1">points</span>
+                      <span className="text-sm text-muted-foreground ml-1">puncte</span>
                     </div>
                     <div className="text-right">
                       <span className="text-lg font-black text-foreground">${(pkg.price / 100).toFixed(2)}</span>
@@ -267,9 +267,9 @@ export default function BuyPointsPage() {
                     disabled={isLoading || !!loadingPkg || loadingSubscribe}
                   >
                     {isLoading ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Se procesează...</>
                     ) : (
-                      <><ShoppingCart className="h-4 w-4" /> Buy now</>
+                      <><ShoppingCart className="h-4 w-4" /> Cumpără acum</>
                     )}
                   </Button>
                 </div>
@@ -280,7 +280,7 @@ export default function BuyPointsPage() {
       </div>
 
       <p className="text-xs text-muted-foreground text-center mt-6">
-        Payments are processed securely via Stripe.
+        Plățile sunt procesate în siguranță prin Stripe.
       </p>
     </div>
   );

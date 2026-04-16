@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import { getAuthHeaders } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
+import { ro } from "date-fns/locale";
 import {
   Award, CheckCircle2, Trash2, ChevronLeft,
   MessageCircle, ArrowUp, ArrowDown, Sparkles, BookOpen, Clock, Zap, ImageIcon, AlertCircle, Flag,
@@ -149,7 +150,7 @@ function CommentsSection({ answerId }: { answerId: number }) {
   };
 
   const postComment = async () => {
-    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Autentificare necesară", variant: "destructive" }); return; }
     if (newComment.trim().length < MIN_COMMENT) return;
     setPosting(true);
     const res = await fetch("/api/comments", {
@@ -164,7 +165,7 @@ function CommentsSection({ answerId }: { answerId: number }) {
       setNewComment("");
     } else {
       const data = await res.json();
-      toast({ title: data.error || "Failed to post comment", variant: "destructive" });
+      toast({ title: data.error || "Eroare la postarea comentariului", variant: "destructive" });
     }
   };
 
@@ -180,15 +181,15 @@ function CommentsSection({ answerId }: { answerId: number }) {
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors font-medium"
       >
         <MessageCircle className="h-3.5 w-3.5" />
-        {comments.length > 0 ? `${comments.length} comment${comments.length !== 1 ? "s" : ""}` : "Add comment"}
+        {comments.length > 0 ? `${comments.length} comentari${comments.length !== 1 ? "i" : "u"}` : "Adaugă comentariu"}
       </button>
 
       {showComments && (
         <div className="mt-3 space-y-2">
           {loading ? (
-            <p className="text-xs text-muted-foreground animate-pulse">Loading comments...</p>
+            <p className="text-xs text-muted-foreground animate-pulse">Se încarcă comentariile...</p>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No comments yet.</p>
+            <p className="text-xs text-muted-foreground">Nu există comentarii.</p>
           ) : (
             comments.map(c => (
               <div key={c.id} className="flex gap-2 items-start group">
@@ -200,7 +201,7 @@ function CommentsSection({ answerId }: { answerId: number }) {
                   <span className="text-xs font-semibold text-foreground mr-1.5">{c.authorDisplayName}</span>
                   <span className="text-xs text-foreground/80"><MentionText text={c.content} /></span>
                   <span className="text-[11px] text-muted-foreground/60 ml-2">
-                    {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ro })}
                   </span>
                 </div>
                 {(user?.id === c.authorId || user?.role === "admin") && (
@@ -222,7 +223,7 @@ function CommentsSection({ answerId }: { answerId: number }) {
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(); } }}
-                placeholder="Add a comment..."
+                placeholder="Adaugă un comentariu..."
                 className="flex-1 text-xs border border-border/60 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:border-primary/60 focus:bg-white transition-colors"
                 maxLength={500}
               />
@@ -255,17 +256,14 @@ export default function QuestionDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [similarQuestions, setSimilarQuestions] = useState<SimilarQuestion[]>([]);
-  // Question editing
   const [editingQuestion, setEditingQuestion] = useState(false);
   const [editQTitle, setEditQTitle] = useState("");
   const [editQContent, setEditQContent] = useState("");
   const [editQSubject, setEditQSubject] = useState("");
   const [editQLoading, setEditQLoading] = useState(false);
-  // Answer editing
   const [editingAnswerId, setEditingAnswerId] = useState<number | null>(null);
   const [editAContent, setEditAContent] = useState("");
   const [editALoading, setEditALoading] = useState(false);
-  // Textarea refs for markdown toolbar
   const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editATextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -282,15 +280,12 @@ export default function QuestionDetailPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetQuestionQueryKey(questionId) });
 
-  // Load bookmark status and similar questions
   useEffect(() => {
     if (!questionId) return;
-    // Similar questions
     fetch(`/api/questions/${questionId}/similar`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setSimilarQuestions(Array.isArray(data) ? data : []))
       .catch(() => {});
-    // Bookmark status
     if (user) {
       fetch(`/api/bookmarks/${questionId}`, { headers: getAuthHeaders() })
         .then(r => r.ok ? r.json() : null)
@@ -300,12 +295,12 @@ export default function QuestionDetailPage() {
   }, [questionId, user]);
 
   const toggleBookmark = async () => {
-    if (!user) { toast({ title: "Sign in to bookmark", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Autentifică-te pentru a salva", variant: "destructive" }); return; }
     setBookmarkLoading(true);
     if (isBookmarked) {
       await fetch(`/api/bookmarks/${questionId}`, { method: "DELETE", headers: getAuthHeaders() });
       setIsBookmarked(false);
-      toast({ title: "Bookmark removed" });
+      toast({ title: "Marcaj eliminat" });
     } else {
       await fetch("/api/bookmarks", {
         method: "POST",
@@ -313,24 +308,24 @@ export default function QuestionDetailPage() {
         body: JSON.stringify({ questionId }),
       });
       setIsBookmarked(true);
-      toast({ title: "Bookmarked! Saved to your bookmarks." });
+      toast({ title: "Salvat! Adăugat la marcajele tale." });
     }
     setBookmarkLoading(false);
   };
 
   const handleVoteQuestion = (type: string) => {
-    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Autentificare necesară", variant: "destructive" }); return; }
     voteQuestion.mutate({ id: questionId, data: { type } }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleVoteAnswer = (answerId: number, type: string) => {
-    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Autentificare necesară", variant: "destructive" }); return; }
     voteAnswer.mutate({ id: answerId, data: { type } }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleAwardAnswer = (answerId: number) => {
     awardAnswer.mutate({ id: answerId }, {
-      onSuccess: () => { invalidate(); toast({ title: "Gold Ribbon awarded! The respondent earned +50 points." }); },
+      onSuccess: () => { invalidate(); toast({ title: "Panglică de Aur acordată! Cel care a răspuns a câștigat +50 puncte." }); },
       onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
     });
   };
@@ -338,20 +333,20 @@ export default function QuestionDetailPage() {
   const handleSubmitAnswer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!answerContent.trim() || answerContent.trim().length < MIN_ANSWER) return;
-    if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Autentificare necesară", variant: "destructive" }); return; }
     createAnswer.mutate({ data: { questionId, content: answerContent } }, {
-      onSuccess: () => { setAnswerContent(""); invalidate(); toast({ title: "Answer posted! +10 points" }); },
+      onSuccess: () => { setAnswerContent(""); invalidate(); toast({ title: "Răspuns postat! +10 puncte" }); },
       onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
     });
   };
 
   const handleDeleteQuestion = () => {
-    if (!confirm("Delete this question?")) return;
+    if (!confirm("Ștergi această întrebare?")) return;
     deleteQuestion.mutate({ id: questionId }, { onSuccess: () => navigate("/questions"), onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
   const handleDeleteAnswer = (answerId: number) => {
-    if (!confirm("Delete this answer?")) return;
+    if (!confirm("Ștergi acest răspuns?")) return;
     deleteAnswer.mutate({ id: answerId }, { onSuccess: invalidate, onError: (e: Error) => toast({ title: e.message, variant: "destructive" }) });
   };
 
@@ -365,10 +360,10 @@ export default function QuestionDetailPage() {
 
   const saveEditQuestion = async () => {
     if (!editQTitle.trim() || editQTitle.trim().length < 15) {
-      toast({ title: "Title must be at least 15 characters", variant: "destructive" }); return;
+      toast({ title: "Titlul trebuie să aibă cel puțin 15 caractere", variant: "destructive" }); return;
     }
     if (!editQContent.trim() || editQContent.trim().length < 50) {
-      toast({ title: "Content must be at least 50 characters", variant: "destructive" }); return;
+      toast({ title: "Conținutul trebuie să aibă cel puțin 50 de caractere", variant: "destructive" }); return;
     }
     setEditQLoading(true);
     try {
@@ -377,11 +372,11 @@ export default function QuestionDetailPage() {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ title: editQTitle.trim(), content: editQContent.trim(), subject: editQSubject }),
       });
-      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Failed to update", variant: "destructive" }); return; }
+      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Actualizare eșuată", variant: "destructive" }); return; }
       setEditingQuestion(false);
       invalidate();
-      toast({ title: "Question updated successfully" });
-    } catch { toast({ title: "Network error", variant: "destructive" }); }
+      toast({ title: "Întrebarea a fost actualizată" });
+    } catch { toast({ title: "Eroare de rețea", variant: "destructive" }); }
     finally { setEditQLoading(false); }
   };
 
@@ -393,7 +388,7 @@ export default function QuestionDetailPage() {
   const saveEditAnswer = async () => {
     if (!editingAnswerId) return;
     if (!editAContent.trim() || editAContent.trim().length < 30) {
-      toast({ title: "Answer must be at least 30 characters", variant: "destructive" }); return;
+      toast({ title: "Răspunsul trebuie să aibă cel puțin 30 de caractere", variant: "destructive" }); return;
     }
     setEditALoading(true);
     try {
@@ -402,12 +397,12 @@ export default function QuestionDetailPage() {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ content: editAContent.trim() }),
       });
-      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Failed to update", variant: "destructive" }); return; }
+      if (!r.ok) { const d = await r.json(); toast({ title: d.error || "Actualizare eșuată", variant: "destructive" }); return; }
       setEditingAnswerId(null);
       setEditAContent("");
       invalidate();
-      toast({ title: "Answer updated successfully" });
-    } catch { toast({ title: "Network error", variant: "destructive" }); }
+      toast({ title: "Răspunsul a fost actualizat" });
+    } catch { toast({ title: "Eroare de rețea", variant: "destructive" }); }
     finally { setEditALoading(false); }
   };
 
@@ -432,8 +427,8 @@ export default function QuestionDetailPage() {
         <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <BookOpen className="h-7 w-7 text-muted-foreground/50" />
         </div>
-        <p className="text-base font-semibold">Question not found</p>
-        <Link href="/questions"><Button className="mt-4" variant="outline">Back to Questions</Button></Link>
+        <p className="text-base font-semibold">Întrebarea nu a fost găsită</p>
+        <Link href="/questions"><Button className="mt-4" variant="outline">Înapoi la Întrebări</Button></Link>
       </div>
     );
   }
@@ -460,7 +455,7 @@ export default function QuestionDetailPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link href="/questions">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="h-4 w-4" /> Questions
+            <ChevronLeft className="h-4 w-4" /> Întrebări
           </button>
         </Link>
         <span className="text-muted-foreground/40">/</span>
@@ -479,11 +474,11 @@ export default function QuestionDetailPage() {
                 </span>
                 {question.isSolved && (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    <CheckCircle2 className="h-3 w-3" /> Solved
+                    <CheckCircle2 className="h-3 w-3" /> Rezolvată
                   </span>
                 )}
                 <span className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
-                  <Eye className="h-3 w-3" /> {views.toLocaleString()} view{views !== 1 ? "s" : ""}
+                  <Eye className="h-3 w-3" /> {views.toLocaleString()} vizualizăr{views !== 1 ? "i" : "e"}
                 </span>
               </div>
 
@@ -492,7 +487,7 @@ export default function QuestionDetailPage() {
                   <Input
                     value={editQTitle}
                     onChange={e => setEditQTitle(e.target.value)}
-                    placeholder="Question title (min 15 chars)"
+                    placeholder="Titlul întrebării (min 15 caractere)"
                     className="h-11 rounded-xl border-border/70 font-semibold text-base"
                   />
                   <select
@@ -505,7 +500,7 @@ export default function QuestionDetailPage() {
                   <Textarea
                     value={editQContent}
                     onChange={e => setEditQContent(e.target.value)}
-                    placeholder="Question content (min 50 chars)"
+                    placeholder="Conținutul întrebării (min 50 caractere)"
                     rows={6}
                     className="resize-none rounded-xl border-border/70 font-mono text-sm"
                   />
@@ -517,7 +512,7 @@ export default function QuestionDetailPage() {
                       className="gradient-primary text-white border-0 rounded-xl h-8 px-4 text-xs font-semibold gap-1.5"
                     >
                       <Check className="h-3.5 w-3.5" />
-                      {editQLoading ? "Saving..." : "Save changes"}
+                      {editQLoading ? "Se salvează..." : "Salvează modificările"}
                     </Button>
                     <Button
                       onClick={() => setEditingQuestion(false)}
@@ -525,7 +520,7 @@ export default function QuestionDetailPage() {
                       size="sm"
                       className="rounded-xl h-8 px-4 text-xs"
                     >
-                      <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                      <X className="h-3.5 w-3.5 mr-1" /> Anulează
                     </Button>
                     <span className="text-xs text-muted-foreground ml-auto">{editQContent.length}/10000</span>
                   </div>
@@ -544,7 +539,7 @@ export default function QuestionDetailPage() {
                 <div className="mt-5 pt-4 border-t border-border/40">
                   <div className="flex items-center gap-1.5 mb-3 text-xs font-medium text-muted-foreground">
                     <ImageIcon className="h-3.5 w-3.5" />
-                    Attached images ({imageUrls.filter((_, idx) => !imageErrors.has(idx)).length})
+                    Imagini atașate ({imageUrls.filter((_, idx) => !imageErrors.has(idx)).length})
                   </div>
                   <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : imageUrls.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
                     {imageUrls.map((url, idx) =>
@@ -553,7 +548,7 @@ export default function QuestionDetailPage() {
                           className="block rounded-xl overflow-hidden border border-border/60 hover:border-primary/40 transition-colors shadow-xs group bg-gray-50">
                           <img
                             src={url}
-                            alt={`Image ${idx + 1}`}
+                            alt={`Imagine ${idx + 1}`}
                             className="w-full h-48 object-contain group-hover:opacity-90 transition-opacity"
                             onError={() => setImageErrors(prev => new Set([...prev, idx]))}
                           />
@@ -571,7 +566,7 @@ export default function QuestionDetailPage() {
                   <button
                     onClick={() => handleVoteQuestion("up")}
                     disabled={isQuestionAuthor}
-                    title={isQuestionAuthor ? "You cannot vote on your own question" : "Upvote"}
+                    title={isQuestionAuthor ? "Nu poți vota propria întrebare" : "Vot pozitiv"}
                     className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                     <ArrowUp className="h-4 w-4" />
                   </button>
@@ -579,7 +574,7 @@ export default function QuestionDetailPage() {
                   <button
                     onClick={() => handleVoteQuestion("down")}
                     disabled={isQuestionAuthor}
-                    title={isQuestionAuthor ? "You cannot vote on your own question" : "Downvote"}
+                    title={isQuestionAuthor ? "Nu poți vota propria întrebare" : "Vot negativ"}
                     className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                     <ArrowDown className="h-4 w-4" />
                   </button>
@@ -589,7 +584,7 @@ export default function QuestionDetailPage() {
                 <button
                   onClick={toggleBookmark}
                   disabled={bookmarkLoading}
-                  title={isBookmarked ? "Remove bookmark" : "Save to bookmarks"}
+                  title={isBookmarked ? "Elimină marcajul" : "Salvează la marcaje"}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                     isBookmarked
                       ? "bg-primary/8 border-primary/30 text-primary hover:bg-primary/12"
@@ -597,7 +592,7 @@ export default function QuestionDetailPage() {
                   }`}
                 >
                   {isBookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
-                  {isBookmarked ? "Bookmarked" : "Bookmark"}
+                  {isBookmarked ? "Salvată" : "Salvează"}
                 </button>
 
                 {/* Share button */}
@@ -606,17 +601,17 @@ export default function QuestionDetailPage() {
                     const url = window.location.href;
                     if (navigator.clipboard) {
                       navigator.clipboard.writeText(url).then(() => {
-                        toast({ title: "Link copied!", description: "Question URL copied to clipboard." });
+                        toast({ title: "Link copiat!", description: "URL-ul întrebării a fost copiat." });
                       });
                     } else {
-                      toast({ title: "Share", description: url });
+                      toast({ title: "Distribuie", description: url });
                     }
                   }}
-                  title="Share this question"
+                  title="Distribuie această întrebare"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-white text-muted-foreground hover:text-foreground hover:border-border text-xs font-medium transition-colors"
                 >
                   <Share2 className="h-3.5 w-3.5" />
-                  Share
+                  Distribuie
                 </button>
 
                 <Link href={`/profile/${question.authorId}`}>
@@ -637,22 +632,22 @@ export default function QuestionDetailPage() {
 
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(question.createdAt), { addSuffix: true, locale: ro })}
                 </span>
               </div>
 
               <div className="flex items-center gap-1">
                 {user && !isQuestionAuthor && (
                   <button
-                    onClick={() => setReportTarget({ type: "question", id: questionId, label: `Question: "${question.title.slice(0, 40)}..."` })}
-                    title="Report this question"
+                    onClick={() => setReportTarget({ type: "question", id: questionId, label: `Întrebare: "${question.title.slice(0, 40)}..."` })}
+                    title="Raportează această întrebare"
                     className="p-2 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-50 transition-colors"
                   >
                     <Flag className="h-4 w-4" />
                   </button>
                 )}
                 {(isQuestionAuthor || user?.role === "admin") && !editingQuestion && (
-                  <button onClick={startEditQuestion} title="Edit question" className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
+                  <button onClick={startEditQuestion} title="Editează întrebarea" className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
                     <Pencil className="h-4 w-4" />
                   </button>
                 )}
@@ -671,7 +666,7 @@ export default function QuestionDetailPage() {
               <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
                 <MessageCircle className="h-3.5 w-3.5 text-primary" />
               </div>
-              {sortedAnswers.length} {sortedAnswers.length === 1 ? "Answer" : "Answers"}
+              {sortedAnswers.length} {sortedAnswers.length === 1 ? "Răspuns" : "Răspunsuri"}
             </h2>
           </div>
 
@@ -680,8 +675,8 @@ export default function QuestionDetailPage() {
               <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <MessageCircle className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <p className="font-semibold text-foreground/70">No answers yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Be the first to help!</p>
+              <p className="font-semibold text-foreground/70">Niciun răspuns încă</p>
+              <p className="text-sm text-muted-foreground mt-1">Fii primul care ajută!</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -695,9 +690,9 @@ export default function QuestionDetailPage() {
                         <div className="w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
                           <Award className="h-3 w-3 text-white" />
                         </div>
-                        <span className="text-xs font-bold text-amber-700">Best Answer · Gold Ribbon</span>
+                        <span className="text-xs font-bold text-amber-700">Cel Mai Bun Răspuns · Panglică de Aur</span>
                         <div className="ml-auto flex items-center gap-1 text-xs text-amber-600 font-medium">
-                          <Zap className="h-3 w-3" /> +50 points awarded
+                          <Zap className="h-3 w-3" /> +50 puncte acordate
                         </div>
                       </div>
                     )}
@@ -708,7 +703,7 @@ export default function QuestionDetailPage() {
                           <button
                             onClick={() => handleVoteAnswer(answer.id, "up")}
                             disabled={isOwnAnswer}
-                            title={isOwnAnswer ? "You cannot vote on your own answer" : "Upvote"}
+                            title={isOwnAnswer ? "Nu poți vota propriul răspuns" : "Vot pozitiv"}
                             className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                             <ArrowUp className="h-4 w-4" />
                           </button>
@@ -716,7 +711,7 @@ export default function QuestionDetailPage() {
                           <button
                             onClick={() => handleVoteAnswer(answer.id, "down")}
                             disabled={isOwnAnswer}
-                            title={isOwnAnswer ? "You cannot vote on your own answer" : "Downvote"}
+                            title={isOwnAnswer ? "Nu poți vota propriul răspuns" : "Vot negativ"}
                             className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                             <ArrowDown className="h-4 w-4" />
                           </button>
@@ -737,7 +732,7 @@ export default function QuestionDetailPage() {
                                   onChange={e => setEditAContent(e.target.value)}
                                   rows={5}
                                   className="resize-none rounded-t-none rounded-b-xl border-border/70 font-mono text-sm"
-                                  placeholder="Edit your answer (min 30 chars)"
+                                  placeholder="Editează răspunsul (min 30 caractere)"
                                 />
                               </div>
                               <div className="flex items-center gap-2">
@@ -748,7 +743,7 @@ export default function QuestionDetailPage() {
                                   className="gradient-primary text-white border-0 rounded-xl h-7 px-3 text-xs font-semibold gap-1"
                                 >
                                   <Check className="h-3 w-3" />
-                                  {editALoading ? "Saving..." : "Save"}
+                                  {editALoading ? "Se salvează..." : "Salvează"}
                                 </Button>
                                 <Button
                                   onClick={() => { setEditingAnswerId(null); setEditAContent(""); }}
@@ -756,7 +751,7 @@ export default function QuestionDetailPage() {
                                   size="sm"
                                   className="rounded-xl h-7 px-3 text-xs"
                                 >
-                                  <X className="h-3 w-3 mr-1" /> Cancel
+                                  <X className="h-3 w-3 mr-1" /> Anulează
                                 </Button>
                                 <span className="text-xs text-muted-foreground ml-auto">{editAContent.length}/10000</span>
                               </div>
@@ -783,23 +778,23 @@ export default function QuestionDetailPage() {
                             </Link>
 
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true })}</span>
+                              <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true, locale: ro })}</span>
                               {isQuestionAuthor && !question.hasAwardedAnswer && !answer.isAwarded && answer.authorId !== user?.id && (
                                 <button onClick={() => handleAwardAnswer(answer.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors text-xs font-semibold shadow-xs">
-                                  <Award className="h-3 w-3" /> Award Gold Ribbon
+                                  <Award className="h-3 w-3" /> Acordă Panglică de Aur
                                 </button>
                               )}
                               {user && user.id !== answer.authorId && (
                                 <button
-                                  onClick={() => setReportTarget({ type: "answer", id: answer.id, label: `Answer by ${answer.authorDisplayName}` })}
-                                  title="Report this answer"
+                                  onClick={() => setReportTarget({ type: "answer", id: answer.id, label: `Răspuns de ${answer.authorDisplayName}` })}
+                                  title="Raportează acest răspuns"
                                   className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-50 transition-colors"
                                 >
                                   <Flag className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {(user?.id === answer.authorId || user?.role === "admin") && editingAnswerId !== answer.id && (
-                                <button onClick={() => startEditAnswer(answer.id, answer.content)} title="Edit answer" className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
+                                <button onClick={() => startEditAnswer(answer.id, answer.content)} title="Editează răspunsul" className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors">
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
                               )}
@@ -828,16 +823,16 @@ export default function QuestionDetailPage() {
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">You asked this question</p>
-                  <p className="text-xs text-amber-700 mt-0.5">You cannot answer your own question. Wait for others to help — then award the best answer with a Gold Ribbon!</p>
+                  <p className="text-sm font-semibold text-amber-800">Ai pus această întrebare</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Nu poți răspunde propriei tale întrebări. Așteaptă ca alții să te ajute — apoi acordă Panglica de Aur celui mai bun răspuns!</p>
                 </div>
               </div>
             ) : alreadyAnswered ? (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-blue-800">You've already answered this question</p>
-                  <p className="text-xs text-blue-700 mt-0.5">One answer per question per user. You can edit or delete your existing answer above.</p>
+                  <p className="text-sm font-semibold text-blue-800">Ai răspuns deja la această întrebare</p>
+                  <p className="text-xs text-blue-700 mt-0.5">Un singur răspuns per întrebare. Poți edita sau șterge răspunsul tău existent de mai sus.</p>
                 </div>
               </div>
             ) : (
@@ -845,24 +840,24 @@ export default function QuestionDetailPage() {
                 <div className="px-5 py-3.5 border-b border-border/50 bg-gray-50/50 flex items-center justify-between">
                   <h3 className="font-bold text-sm flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    Write your answer
+                    Scrie răspunsul tău
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">+10 pts · Markdown supported</span>
+                    <span className="text-xs text-muted-foreground">+10 pts · Markdown acceptat</span>
                     <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
                       <button
                         type="button"
                         onClick={() => setAnswerPreview(false)}
                         className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${!answerPreview ? "bg-white shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        Write
+                        Scriere
                       </button>
                       <button
                         type="button"
                         onClick={() => setAnswerPreview(true)}
                         className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1 ${answerPreview ? "bg-white shadow-xs text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        <Eye className="h-3 w-3" /> Preview
+                        <Eye className="h-3 w-3" /> Previzualizare
                       </button>
                     </div>
                   </div>
@@ -873,7 +868,7 @@ export default function QuestionDetailPage() {
                       {answerContent.trim() ? (
                         <MarkdownContent content={answerContent} />
                       ) : (
-                        <p className="text-sm text-muted-foreground italic">Nothing to preview yet. Switch to Write tab and start typing...</p>
+                        <p className="text-sm text-muted-foreground italic">Nimic de previzualizat. Treci la tab-ul Scriere și începe să scrii...</p>
                       )}
                     </div>
                   ) : (
@@ -887,7 +882,7 @@ export default function QuestionDetailPage() {
                         ref={answerTextareaRef}
                         value={answerContent}
                         onChange={e => setAnswerContent(e.target.value)}
-                        placeholder="Explain step by step... Use the toolbar above or type Markdown directly"
+                        placeholder="Explică pas cu pas... Folosește bara de instrumente sau scrie direct în Markdown"
                         rows={6}
                         className={`resize-none rounded-t-none rounded-b-xl border-border/70 bg-gray-50/50 focus-visible:bg-white text-sm font-mono ${answerContent.length > 0 && !answerOk ? "border-amber-400" : ""}`}
                       />
@@ -896,8 +891,8 @@ export default function QuestionDetailPage() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="text-xs text-muted-foreground">
                       {answerContent.length > 0 && !answerOk
-                        ? <span className="text-amber-600 font-medium">{MIN_ANSWER - answerContent.trim().length} more characters needed</span>
-                        : <span>Tip: detailed answers earn the Gold Ribbon (+50 pts)</span>
+                        ? <span className="text-amber-600 font-medium">Mai ai nevoie de {MIN_ANSWER - answerContent.trim().length} caractere</span>
+                        : <span>Sfat: răspunsurile detaliate câștigă Panglica de Aur (+50 pts)</span>
                       }
                     </div>
                     <div className="flex items-center gap-3">
@@ -907,9 +902,9 @@ export default function QuestionDetailPage() {
                         {createAnswer.isPending ? (
                           <div className="flex items-center gap-2">
                             <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Posting...
+                            Se postează...
                           </div>
-                        ) : "Post Answer"}
+                        ) : "Postează Răspunsul"}
                       </Button>
                     </div>
                   </div>
@@ -921,98 +916,54 @@ export default function QuestionDetailPage() {
               <div className="w-10 h-10 bg-primary/8 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <MessageCircle className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-semibold text-foreground mb-1">Sign in to answer</p>
-              <p className="text-sm text-muted-foreground mb-4">Help other students and earn points!</p>
+              <p className="font-semibold text-foreground mb-1">Autentifică-te pentru a răspunde</p>
+              <p className="text-sm text-muted-foreground mb-4">Ajută alți elevi și câștigă puncte!</p>
               <div className="flex justify-center gap-3">
-                <Link href="/login"><Button variant="outline" className="h-9 px-5 rounded-xl">Sign In</Button></Link>
-                <Link href="/register"><Button className="gradient-primary text-white border-0 h-9 px-5 rounded-xl font-semibold">Sign Up Free</Button></Link>
+                <Link href="/login">
+                  <Button className="gradient-primary text-white border-0 rounded-xl font-semibold">Autentificare</Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="outline" className="rounded-xl font-semibold">Înregistrare</Button>
+                </Link>
               </div>
             </div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Question Stats</h3>
-            <div className="space-y-2.5">
-              {[
-                { label: "Upvotes", value: question.upvotes, color: "text-emerald-600" },
-                { label: "Answers", value: question.answers.length, color: "text-blue-600" },
-                { label: "Views", value: views, color: "text-purple-600" },
-                { label: "Score", value: score, color: score >= 0 ? "text-primary" : "text-red-500" },
-              ].map(stat => (
-                <div key={stat.label} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{stat.label}</span>
-                  <span className={`text-sm font-bold ${stat.color}`}>{stat.value?.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Asked by</h3>
-            <Link href={`/profile/${question.authorId}`}>
-              <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={question.authorAvatarUrl || undefined} />
-                  <AvatarFallback className="gradient-primary text-white font-bold">{question.authorDisplayName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-1">
-                    <p className="text-sm font-semibold">{question.authorDisplayName}</p>
-                    {(question as any).authorIsPremium && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
-                  </div>
-                  <p className="text-xs text-primary font-medium">{question.authorPoints.toLocaleString()} points</p>
-                </div>
+        {similarQuestions.length > 0 && (
+          <div className="hidden lg:block">
+            <div className="bg-white rounded-xl border border-border/60 overflow-hidden shadow-xs sticky top-6">
+              <div className="px-4 py-3 border-b border-border/50 bg-gray-50/50">
+                <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 text-primary" /> Întrebări similare
+                </h3>
               </div>
-            </Link>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Award className="h-4 w-4 text-amber-600" />
-              <p className="text-xs font-bold text-amber-800">Gold Ribbon Award</p>
-            </div>
-            <p className="text-xs text-amber-700 leading-relaxed">
-              {isQuestionAuthor
-                ? "As the question author, you can award the Gold Ribbon to the best answer. That user receives 50 bonus points!"
-                : "The question author can award the Gold Ribbon to the best answer, granting 50 bonus points."}
-            </p>
-          </div>
-
-          {/* Similar questions */}
-          {similarQuestions.length > 0 && (
-            <div className="bg-white rounded-xl border border-border/60 p-4 shadow-xs">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3">Similar Questions</h3>
-              <div className="space-y-2.5">
-                {similarQuestions.map(sq => (
-                  <Link key={sq.id} href={`/questions/${sq.id}`}>
-                    <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                          {sq.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {sq.isSolved && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
-                          <span className="text-[11px] text-muted-foreground">↑ {sq.upvotes}</span>
-                        </div>
+              <div className="divide-y divide-border/40">
+                {similarQuestions.map(q => (
+                  <Link href={`/questions/${q.id}`} key={q.id}>
+                    <div className="p-3 hover:bg-gray-50 transition-colors cursor-pointer">
+                      <p className="text-xs font-medium text-foreground line-clamp-2 leading-relaxed mb-1.5">{q.title}</p>
+                      <div className="flex items-center gap-2">
+                        {q.isSolved && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Rezolvată
+                          </span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground ml-auto">{q.upvotes} voturi</span>
                       </div>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
                     </div>
                   </Link>
                 ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {reportTarget && (
         <ReportModal
-          targetType={reportTarget.type}
-          targetId={reportTarget.id}
-          targetLabel={reportTarget.label}
+          target={reportTarget}
           onClose={() => setReportTarget(null)}
         />
       )}

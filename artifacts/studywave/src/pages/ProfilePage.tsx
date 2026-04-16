@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { ro } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
@@ -43,7 +44,7 @@ const BADGE_COLOR_MAP: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  usePageTitle("Profile");
+  usePageTitle("Profil");
   const [, params] = useRoute("/profile/:id");
   const rawParam = params?.id || "";
   const numericId = parseInt(rawParam, 10);
@@ -95,7 +96,7 @@ export default function ProfilePage() {
   const followStatusValue = followStatus?.isFollowing ?? false;
 
   const handleFollowToggle = async () => {
-    if (!currentUser) { toast({ title: "Sign in to follow users", variant: "destructive" }); return; }
+    if (!currentUser) { toast({ title: "Autentifică-te pentru a urmări utilizatori", variant: "destructive" }); return; }
     setFollowLoading(true);
     try {
       const method = followStatusValue ? "DELETE" : "POST";
@@ -103,10 +104,10 @@ export default function ProfilePage() {
       if (r.ok) {
         queryClient.invalidateQueries({ queryKey: ["follow-status", resolvedId] });
         queryClient.invalidateQueries({ queryKey: ["user-profile", rawParam] });
-        toast({ title: followStatusValue ? "Unfollowed" : `Now following ${profile?.displayName}` });
+        toast({ title: followStatusValue ? "Nu mai urmărești" : `Urmărești acum pe ${profile?.displayName}` });
       }
     } catch {
-      toast({ title: "Something went wrong", variant: "destructive" });
+      toast({ title: "Ceva nu a mers bine", variant: "destructive" });
     } finally {
       setFollowLoading(false);
     }
@@ -140,20 +141,19 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-        <p className="text-muted-foreground">User not found.</p>
+        <p className="text-muted-foreground">Utilizatorul nu a fost găsit.</p>
       </div>
     );
   }
 
   const isOwnProfile = currentUser?.id === resolvedId;
 
-  // Calculate rank/level based on points
   const getLevel = (points: number) => {
     if (points >= 5000) return { label: "Expert", color: "text-yellow-600 bg-yellow-50 border-yellow-200", icon: "🏆" };
-    if (points >= 2000) return { label: "Advanced", color: "text-purple-600 bg-purple-50 border-purple-200", icon: "💎" };
-    if (points >= 1000) return { label: "Intermediate", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "🔥" };
-    if (points >= 100) return { label: "Beginner", color: "text-green-600 bg-green-50 border-green-200", icon: "⭐" };
-    return { label: "New", color: "text-gray-600 bg-gray-50 border-gray-200", icon: "🌱" };
+    if (points >= 2000) return { label: "Avansat", color: "text-purple-600 bg-purple-50 border-purple-200", icon: "💎" };
+    if (points >= 1000) return { label: "Intermediar", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "🔥" };
+    if (points >= 100) return { label: "Începător", color: "text-green-600 bg-green-50 border-green-200", icon: "⭐" };
+    return { label: "Nou", color: "text-gray-600 bg-gray-50 border-gray-200", icon: "🌱" };
   };
   const level = getLevel(profile.points);
 
@@ -202,14 +202,14 @@ export default function ProfilePage() {
                   className={`h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold ${followStatusValue ? "" : "gradient-primary text-white border-0 hover:opacity-90"}`}
                 >
                   {followStatusValue ? <UserCheck className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
-                  {followStatusValue ? "Following" : "Follow"}
+                  {followStatusValue ? "Urmărești" : "Urmărește"}
                 </Button>
               )}
               {isOwnProfile && (
                 <>
                   <Link href="/settings">
                     <Button variant="outline" size="sm" className="h-8 px-3.5 rounded-xl gap-2 text-xs font-semibold">
-                      <Settings className="h-3.5 w-3.5" /> Edit Profile
+                      <Settings className="h-3.5 w-3.5" /> Editează Profilul
                     </Button>
                   </Link>
                   {!(profile as any).isVerified && (
@@ -236,7 +236,7 @@ export default function ProfilePage() {
                 </span>
                 {isOwnProfile && (profile as any).premiumExpiresAt && (
                   <span className="text-xs text-amber-600/70 font-medium">
-                    expires {new Date((profile as any).premiumExpiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    expiră {new Date((profile as any).premiumExpiresAt).toLocaleDateString("ro-RO", { month: "short", day: "numeric", year: "numeric" })}
                   </span>
                 )}
               </>
@@ -296,21 +296,21 @@ export default function ProfilePage() {
 
           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            Member since {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
+            Membru din {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true, locale: ro })}
           </div>
         </div>
 
         {/* Stats bar */}
         <div className="grid grid-cols-4 sm:grid-cols-8 border-t border-border/50 divide-x divide-border/50">
           {[
-            { icon: Trophy, label: "Points", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
-            { icon: HelpCircle, label: "Questions", value: (profile as any).questionCount ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
-            { icon: MessageCircle, label: "Answers", value: (profile as any).answerCount ?? 0, color: "text-violet-600", bg: "bg-violet-50" },
-            { icon: Award, label: "Ribbons", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
-            { icon: Users, label: "Followers", value: (profile as any).followersCount ?? 0, color: "text-indigo-600", bg: "bg-indigo-50" },
-            { icon: UserPlus, label: "Following", value: (profile as any).followingCount ?? 0, color: "text-teal-600", bg: "bg-teal-50" },
+            { icon: Trophy, label: "Puncte", value: profile.points.toLocaleString(), color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: HelpCircle, label: "Întrebări", value: (profile as any).questionCount ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
+            { icon: MessageCircle, label: "Răspunsuri", value: (profile as any).answerCount ?? 0, color: "text-violet-600", bg: "bg-violet-50" },
+            { icon: Award, label: "Panglici", value: (profile as any).awardedAnswerCount ?? 0, color: "text-amber-600", bg: "bg-amber-50" },
+            { icon: Users, label: "Urmăritori", value: (profile as any).followersCount ?? 0, color: "text-indigo-600", bg: "bg-indigo-50" },
+            { icon: UserPlus, label: "Urmărești", value: (profile as any).followingCount ?? 0, color: "text-teal-600", bg: "bg-teal-50" },
             { icon: Flame, label: "Streak", value: (profile as any).currentStreak ?? 0, color: "text-orange-600", bg: "bg-orange-50" },
-            { icon: TrendingUp, label: "Best", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
+            { icon: TrendingUp, label: "Record", value: (profile as any).longestStreak ?? 0, color: "text-rose-600", bg: "bg-rose-50" },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center justify-center py-4 px-1 text-center gap-1">
               <div className={`w-7 h-7 rounded-lg ${stat.bg} flex items-center justify-center`}>
@@ -331,7 +331,7 @@ export default function ProfilePage() {
               <div className="w-7 h-7 bg-primary/8 rounded-lg flex items-center justify-center">
                 <Star className="h-3.5 w-3.5 text-primary" />
               </div>
-              Badges ({profile.badges.length})
+              Insigne ({profile.badges.length})
             </h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -361,11 +361,11 @@ export default function ProfilePage() {
         <TabsList className="bg-white border border-border/60 p-1 rounded-xl shadow-xs w-full">
           <TabsTrigger value="questions" className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm">
             <HelpCircle className="h-4 w-4 mr-2" />
-            Questions ({questions?.length || 0})
+            Întrebări ({questions?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="answers" className="flex-1 rounded-lg text-sm data-[state=active]:shadow-sm">
             <MessageCircle className="h-4 w-4 mr-2" />
-            Answers ({answers?.length || 0})
+            Răspunsuri ({answers?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -373,7 +373,7 @@ export default function ProfilePage() {
           {questions?.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-border/60">
               <HelpCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="font-semibold text-foreground/60">No questions posted yet</p>
+              <p className="font-semibold text-foreground/60">Nicio întrebare postată încă</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -386,7 +386,7 @@ export default function ProfilePage() {
           {answers?.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-border/60">
               <MessageCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="font-semibold text-foreground/60">No answers posted yet</p>
+              <p className="font-semibold text-foreground/60">Niciun răspuns postat încă</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -399,20 +399,20 @@ export default function ProfilePage() {
                 >
                   {a.isAwarded && (
                     <div className="flex items-center gap-2 text-amber-700 text-xs font-bold mb-3 pb-2.5 border-b border-amber-100">
-                      <Award className="h-3.5 w-3.5" /> Best Answer · Gold Ribbon
+                      <Award className="h-3.5 w-3.5" /> Cel Mai Bun Răspuns · Panglică de Aur
                     </div>
                   )}
                   <p className="text-sm text-foreground/85 line-clamp-3 leading-relaxed">{a.content}</p>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/40">
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: ro })}
                     </span>
                     <span className="flex items-center gap-1 text-xs font-medium text-primary">
-                      <TrendingUp className="h-3 w-3" /> {a.upvotes - a.downvotes} votes
+                      <TrendingUp className="h-3 w-3" /> {a.upvotes - a.downvotes} voturi
                     </span>
                     <Link href={`/questions/${a.questionId}`}>
                       <span className="ml-auto text-xs text-primary font-semibold hover:underline cursor-pointer">
-                        View question →
+                        Vezi întrebarea →
                       </span>
                     </Link>
                   </div>
@@ -471,52 +471,23 @@ export default function ProfilePage() {
             >
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Prenume</label>
-                  <Input
-                    value={verifyForm.firstName}
-                    onChange={e => setVerifyForm(f => ({ ...f, firstName: e.target.value }))}
-                    placeholder="Ex: Maria"
-                    required
-                    className="rounded-xl h-9 text-sm"
-                  />
+                  <label className="text-xs font-semibold mb-1 block">Prenume</label>
+                  <Input value={verifyForm.firstName} onChange={e => setVerifyForm(f => ({ ...f, firstName: e.target.value }))} placeholder="Prenumele tău" className="h-9 rounded-xl text-sm" required />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Nume</label>
-                  <Input
-                    value={verifyForm.lastName}
-                    onChange={e => setVerifyForm(f => ({ ...f, lastName: e.target.value }))}
-                    placeholder="Ex: Popescu"
-                    required
-                    className="rounded-xl h-9 text-sm"
-                  />
+                  <label className="text-xs font-semibold mb-1 block">Nume de familie</label>
+                  <Input value={verifyForm.lastName} onChange={e => setVerifyForm(f => ({ ...f, lastName: e.target.value }))} placeholder="Numele tău" className="h-9 rounded-xl text-sm" required />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Clasa ta</label>
-                <Input
-                  value={verifyForm.grade}
-                  onChange={e => setVerifyForm(f => ({ ...f, grade: e.target.value }))}
-                  placeholder="Ex: a 7-a B"
-                  required
-                  className="rounded-xl h-9 text-sm"
-                />
+                <label className="text-xs font-semibold mb-1 block">Clasa</label>
+                <Input value={verifyForm.grade} onChange={e => setVerifyForm(f => ({ ...f, grade: e.target.value }))} placeholder="ex: clasa a 9-a" className="h-9 rounded-xl text-sm" required />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Ce îți place cel mai mult la platformă?</label>
-                <Textarea
-                  value={verifyForm.favoriteFeature}
-                  onChange={e => setVerifyForm(f => ({ ...f, favoriteFeature: e.target.value }))}
-                  placeholder="Ex: Îmi place sistemul de puncte și că pot pune întrebări..."
-                  required
-                  rows={3}
-                  className="rounded-xl text-sm resize-none"
-                />
+                <label className="text-xs font-semibold mb-1 block">Funcția ta preferată pe StudyWave</label>
+                <Textarea value={verifyForm.favoriteFeature} onChange={e => setVerifyForm(f => ({ ...f, favoriteFeature: e.target.value }))} placeholder="Spune-ne ce îți place cel mai mult la platformă..." className="rounded-xl text-sm resize-none" rows={3} required />
               </div>
-              <Button
-                type="submit"
-                disabled={verifyLoading}
-                className="w-full gradient-primary text-white border-0 rounded-xl font-bold h-9 text-sm"
-              >
+              <Button type="submit" disabled={verifyLoading} className="w-full gradient-primary text-white border-0 rounded-xl h-9 font-semibold">
                 {verifyLoading ? "Se trimite..." : "Trimite cererea"}
               </Button>
             </form>
