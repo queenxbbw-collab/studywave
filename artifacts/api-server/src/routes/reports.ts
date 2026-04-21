@@ -110,10 +110,10 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
   }
 
   const id = parseInt(req.params.id as string, 10);
-  const { status } = req.body;
+  const { status, action } = req.body as { status?: string; action?: string };
 
   const validStatuses = ["pending", "reviewed", "dismissed"];
-  if (!validStatuses.includes(status)) {
+  if (!status || !validStatuses.includes(status)) {
     res.status(400).json({ error: "Invalid status" });
     return;
   }
@@ -129,18 +129,42 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
+  let actionPerformed: string | null = null;
+  if (action === "delete_target" && status === "reviewed") {
+    if (updated.targetType === "question") {
+      await db.delete(questionsTable).where(eq(questionsTable.id, updated.targetId));
+      actionPerformed = "deleted_question";
+    } else if (updated.targetType === "answer") {
+      await db.delete(answersTable).where(eq(answersTable.id, updated.targetId));
+      actionPerformed = "deleted_answer";
+    }
+    if (actionPerformed) {
+      await db
+        .update(reportsTable)
+        .set({ status: "reviewed" })
+        .where(
+          and(
+            eq(reportsTable.targetType, updated.targetType),
+            eq(reportsTable.targetId, updated.targetId)
+          )
+        );
+    }
+  }
+
   await logAdminAction({
     adminId: req.userId!,
     adminUsername: user.username,
-    action: `report.${status}`,
+    action: actionPerformed ? `report.${status}.${actionPerformed}` : `report.${status}`,
     category: "moderation",
     targetType: "report",
     targetId: id,
     targetLabel: `Report #${id} (${updated.targetType} #${updated.targetId})`,
-    details: `Marked report #${id} [${updated.targetType} #${updated.targetId}, reason: ${updated.reason}] as "${status}"`,
+    details: actionPerformed
+      ? `Marked report #${id} as "${status}" and ${actionPerformed.replace("_", " ")} (${updated.targetType} #${updated.targetId}, reason: ${updated.reason})`
+      : `Marked report #${id} [${updated.targetType} #${updated.targetId}, reason: ${updated.reason}] as "${status}"`,
   });
 
-  res.json({ id: updated.id, status: updated.status });
+  res.json({ id: updated.id, status: updated.status, actionPerformed });
 });
 
 export default router;

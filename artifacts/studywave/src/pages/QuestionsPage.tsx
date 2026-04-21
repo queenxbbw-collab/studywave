@@ -200,21 +200,48 @@ export default function QuestionsPage() {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex gap-1">
-            {Array.from({ length: Math.min(7, data.totalPages) }).map((_, i) => {
-              const p = i + 1;
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
-                    p === page ? "gradient-primary text-white shadow-sm" : "bg-white border border-border/60 text-muted-foreground hover:border-primary/40"
-                  }`}
-                >
-                  {p}
-                </button>
+          <div className="flex gap-1 items-center">
+            {(() => {
+              const total = data.totalPages;
+              const cur = page;
+              const pages: (number | "...")[] = [];
+              const add = (n: number) => { if (!pages.includes(n)) pages.push(n); };
+              add(1);
+              if (cur - 2 > 2) pages.push("...");
+              for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) add(i);
+              if (cur + 2 < total - 1) pages.push("...");
+              if (total > 1) add(total);
+              return pages.map((p, i) =>
+                p === "..." ? (
+                  <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-muted-foreground text-sm">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
+                      p === page ? "gradient-primary text-white shadow-sm" : "bg-white border border-border/60 text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
               );
-            })}
+            })()}
+            {data.totalPages > 7 && (
+              <input
+                type="number"
+                min={1}
+                max={data.totalPages}
+                placeholder="Pag."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const v = parseInt((e.target as HTMLInputElement).value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= data.totalPages) setPage(v);
+                  }
+                }}
+                className="w-16 h-9 ml-2 px-2 rounded-lg border border-border/60 text-sm text-center focus:outline-none focus:border-primary/60"
+              />
+            )}
           </div>
           <Button
             variant="outline"

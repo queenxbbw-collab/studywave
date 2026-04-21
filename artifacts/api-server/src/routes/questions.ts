@@ -345,12 +345,12 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
 
   res.json({
     questionsToday: Number(qCount.cnt),
-    questionLimit: DAILY_QUESTION_LIMIT,
-    questionsRemaining: premium ? 999 : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt)),
+    questionLimit: premium ? null : DAILY_QUESTION_LIMIT,
+    questionsRemaining: premium ? null : Math.max(0, DAILY_QUESTION_LIMIT - Number(qCount.cnt)),
     questionBonusPool: 0,
     answersToday: Number(aCount.cnt),
     answerLimit: premium ? null : 15,
-    answersRemaining: premium ? 999 : Math.max(0, 15 - Number(aCount.cnt)),
+    answersRemaining: premium ? null : Math.max(0, 15 - Number(aCount.cnt)),
     points: userRow?.points ?? 0,
     isPremium: premium,
   });

@@ -25,8 +25,8 @@ const DAILY_LIMIT = 5;
 
 interface DailyLimits {
   questionsToday: number;
-  questionsRemaining: number;
-  questionLimit: number;
+  questionsRemaining: number | null;
+  questionLimit: number | null;
   questionBonusPool: number;
   points: number;
   isPremium: boolean;
@@ -122,12 +122,12 @@ export default function AskPage() {
 
   const titleOk = title.trim().length >= MIN_TITLE;
   const contentOk = content.trim().length >= MIN_CONTENT;
-  const canSubmit = titleOk && contentOk && !!subject && !isSubmitting && (limits ? limits.questionsRemaining > 0 : true);
+  const canSubmit = titleOk && contentOk && !!subject && !isSubmitting && (limits ? (limits.questionsRemaining === null || limits.questionsRemaining > 0) : true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    if (limits && limits.questionsRemaining <= 0) {
+    if (limits && limits.questionsRemaining !== null && limits.questionsRemaining <= 0) {
       toast({ title: `Limita zilnică atinsă (${DAILY_LIMIT} întrebări/zi). Revino mâine!`, variant: "destructive" });
       return;
     }
@@ -154,7 +154,7 @@ export default function AskPage() {
     }
   };
 
-  const limitReached = limits ? limits.questionsRemaining <= 0 : false;
+  const limitReached = limits ? (limits.questionsRemaining !== null && limits.questionsRemaining <= 0) : false;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -353,8 +353,8 @@ export default function AskPage() {
                       <Crown className="h-3 w-3 inline mr-1" />Premium
                     </span>
                   ) : (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${limits.questionsRemaining <= 1 ? "bg-red-50 text-red-600" : limits.questionsRemaining <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
-                      {limits.questionsRemaining}/{limits.questionLimit} azi
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${(limits.questionsRemaining ?? 0) <= 1 ? "bg-red-50 text-red-600" : (limits.questionsRemaining ?? 0) <= 3 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
+                      {limits.questionsRemaining ?? 0}/{limits.questionLimit ?? DAILY_LIMIT} azi
                     </span>
                   )
                 )}

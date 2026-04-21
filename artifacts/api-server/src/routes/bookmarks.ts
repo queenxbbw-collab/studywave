@@ -68,27 +68,4 @@ router.get("/bookmarks", authenticate, async (req, res): Promise<void> => {
   res.json({ bookmarks: mapped });
 });
 
-router.post("/bookmarks/:questionId", authenticate, async (req, res): Promise<void> => {
-  const questionId = parseInt(req.params.questionId);
-  if (isNaN(questionId)) { res.status(400).json({ error: "Invalid question ID" }); return; }
-
-  const [q] = (await db.execute(sql`SELECT id FROM questions WHERE id = ${questionId}`)).rows;
-  if (!q) { res.status(404).json({ error: "Question not found" }); return; }
-
-  const [existing] = (await db.execute(sql`SELECT id FROM bookmarks WHERE user_id = ${req.userId} AND question_id = ${questionId}`)).rows;
-  if (existing) {
-    await db.execute(sql`DELETE FROM bookmarks WHERE user_id = ${req.userId} AND question_id = ${questionId}`);
-    res.json({ bookmarked: false });
-  } else {
-    await db.execute(sql`INSERT INTO bookmarks (user_id, question_id) VALUES (${req.userId}, ${questionId})`);
-    res.json({ bookmarked: true });
-  }
-});
-
-router.get("/bookmarks/check/:questionId", authenticate, async (req, res): Promise<void> => {
-  const questionId = parseInt(req.params.questionId);
-  const [existing] = (await db.execute(sql`SELECT id FROM bookmarks WHERE user_id = ${req.userId} AND question_id = ${questionId}`)).rows;
-  res.json({ bookmarked: !!existing });
-});
-
 export default router;

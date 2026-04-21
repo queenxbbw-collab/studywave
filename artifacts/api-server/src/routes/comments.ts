@@ -9,12 +9,16 @@ const router: IRouter = Router();
 const DAILY_COMMENT_LIMIT = 50;
 const MIN_COMMENT_LENGTH = 5;
 
+function startOfTodayUTC() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
 async function checkCommentLimit(userId: number): Promise<boolean> {
-  const todayUTC = new Date();
-  todayUTC.setUTCHours(0, 0, 0, 0);
+  const todayStart = startOfTodayUTC();
   const [row] = (await db.execute(sql`
     SELECT COUNT(*) as cnt FROM comments
-    WHERE user_id = ${userId} AND created_at >= ${todayUTC.toISOString()}
+    WHERE user_id = ${userId} AND created_at >= ${todayStart.toISOString()}
   `)).rows as any[];
   return parseInt(row?.cnt ?? "0") < DAILY_COMMENT_LIMIT;
 }
