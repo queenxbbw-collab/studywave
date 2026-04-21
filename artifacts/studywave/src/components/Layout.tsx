@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BookOpen, Home, HelpCircle, Trophy, Star, Settings, LogOut,
-  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb, ShoppingCart, GraduationCap
+  Plus, Shield, Menu, X, ChevronDown, Zap, Bookmark, Lightbulb, ShoppingCart, GraduationCap, User
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -110,7 +110,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       </div>
                       <DropdownMenuSeparator className="my-1" />
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
-                        <Link href={`/profile/${user.id}`}>Profil Public</Link>
+                        <Link href={`/profile/${user.id}`}>
+                          <User className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Profil Public
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="rounded-lg py-2 px-3 cursor-pointer">
                         <Link href="/bookmarks">
