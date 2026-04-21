@@ -5,6 +5,7 @@ import { authenticate } from "../middlewares/authenticate";
 import { UpdateAnswerBody, VoteAnswerBody } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
 import { createNotification, parseMentions } from "./notifications";
+import { getEffectivePremium } from "../lib/premium";
 
 // --- Limits ---
 const DAILY_ANSWER_LIMIT = 15;
@@ -55,8 +56,8 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
   }
 
   // Daily answer rate limit (Premium users have unlimited answers)
-  const [userRow] = await db.select({ isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
-  if (!userRow?.isPremium) {
+  const isPremium = await getEffectivePremium(req.userId!);
+  if (!isPremium) {
     const todayStart = startOfTodayUTC();
     const [todayCount] = await db.select({ cnt: count() }).from(answersTable)
       .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
@@ -139,8 +140,23 @@ router.delete("/answers/:id", authenticate, async (req, res): Promise<void> => {
   const [answer] = await db.select().from(answersTable).where(eq(answersTable.id, id));
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
   if (answer.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
+
   await db.delete(answerVotesTable).where(eq(answerVotesTable.answerId, id));
   await db.delete(answersTable).where(eq(answersTable.id, id));
+
+  // Anti-farming: refund the +10 granted on creation, plus +50 if the answer was awarded.
+  const refund = 10 + (answer.isAwarded ? 50 : 0);
+  await db.update(usersTable)
+    .set({ points: sql`GREATEST(0, ${usersTable.points} - ${refund})` })
+    .where(eq(usersTable.id, answer.authorId));
+
+  // If this was the awarded answer, clear the question's awarded/solved flags.
+  if (answer.isAwarded) {
+    await db.update(questionsTable)
+      .set({ hasAwardedAnswer: false, isSolved: false })
+      .where(eq(questionsTable.id, answer.questionId));
+  }
+
   res.sendStatus(204);
 });
 

@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq, isNull } from "drizzle-orm";
 import { hashPassword } from "./lib/auth";
+import { expireStalePremium } from "./lib/premium";
 
 const rawPort = process.env["PORT"];
 
@@ -183,6 +184,19 @@ async function start() {
     }
     logger.info({ port }, "Server listening");
   });
+
+  // Periodic safety net: downgrade users whose premium has expired
+  // (covers cases where Stripe webhooks were missed)
+  const runExpiry = async () => {
+    try {
+      const n = await expireStalePremium();
+      if (n > 0) logger.info({ count: n }, "Expired premium downgraded");
+    } catch (err: any) {
+      logger.warn({ errMsg: String(err?.message ?? err) }, "Premium expiry sweep failed");
+    }
+  };
+  void runExpiry();
+  setInterval(runExpiry, 60 * 60 * 1000); // hourly
 }
 
 start();

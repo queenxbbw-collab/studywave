@@ -159,8 +159,22 @@ router.post("/payments/verify-premium", authenticate, async (req: Request, res: 
     }
 
     const subId = session.subscription as string;
+    let expiresAt: Date | null = null;
+    try {
+      if (subId) {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const periodEnd = (sub as any).current_period_end as number | undefined;
+        if (periodEnd) expiresAt = new Date(periodEnd * 1000);
+      }
+    } catch (e: any) {
+      console.error("[Stripe] failed to retrieve subscription period:", e.message);
+    }
+    if (!expiresAt) {
+      // Safety fallback: 35 days (covers monthly cycle + grace period) so premium can NEVER be permanent
+      expiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000);
+    }
     await db.update(usersTable)
-      .set({ isPremium: true, stripeSubscriptionId: subId ?? null })
+      .set({ isPremium: true, stripeSubscriptionId: subId ?? null, premiumExpiresAt: expiresAt })
       .where(eq(usersTable.id, userId));
 
     const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
@@ -196,10 +210,21 @@ export async function handleStripeWebhook(payload: Buffer, signature: string): P
 
     if (type === "premium_subscription" && userId) {
       const subId = session.subscription as string;
+      let expiresAt: Date | null = null;
+      try {
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const periodEnd = (sub as any).current_period_end as number | undefined;
+          if (periodEnd) expiresAt = new Date(periodEnd * 1000);
+        }
+      } catch (e: any) {
+        console.error("[Stripe] failed to retrieve subscription period:", e.message);
+      }
+      if (!expiresAt) expiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000);
       await db.update(usersTable)
-        .set({ isPremium: true, stripeSubscriptionId: subId })
+        .set({ isPremium: true, stripeSubscriptionId: subId, premiumExpiresAt: expiresAt })
         .where(eq(usersTable.id, userId));
-      console.log(`[Stripe] Activated Premium for user ${userId}`);
+      console.log(`[Stripe] Activated Premium for user ${userId} until ${expiresAt.toISOString()}`);
     } else {
       const points = parseInt(session.metadata?.points ?? "0");
       if (userId && points) {
@@ -211,11 +236,27 @@ export async function handleStripeWebhook(payload: Buffer, signature: string): P
     }
   }
 
+  if (event.type === "customer.subscription.updated") {
+    const sub = event.data.object as Stripe.Subscription;
+    const periodEnd = (sub as any).current_period_end as number | undefined;
+    const status = sub.status;
+    const isActive = status === "active" || status === "trialing";
+    const expiresAt = periodEnd ? new Date(periodEnd * 1000) : null;
+    await db.update(usersTable)
+      .set({
+        isPremium: isActive,
+        premiumExpiresAt: expiresAt,
+        ...(isActive ? {} : { stripeSubscriptionId: null }),
+      })
+      .where(eq(usersTable.stripeSubscriptionId, sub.id));
+    console.log(`[Stripe] Subscription ${sub.id} updated: status=${status}, expires=${expiresAt?.toISOString() ?? "n/a"}`);
+  }
+
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object as Stripe.Subscription;
     const subId = sub.id;
     await db.update(usersTable)
-      .set({ isPremium: false, stripeSubscriptionId: null })
+      .set({ isPremium: false, stripeSubscriptionId: null, premiumExpiresAt: null })
       .where(eq(usersTable.stripeSubscriptionId, subId));
     console.log(`[Stripe] Deactivated Premium for subscription ${subId}`);
   }

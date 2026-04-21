@@ -5,6 +5,7 @@ import { authenticate, optionalAuthenticate } from "../middlewares/authenticate"
 import { CreateQuestionBody, UpdateQuestionBody, VoteQuestionBody, ListQuestionsQueryParams } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
 import { createNotification } from "./notifications";
+import { getEffectivePremium } from "../lib/premium";
 
 const router = Router();
 
@@ -132,8 +133,7 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
       gte(questionsTable.createdAt, todayStart),
     ));
 
-  const [userRow] = await db.select({ isPremium: usersTable.isPremium }).from(usersTable).where(eq(usersTable.id, req.userId!));
-  const isPremium = userRow?.isPremium ?? false;
+  const isPremium = await getEffectivePremium(req.userId!);
 
   if (!isPremium && Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
     res.status(429).json({
@@ -263,10 +263,29 @@ router.delete("/questions/:id", authenticate, async (req, res): Promise<void> =>
   if (!question) { res.status(404).json({ error: "Question not found" }); return; }
   if (question.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
+  // Anti-farming: capture answer info BEFORE deletion so we can refund points.
+  const allAnswers = await db.select({ authorId: answersTable.authorId, isAwarded: answersTable.isAwarded })
+    .from(answersTable)
+    .where(eq(answersTable.questionId, id));
+
   await db.delete(questionVotesTable).where(eq(questionVotesTable.questionId, id));
   await db.delete(answersTable).where(eq(answersTable.questionId, id));
   await db.delete(activityTable).where(eq(activityTable.questionId, id));
   await db.delete(questionsTable).where(eq(questionsTable.id, id));
+
+  // Refund the +5 the question author received on creation (clamped at 0)
+  await db.update(usersTable)
+    .set({ points: sql`GREATEST(0, ${usersTable.points} - 5)` })
+    .where(eq(usersTable.id, question.authorId));
+
+  // Refund +10 per answer (and +50 if it was awarded a Gold Ribbon)
+  for (const a of allAnswers) {
+    const refund = 10 + (a.isAwarded ? 50 : 0);
+    await db.update(usersTable)
+      .set({ points: sql`GREATEST(0, ${usersTable.points} - ${refund})` })
+      .where(eq(usersTable.id, a.authorId));
+  }
+
   res.sendStatus(204);
 });
 
@@ -338,10 +357,10 @@ router.get("/my-limits", authenticate, async (req, res): Promise<void> => {
     .where(and(eq(questionsTable.authorId, req.userId!), gte(questionsTable.createdAt, todayStart)));
   const [aCount] = await db.select({ cnt: count() }).from(answersTable)
     .where(and(eq(answersTable.authorId, req.userId!), gte(answersTable.createdAt, todayStart)));
-  const [userRow] = await db.select({ points: usersTable.points, isPremium: usersTable.isPremium })
+  const [userRow] = await db.select({ points: usersTable.points })
     .from(usersTable).where(eq(usersTable.id, req.userId!));
 
-  const premium = userRow?.isPremium ?? false;
+  const premium = await getEffectivePremium(req.userId!);
 
   res.json({
     questionsToday: Number(qCount.cnt),
