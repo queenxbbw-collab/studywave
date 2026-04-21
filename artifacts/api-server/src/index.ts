@@ -94,7 +94,43 @@ async function seedUsers() {
 }
 
 async function seedBadges() {
-    // ── 2. Seed default badges ───────────────────────────────────────────────
+    // ── 2a. Translate any pre-existing English badges to Romanian ────────────
+    const BADGE_TRANSLATIONS: Array<{ old: string; name: string; description: string }> = [
+      { old: "First Step",         name: "Primul Pas",                 description: "Pune prima ta întrebare" },
+      { old: "Curious Mind",       name: "Minte Curioasă",             description: "Pune 5 întrebări" },
+      { old: "Helper",             name: "Ajutor",                     description: "Publică primul tău răspuns" },
+      { old: "Quick Learner",      name: "Învățăcel Rapid",            description: "Câștigă 50 de puncte" },
+      { old: "Knowledge Seeker",   name: "Căutător de Cunoștințe",     description: "Pune 25 de întrebări" },
+      { old: "Problem Solver",     name: "Rezolvator de Probleme",     description: "Ai 10 răspunsuri acceptate" },
+      { old: "Rising Star",        name: "Stea în Ascensiune",         description: "Câștigă 250 de puncte" },
+      { old: "On Fire",            name: "În Flăcări",                 description: "Menține o serie de 7 zile de răspunsuri" },
+      { old: "Connector",          name: "Conector",                   description: "Recomandă 3 prieteni pe StudyWave" },
+      { old: "Voted Up",           name: "Apreciat",                   description: "Primește 50 de voturi pozitive la răspunsurile tale" },
+      { old: "Expert",             name: "Expert",                     description: "Câștigă 500 de puncte" },
+      { old: "Gold Ribbon Winner", name: "Câștigător Panglica de Aur", description: "Câștigă prima ta Panglică de Aur" },
+      { old: "Mentor",             name: "Mentor",                     description: "Ai 50 de răspunsuri acceptate" },
+      { old: "Influencer",         name: "Influencer",                 description: "Recomandă 10 prieteni pe StudyWave" },
+      { old: "Top Contributor",    name: "Contribuitor de Top",        description: "Câștigă 1.000 de puncte" },
+      { old: "Legend",             name: "Legendă",                    description: "Câștigă 2.500 de puncte" },
+      { old: "Grand Master",       name: "Mare Maestru",               description: "Câștigă 5.000 de puncte" },
+      { old: "StudyWave Elite",    name: "StudyWave Elite",            description: "Câștigă 10.000 de puncte" },
+      { old: "Dedicated",          name: "Dedicat",                    description: "Menține o serie de activitate de 30 de zile" },
+      { old: "Ambassador",         name: "Ambasador",                  description: "Recomandă 25 de prieteni pe StudyWave" },
+    ];
+    let translated = 0;
+    for (const t of BADGE_TRANSLATIONS) {
+      const result = await db
+        .update(badgesTable)
+        .set({ name: t.name, description: t.description })
+        .where(eq(badgesTable.name, t.old))
+        .returning({ id: badgesTable.id });
+      translated += result.length;
+    }
+    if (translated > 0) {
+      logger.info(`Translated ${translated} badge(s) to Romanian`);
+    }
+
+    // ── 2b. Seed default badges ──────────────────────────────────────────────
     const existingBadges = await db.select({ id: badgesTable.id }).from(badgesTable).limit(1);
     if (existingBadges.length === 0) {
       await db.insert(badgesTable).values([
