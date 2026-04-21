@@ -6,6 +6,7 @@ import { UpdateAnswerBody, VoteAnswerBody } from "@workspace/api-zod";
 import { checkAndAwardBadges } from "../lib/badges";
 import { createNotification, parseMentions } from "./notifications";
 import { getEffectivePremium } from "../lib/premium";
+import { bumpStreak } from "../lib/streak";
 
 // --- Limits ---
 const DAILY_ANSWER_LIMIT = 15;
@@ -77,6 +78,7 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
 
   await db.insert(activityTable).values({ type: "answer_posted", userId: req.userId!, questionId });
   await db.update(usersTable).set({ points: sql`${usersTable.points} + 10` }).where(eq(usersTable.id, req.userId!));
+  await bumpStreak(req.userId!);
   await checkAndAwardBadges(req.userId!);
   // Notify question author
   const [answerer] = await db.select({ displayName: usersTable.displayName }).from(usersTable).where(eq(usersTable.id, req.userId!));
@@ -273,6 +275,41 @@ router.post("/answers/:id/award", authenticate, async (req, res): Promise<void> 
     authorPoints: author.points, upvotes: updated.upvotes, downvotes: updated.downvotes,
     isAwarded: updated.isAwarded, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString(),
   });
+});
+
+// Revoke a previously-awarded Gold Ribbon (question author or admin only).
+router.delete("/answers/:id/award", authenticate, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+
+  const [answer] = await db.select().from(answersTable).where(eq(answersTable.id, id));
+  if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
+  if (!answer.isAwarded) { res.status(400).json({ error: "This answer does not have a Gold Ribbon" }); return; }
+
+  const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, answer.questionId));
+  if (!question) { res.status(404).json({ error: "Question not found" }); return; }
+
+  if (question.authorId !== req.userId && req.userRole !== "admin") {
+    res.status(403).json({ error: "Only the question author or an admin can revoke the Gold Ribbon" });
+    return;
+  }
+
+  await db.update(answersTable).set({ isAwarded: false }).where(eq(answersTable.id, id));
+  await db.update(questionsTable)
+    .set({ hasAwardedAnswer: false, isSolved: false })
+    .where(eq(questionsTable.id, answer.questionId));
+  await db.update(usersTable)
+    .set({ points: sql`GREATEST(0, ${usersTable.points} - 50)` })
+    .where(eq(usersTable.id, answer.authorId));
+
+  await createNotification(
+    answer.authorId,
+    "gold_ribbon",
+    "Panglica de Aur a fost retrasă",
+    `Panglica de Aur pentru răspunsul tău la "${question.title.slice(0, 60)}" a fost retrasă. -50 puncte.`,
+    answer.questionId
+  );
+
+  res.sendStatus(204);
 });
 
 export default router;

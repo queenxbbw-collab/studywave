@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { createNotification, parseMentions } from "./notifications";
+import { bumpStreak } from "../lib/streak";
 
 const router: IRouter = Router();
 
@@ -80,6 +81,7 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
   }
   // Parse @mentions
   await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Cineva", answerRow?.question_id);
+  await bumpStreak(req.userId!);
 
   res.status(201).json({ comment: {
     id: comment.id, content: comment.content, createdAt: comment.created_at,
@@ -121,6 +123,7 @@ router.post("/comments/answer/:answerId", authenticate, async (req, res): Promis
   }
   // Parse @mentions
   await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Cineva", answerRow2?.question_id);
+  await bumpStreak(req.userId!);
 
   res.status(201).json({
     id: comment.id,

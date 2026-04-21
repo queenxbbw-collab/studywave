@@ -6,6 +6,8 @@ import { CreateQuestionBody, UpdateQuestionBody, VoteQuestionBody, ListQuestions
 import { checkAndAwardBadges } from "../lib/badges";
 import { createNotification } from "./notifications";
 import { getEffectivePremium } from "../lib/premium";
+import { bumpStreak } from "../lib/streak";
+import { shouldCountView } from "../lib/viewThrottle";
 
 const router = Router();
 
@@ -152,6 +154,7 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
 
   await db.insert(activityTable).values({ type: "question_asked", userId: req.userId!, questionId: question.id });
   await db.update(usersTable).set({ points: sql`${usersTable.points} + 5` }).where(eq(usersTable.id, req.userId!));
+  await bumpStreak(req.userId!);
   await checkAndAwardBadges(req.userId!);
 
   res.status(201).json({
@@ -192,8 +195,16 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     .where(eq(answersTable.questionId, id))
     .orderBy(desc(answersTable.isAwarded), desc(answersTable.upvotes), asc(answersTable.createdAt));
 
-  // Increment view count (fire and forget)
-  db.execute(sql`UPDATE questions SET views = views + 1 WHERE id = ${id}`).catch(() => {});
+  // Increment view count — throttled per viewer (30 min) and skipping the author.
+  const viewerKey: string | number =
+    req.userId && req.userId !== questionRow.q.authorId
+      ? req.userId
+      : !req.userId
+        ? (req.ip ?? req.socket.remoteAddress ?? "anon")
+        : ""; // author viewing their own question — never counted
+  if (viewerKey !== "" && shouldCountView(id, viewerKey)) {
+    db.execute(sql`UPDATE questions SET views = views + 1 WHERE id = ${id}`).catch(() => {});
+  }
 
   const { q, author } = questionRow;
   res.json({

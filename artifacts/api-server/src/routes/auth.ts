@@ -6,6 +6,7 @@ import { authenticate } from "../middlewares/authenticate";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import crypto from "crypto";
 import { createNotification } from "./notifications";
+import { bumpStreak } from "../lib/streak";
 
 const router = Router();
 
@@ -133,15 +134,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // Update streak
-  const today = new Date().toISOString().split("T")[0];
-  const lastDate = user.lastActivityDate ? new Date(user.lastActivityDate as unknown as string).toISOString().split("T")[0] : null;
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-  let newStreak = (user as any).currentStreak ?? 0;
-  if (!lastDate || lastDate < yesterday) newStreak = 1;
-  else if (lastDate === yesterday) newStreak = newStreak + 1;
-  const newLongest = Math.max(newStreak, (user as any).longestStreak ?? 0);
-  await db.execute(sql`UPDATE users SET current_streak = ${newStreak}, longest_streak = ${newLongest}, last_activity_date = ${today} WHERE id = ${user.id}`);
+  // Update streak (idempotent per UTC day; also bumped on any post/comment activity)
+  await bumpStreak(user.id);
 
   const token = signToken(user.id, user.role);
   const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id));
