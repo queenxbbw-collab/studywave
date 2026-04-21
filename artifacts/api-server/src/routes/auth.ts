@@ -97,8 +97,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     await createNotification(
       referrerId,
       "referral_signup",
-      "🎉 Someone joined using your referral!",
-      `${displayName || username} just registered with your referral code. You earned +25 points!`
+      "🎉 Cineva s-a înregistrat folosind recomandarea ta!",
+      `${displayName || username} tocmai s-a înregistrat cu codul tău de recomandare. Ai primit +25 de puncte!`
     );
   }
 

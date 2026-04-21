@@ -140,8 +140,8 @@ export async function parseMentions(
       await createNotification(
         mentioned.id,
         "mention",
-        `${authorName} mentioned you`,
-        `You were mentioned in a post: "${content.slice(0, 80)}..."`,
+        `${authorName} te-a menționat`,
+        `Ai fost menționat într-o postare: "${content.slice(0, 80)}..."`,
         questionId
       );
     } catch {}

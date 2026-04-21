@@ -246,8 +246,8 @@ router.post("/users/:id/follow", authenticate, async (req, res): Promise<void> =
   await createNotification(
     targetId,
     "new_follower",
-    "You have a new follower!",
-    `${follower?.displayName || follower?.username || "Someone"} started following you.`
+    "Ai un urmăritor nou!",
+    `${follower?.displayName || follower?.username || "Cineva"} a început să te urmărească.`
   );
   res.json({ message: "Now following" });
 });

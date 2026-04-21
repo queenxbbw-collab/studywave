@@ -69,13 +69,13 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
     await createNotification(
       answerRow.author_id,
       "new_comment",
-      "New comment on your answer",
-      `${user?.display_name || user?.username || "Someone"} commented: "${content.trim().slice(0, 80)}"`,
+      "Comentariu nou la răspunsul tău",
+      `${user?.display_name || user?.username || "Cineva"} a comentat: "${content.trim().slice(0, 80)}"`,
       answerRow.question_id
     );
   }
   // Parse @mentions
-  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Someone", answerRow?.question_id);
+  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Cineva", answerRow?.question_id);
 
   res.status(201).json({ comment: {
     id: comment.id, content: comment.content, createdAt: comment.created_at,
@@ -110,13 +110,13 @@ router.post("/comments/answer/:answerId", authenticate, async (req, res): Promis
     await createNotification(
       answerRow2.author_id,
       "new_comment",
-      "New comment on your answer",
-      `${user?.display_name || user?.username || "Someone"} commented: "${content.trim().slice(0, 80)}"`,
+      "Comentariu nou la răspunsul tău",
+      `${user?.display_name || user?.username || "Cineva"} a comentat: "${content.trim().slice(0, 80)}"`,
       answerRow2.question_id
     );
   }
   // Parse @mentions
-  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Someone", answerRow2?.question_id);
+  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Cineva", answerRow2?.question_id);
 
   res.status(201).json({
     id: comment.id,

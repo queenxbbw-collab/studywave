@@ -315,8 +315,8 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
     await createNotification(
       question.authorId,
       "question_upvote",
-      `Your question reached ${updated.q.upvotes} upvote${updated.q.upvotes === 1 ? "" : "s"}!`,
-      `"${question.title.slice(0, 70)}" just hit ${updated.q.upvotes} upvote${updated.q.upvotes === 1 ? "" : "s"}.`,
+      `Întrebarea ta a ajuns la ${updated.q.upvotes} vot${updated.q.upvotes === 1 ? "" : "uri"} pozitiv${updated.q.upvotes === 1 ? "" : "e"}!`,
+      `"${question.title.slice(0, 70)}" tocmai a atins ${updated.q.upvotes} vot${updated.q.upvotes === 1 ? "" : "uri"} pozitiv${updated.q.upvotes === 1 ? "" : "e"}.`,
       id
     );
   }

@@ -83,8 +83,8 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
     await createNotification(
       question.authorId,
       "new_answer",
-      "New answer on your question",
-      `${answerer?.displayName ?? "Someone"} answered: "${question.title.slice(0, 60)}"`,
+      "Răspuns nou la întrebarea ta",
+      `${answerer?.displayName ?? "Cineva"} a răspuns la: "${question.title.slice(0, 60)}"`,
       questionId
     );
   }
@@ -189,8 +189,8 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
     await createNotification(
       answer.authorId,
       "answer_upvote",
-      `Your answer reached ${updated.upvotes} upvote${updated.upvotes === 1 ? "" : "s"}!`,
-      `Your answer on "${q?.title?.slice(0, 60) ?? "a question"}" just hit ${updated.upvotes} upvote${updated.upvotes === 1 ? "" : "s"}.`,
+      `Răspunsul tău a ajuns la ${updated.upvotes} vot${updated.upvotes === 1 ? "" : "uri"} pozitiv${updated.upvotes === 1 ? "" : "e"}!`,
+      `Răspunsul tău la "${q?.title?.slice(0, 60) ?? "o întrebare"}" tocmai a atins ${updated.upvotes} vot${updated.upvotes === 1 ? "" : "uri"} pozitiv${updated.upvotes === 1 ? "" : "e"}.`,
       updated.questionId
     );
   }
@@ -243,8 +243,8 @@ router.post("/answers/:id/award", authenticate, async (req, res): Promise<void> 
   await createNotification(
     answer.authorId,
     "gold_ribbon",
-    "🎖️ Your answer won a Gold Ribbon!",
-    `You earned +50 points for the best answer on: "${question.title.slice(0, 60)}"`,
+    "🎖️ Răspunsul tău a câștigat o Panglică de Aur!",
+    `Ai primit +50 de puncte pentru cel mai bun răspuns la: "${question.title.slice(0, 60)}"`,
     answer.questionId
   );
 
