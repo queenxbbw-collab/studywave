@@ -56,10 +56,10 @@ router.get("/questions", optionalAuthenticate, async (req, res): Promise<void> =
   const sort = params.success ? params.data.sort : "newest";
   const offset = (page - 1) * limit;
 
-  const conditions = [];
+  const conditions = [eq(questionsTable.isHidden, false)];
   if (subject && subject !== "all") conditions.push(eq(questionsTable.subject, subject));
   if (search) conditions.push(or(ilike(questionsTable.title, `%${search}%`), ilike(questionsTable.content, `%${search}%`)));
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = and(...conditions);
 
   let orderClause;
   if (sort === "oldest") orderClause = asc(questionsTable.createdAt);
@@ -192,7 +192,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points, isPremium: usersTable.isPremium } })
     .from(answersTable)
     .innerJoin(usersTable, eq(answersTable.authorId, usersTable.id))
-    .where(eq(answersTable.questionId, id))
+    .where(and(eq(answersTable.questionId, id), eq(answersTable.isHidden, false)))
     .orderBy(desc(answersTable.isAwarded), desc(answersTable.upvotes), asc(answersTable.createdAt));
 
   // Increment view count — throttled per viewer (30 min) and skipping the author.
@@ -398,7 +398,7 @@ router.get("/questions/:id/similar", async (req, res): Promise<void> => {
     .select({ q: questionsTable, author: { displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
-    .where(and(eq(questionsTable.subject, qRow.subject), sql`${questionsTable.id} != ${id}`))
+    .where(and(eq(questionsTable.subject, qRow.subject), sql`${questionsTable.id} != ${id}`, eq(questionsTable.isHidden, false)))
     .orderBy(desc(questionsTable.upvotes))
     .limit(4);
 

@@ -90,7 +90,7 @@ router.get("/users/:id/questions", async (req, res): Promise<void> => {
     })
     .from(questionsTable)
     .innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id))
-    .where(eq(questionsTable.authorId, id))
+    .where(and(eq(questionsTable.authorId, id), eq(questionsTable.isHidden, false)))
     .orderBy(sql`${questionsTable.createdAt} DESC`);
 
   const [answerCounts] = await Promise.all([
@@ -135,7 +135,7 @@ router.get("/users/:id/answers", async (req, res): Promise<void> => {
     })
     .from(answersTable)
     .innerJoin(usersTable, eq(answersTable.authorId, usersTable.id))
-    .where(eq(answersTable.authorId, id))
+    .where(and(eq(answersTable.authorId, id), eq(answersTable.isHidden, false)))
     .orderBy(sql`${answersTable.createdAt} DESC`);
 
   res.json(answers.map(({ a, author }) => ({

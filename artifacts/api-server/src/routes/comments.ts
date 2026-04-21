@@ -89,53 +89,6 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
   }});
 });
 
-router.post("/comments/answer/:answerId", authenticate, async (req, res): Promise<void> => {
-  const answerId = parseInt(req.params.answerId);
-  const { content } = req.body as { content?: string };
-  if (isNaN(answerId)) { res.status(400).json({ error: "Invalid answer ID" }); return; }
-  if (!content || content.trim().length < MIN_COMMENT_LENGTH) { res.status(400).json({ error: `Comment must be at least ${MIN_COMMENT_LENGTH} characters` }); return; }
-  if (content.trim().length > 500) { res.status(400).json({ error: "Comment too long (max 500 chars)" }); return; }
-
-  const canComment = await checkCommentLimit(req.userId!);
-  if (!canComment) { res.status(429).json({ error: `You've reached the daily limit of ${DAILY_COMMENT_LIMIT} comments. Come back tomorrow!` }); return; }
-
-  const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
-  if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
-
-  const result = await db.execute(sql`
-    INSERT INTO comments (answer_id, user_id, content) VALUES (${answerId}, ${req.userId}, ${content.trim()})
-    RETURNING id, content, created_at
-  `);
-  const comment = result.rows[0] as any;
-
-  const [user] = (await db.execute(sql`SELECT id, display_name, username, avatar_url FROM users WHERE id = ${req.userId}`)).rows as any[];
-
-  // Notify answer author (unless they are the commenter)
-  const [answerRow2] = (await db.execute(sql`SELECT author_id, question_id FROM answers WHERE id = ${answerId}`)).rows as any[];
-  if (answerRow2 && answerRow2.author_id !== req.userId) {
-    await createNotification(
-      answerRow2.author_id,
-      "new_comment",
-      "Comentariu nou la răspunsul tău",
-      `${user?.display_name || user?.username || "Cineva"} a comentat: "${content.trim().slice(0, 80)}"`,
-      answerRow2.question_id
-    );
-  }
-  // Parse @mentions
-  await parseMentions(content.trim(), req.userId!, user?.display_name || user?.username || "Cineva", answerRow2?.question_id);
-  await bumpStreak(req.userId!);
-
-  res.status(201).json({
-    id: comment.id,
-    content: comment.content,
-    createdAt: comment.created_at,
-    authorId: user.id,
-    authorDisplayName: user.display_name,
-    authorUsername: user.username,
-    authorAvatarUrl: user.avatar_url,
-  });
-});
-
 router.delete("/comments/:id", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
