@@ -139,7 +139,7 @@ export default function AdminPage() {
       body: JSON.stringify(newAnnouncement),
     });
     if (res.ok) {
-      toast({ title: "Announcement created" });
+      toast({ title: "Anunț creat" });
       setNewAnnouncement({ title: "", content: "", type: "info" });
       fetchAnnouncements();
       notifyAnnouncementsChanged();
@@ -198,7 +198,7 @@ export default function AdminPage() {
   };
 
   const deleteAnnouncement = async (id: number) => {
-    if (!confirm("Delete this announcement?")) return;
+    if (!confirm("Ștergi acest anunț?")) return;
     await fetch(`/api/admin/announcements/${id}`, { method: "DELETE", headers: getAuthHeaders() });
     setAnnouncements(a => a.filter(x => x.id !== id));
     notifyAnnouncementsChanged();
@@ -235,7 +235,7 @@ export default function AdminPage() {
     updateUser.mutate({ id: userId, data: { isActive: !isActive } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
-        toast({ title: isActive ? "User deactivated" : "User activated" });
+        toast({ title: isActive ? "Utilizator dezactivat" : "Utilizator activat" });
       },
     });
   };
@@ -244,17 +244,17 @@ export default function AdminPage() {
     updateUser.mutate({ id: userId, data: { isPremium: !isPremium } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListUsersQueryKey() });
-        toast({ title: isPremium ? "Premium removed" : "Premium activated!", description: isPremium ? "User is no longer premium." : "User now has Premium access." });
+        toast({ title: isPremium ? "Premium eliminat" : "Premium activat!", description: isPremium ? "Utilizatorul nu mai este Premium." : "Utilizatorul are acum acces Premium." });
       },
     });
   };
 
   const handleDeleteQuestion = (questionId: number) => {
-    if (!confirm("Delete this question and all its answers?")) return;
+    if (!confirm("Ștergi această întrebare și toate răspunsurile ei?")) return;
     deleteQuestion.mutate({ id: questionId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListQuestionsQueryKey() });
-        toast({ title: "Question deleted" });
+        toast({ title: "Întrebare ștearsă" });
       },
     });
   };
@@ -265,18 +265,18 @@ export default function AdminPage() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListBadgesQueryKey() });
         setNewBadge({ name: "", description: "", icon: "Star", color: "#6366f1", pointsRequired: 0, category: "general" });
-        toast({ title: "Badge created!" });
+        toast({ title: "Insignă creată!" });
       },
       onError: e => toast({ title: e.message, variant: "destructive" }),
     });
   };
 
   const handleDeleteBadge = (badgeId: number) => {
-    if (!confirm("Delete this badge?")) return;
+    if (!confirm("Ștergi această insignă?")) return;
     deleteBadge.mutate({ id: badgeId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListBadgesQueryKey() });
-        toast({ title: "Badge deleted" });
+        toast({ title: "Insignă ștearsă" });
       },
     });
   };
@@ -284,7 +284,7 @@ export default function AdminPage() {
   const handleResetData = async () => {
     if (!dangerTarget) return;
     const expected = dangerTarget === "all" ? "DELETE ALL" : dangerTarget === "questions" ? "DELETE CONTENT" : "DELETE USERS";
-    if (confirmText !== expected) { toast({ title: "Confirmation text doesn't match", variant: "destructive" }); return; }
+    if (confirmText !== expected) { toast({ title: "Textul de confirmare nu corespunde", variant: "destructive" }); return; }
     setDangerLoading(true);
     try {
       const r = await fetch("/api/admin/reset-data", {
@@ -293,18 +293,18 @@ export default function AdminPage() {
         body: JSON.stringify({ target: dangerTarget }),
       });
       if (!r.ok) throw new Error((await r.json()).error);
-      toast({ title: "Reset complete", description: `All ${dangerTarget} data has been deleted.` });
+      toast({ title: "Resetare completă", description: `Toate datele pentru "${dangerTarget}" au fost șterse.` });
       setConfirmText(""); setDangerTarget(null);
       queryClient.invalidateQueries();
     } catch (e: any) {
-      toast({ title: "Reset failed", description: e.message, variant: "destructive" });
+      toast({ title: "Resetare eșuată", description: e.message, variant: "destructive" });
     } finally { setDangerLoading(false); }
   };
 
   const handleSetPoints = async () => {
     const uid = parseInt(pointsUserId, 10);
     const pts = parseInt(pointsValue, 10);
-    if (isNaN(uid) || isNaN(pts) || pts < 0) { toast({ title: "Invalid user ID or points", variant: "destructive" }); return; }
+    if (isNaN(uid) || isNaN(pts) || pts < 0) { toast({ title: "ID utilizator sau puncte invalide", variant: "destructive" }); return; }
     setPointsLoading(true);
     try {
       const r = await fetch(`/api/admin/users/${uid}/points`, {
@@ -313,12 +313,12 @@ export default function AdminPage() {
         body: JSON.stringify({ points: pts }),
       });
       if (!r.ok) throw new Error((await r.json()).error);
-      toast({ title: "Points updated successfully" });
+      toast({ title: "Puncte actualizate cu succes" });
       await queryClient.invalidateQueries();
       await queryClient.refetchQueries({ type: "active" });
       setPointsValue("");
     } catch (e: any) {
-      toast({ title: "Failed to set points", description: e.message, variant: "destructive" });
+      toast({ title: "Nu s-au putut seta punctele", description: e.message, variant: "destructive" });
     } finally { setPointsLoading(false); }
   };
 
@@ -331,13 +331,13 @@ export default function AdminPage() {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Admin Panel</h1>
-            <p className="text-xs text-muted-foreground">Manage and monitor the StudyWave platform</p>
+            <h1 className="text-2xl font-extrabold tracking-tight">Panou Admin</h1>
+            <p className="text-xs text-muted-foreground">Administrează și monitorizează platforma StudyWave</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs font-semibold text-emerald-700">System online</span>
+          <span className="text-xs font-semibold text-emerald-700">Sistem activ</span>
         </div>
       </div>
 
