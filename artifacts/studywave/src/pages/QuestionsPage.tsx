@@ -48,7 +48,7 @@ export default function QuestionsPage() {
     if (s === "oldest") return "Cele mai vechi";
     if (s === "most-voted") return "Cele mai votate";
     if (s === "unsolved") return "Nerezolvate";
-    if (s === "trending") return "Trending";
+    if (s === "trending") return "În tendințe";
     return s;
   };
 
@@ -151,7 +151,7 @@ export default function QuestionsPage() {
       <div className="flex gap-2 mb-5 flex-wrap">
         {[
           { value: "newest", label: "Cele mai noi" },
-          { value: "trending", label: "Trending" },
+          { value: "trending", label: "În tendințe" },
           { value: "most-voted", label: "Cele mai votate" },
           { value: "unsolved", label: "Nerezolvate" },
         ].map(tab => (

@@ -21,16 +21,16 @@ interface Referral {
 }
 
 const BANNER_PRESETS = [
-  { label: "Violet Dream", value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-  { label: "Sunset", value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
+  { label: "Vis Violet", value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
+  { label: "Apus", value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
   { label: "Ocean", value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
-  { label: "Forest", value: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" },
-  { label: "Fire", value: "linear-gradient(135deg, #f77062 0%, #fe5196 100%)" },
-  { label: "Midnight", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" },
-  { label: "Gold", value: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)" },
+  { label: "Pădure", value: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" },
+  { label: "Foc", value: "linear-gradient(135deg, #f77062 0%, #fe5196 100%)" },
+  { label: "Miez de Noapte", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" },
+  { label: "Auriu", value: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)" },
   { label: "Arctic", value: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)" },
-  { label: "Emerald", value: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)" },
-  { label: "Rose", value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" },
+  { label: "Smarald", value: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)" },
+  { label: "Trandafir", value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" },
 ];
 
 const NAV_ITEMS = [
@@ -437,8 +437,8 @@ export default function SettingsPage() {
                     <div className="flex flex-wrap gap-2">
                       {[
                         { label: "Inițiale", url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=6366f1&color=fff&size=200&bold=true&rounded=true` },
-                        { label: "Pixel Art", url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.username}` },
-                        { label: "Avataaars", url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}` },
+                        { label: "Artă Pixel", url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.username}` },
+                        { label: "Avatar", url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}` },
                         { label: "Forme", url: `https://api.dicebear.com/7.x/shapes/svg?seed=${user.username}` },
                       ].map(preset => (
                         <button
