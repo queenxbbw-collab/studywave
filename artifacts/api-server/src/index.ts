@@ -28,6 +28,19 @@ function makeReferralCode(username: string): string {
 async function seedDatabase() {
   try {
     // ── 1. Seed users ────────────────────────────────────────────────────────
+    await seedUsers();
+  } catch (err: any) {
+    logger.warn({ errMsg: String(err?.message ?? err) }, "User seed warning — continuing");
+  }
+  try {
+    await seedBadges();
+  } catch (err: any) {
+    logger.warn({ errMsg: String(err?.message ?? err) }, "Badge seed warning — continuing");
+  }
+}
+
+async function seedUsers() {
+    // ── 1. Seed users ────────────────────────────────────────────────────────
     const existing = await db
       .select({ id: usersTable.id })
       .from(usersTable)
@@ -78,41 +91,40 @@ async function seedDatabase() {
         logger.info(`Patched ${noCode.length} user(s) with missing referral codes`);
       }
     }
+}
 
+async function seedBadges() {
     // ── 2. Seed default badges ───────────────────────────────────────────────
     const existingBadges = await db.select({ id: badgesTable.id }).from(badgesTable).limit(1);
     if (existingBadges.length === 0) {
       await db.insert(badgesTable).values([
-        // Beginner
-        { name: "First Step",        description: "Ask your very first question",             icon: "Sparkles",    color: "purple",  pointsRequired: 0,     category: "general"   },
-        { name: "Curious Mind",      description: "Ask 5 questions",                          icon: "HelpCircle",  color: "blue",    pointsRequired: 25,    category: "questions" },
-        { name: "Helper",            description: "Post your first answer",                   icon: "MessageCircle", color: "green", pointsRequired: 10,    category: "answers"   },
-        { name: "Quick Learner",     description: "Earn 50 points",                           icon: "Zap",         color: "gold",    pointsRequired: 50,    category: "points"    },
-        // Intermediate
-        { name: "Knowledge Seeker",  description: "Ask 25 questions",                         icon: "BookOpen",    color: "blue",    pointsRequired: 100,   category: "questions" },
-        { name: "Problem Solver",    description: "Have 10 answers accepted",                 icon: "CheckCircle", color: "green",   pointsRequired: 150,   category: "answers"   },
-        { name: "Rising Star",       description: "Earn 250 points",                          icon: "Star",        color: "gold",    pointsRequired: 250,   category: "points"    },
-        { name: "On Fire",           description: "Maintain a 7-day answer streak",           icon: "Flame",       color: "red",     pointsRequired: 200,   category: "answers"   },
-        { name: "Connector",         description: "Refer 3 friends to StudyWave",             icon: "Heart",       color: "purple",  pointsRequired: 175,   category: "general"   },
-        { name: "Voted Up",          description: "Receive 50 upvotes on your answers",       icon: "Target",      color: "blue",    pointsRequired: 200,   category: "answers"   },
-        // Advanced
-        { name: "Expert",            description: "Earn 500 points",                          icon: "Award",       color: "silver",  pointsRequired: 500,   category: "points"    },
-        { name: "Gold Ribbon Winner",description: "Win your first Gold Ribbon answer",        icon: "Trophy",      color: "gold",    pointsRequired: 400,   category: "awards"    },
-        { name: "Mentor",            description: "Have 50 answers accepted",                 icon: "Shield",      color: "green",   pointsRequired: 600,   category: "answers"   },
-        { name: "Influencer",        description: "Refer 10 friends to StudyWave",            icon: "Rocket",      color: "purple",  pointsRequired: 550,   category: "general"   },
-        { name: "Top Contributor",   description: "Earn 1,000 points",                        icon: "Medal",       color: "gold",    pointsRequired: 1000,  category: "points"    },
-        // Elite
-        { name: "Legend",            description: "Earn 2,500 points",                        icon: "Crown",       color: "purple",  pointsRequired: 2500,  category: "points"    },
-        { name: "Grand Master",      description: "Earn 5,000 points",                        icon: "Brain",       color: "red",     pointsRequired: 5000,  category: "points"    },
-        { name: "StudyWave Elite",   description: "Earn 10,000 points",                       icon: "Lightbulb",   color: "gold",    pointsRequired: 10000, category: "points"    },
-        { name: "Dedicated",         description: "Keep a 30-day activity streak",            icon: "Flame",       color: "red",     pointsRequired: 450,   category: "general"   },
-        { name: "Ambassador",        description: "Refer 25 friends to StudyWave",            icon: "Rocket",      color: "blue",    pointsRequired: 2000,  category: "general"   },
+        // Începător
+        { name: "Primul Pas",                description: "Pune prima ta întrebare",                          icon: "Sparkles",    color: "purple",  pointsRequired: 0,     category: "general"   },
+        { name: "Minte Curioasă",            description: "Pune 5 întrebări",                                 icon: "HelpCircle",  color: "blue",    pointsRequired: 25,    category: "questions" },
+        { name: "Ajutor",                    description: "Publică primul tău răspuns",                       icon: "MessageCircle", color: "green", pointsRequired: 10,    category: "answers"   },
+        { name: "Învățăcel Rapid",           description: "Câștigă 50 de puncte",                             icon: "Zap",         color: "gold",    pointsRequired: 50,    category: "points"    },
+        // Intermediar
+        { name: "Căutător de Cunoștințe",    description: "Pune 25 de întrebări",                             icon: "BookOpen",    color: "blue",    pointsRequired: 100,   category: "questions" },
+        { name: "Rezolvator de Probleme",    description: "Ai 10 răspunsuri acceptate",                       icon: "CheckCircle", color: "green",   pointsRequired: 150,   category: "answers"   },
+        { name: "Stea în Ascensiune",        description: "Câștigă 250 de puncte",                            icon: "Star",        color: "gold",    pointsRequired: 250,   category: "points"    },
+        { name: "În Flăcări",                description: "Menține o serie de 7 zile de răspunsuri",          icon: "Flame",       color: "red",     pointsRequired: 200,   category: "answers"   },
+        { name: "Conector",                  description: "Recomandă 3 prieteni pe StudyWave",                icon: "Heart",       color: "purple",  pointsRequired: 175,   category: "general"   },
+        { name: "Apreciat",                  description: "Primește 50 de voturi pozitive la răspunsurile tale", icon: "Target",   color: "blue",    pointsRequired: 200,   category: "answers"   },
+        // Avansat
+        { name: "Expert",                    description: "Câștigă 500 de puncte",                            icon: "Award",       color: "silver",  pointsRequired: 500,   category: "points"    },
+        { name: "Câștigător Panglica de Aur",description: "Câștigă prima ta Panglică de Aur",                 icon: "Trophy",      color: "gold",    pointsRequired: 400,   category: "awards"    },
+        { name: "Mentor",                    description: "Ai 50 de răspunsuri acceptate",                    icon: "Shield",      color: "green",   pointsRequired: 600,   category: "answers"   },
+        { name: "Influencer",                description: "Recomandă 10 prieteni pe StudyWave",               icon: "Rocket",      color: "purple",  pointsRequired: 550,   category: "general"   },
+        { name: "Contribuitor de Top",       description: "Câștigă 1.000 de puncte",                          icon: "Medal",       color: "gold",    pointsRequired: 1000,  category: "points"    },
+        // Elită
+        { name: "Legendă",                   description: "Câștigă 2.500 de puncte",                          icon: "Crown",       color: "purple",  pointsRequired: 2500,  category: "points"    },
+        { name: "Mare Maestru",              description: "Câștigă 5.000 de puncte",                          icon: "Brain",       color: "red",     pointsRequired: 5000,  category: "points"    },
+        { name: "StudyWave Elite",           description: "Câștigă 10.000 de puncte",                         icon: "Lightbulb",   color: "gold",    pointsRequired: 10000, category: "points"    },
+        { name: "Dedicat",                   description: "Menține o serie de activitate de 30 de zile",      icon: "Flame",       color: "red",     pointsRequired: 450,   category: "general"   },
+        { name: "Ambasador",                 description: "Recomandă 25 de prieteni pe StudyWave",            icon: "Rocket",      color: "blue",    pointsRequired: 2000,  category: "general"   },
       ]);
       logger.info("Default badges seeded (20 badges)");
     }
-  } catch (err: any) {
-    logger.warn({ errMsg: String(err?.message ?? err) }, "Seed warning — continuing");
-  }
 }
 
 async function start() {
