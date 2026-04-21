@@ -387,7 +387,13 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
 
 // POST /admin/reset-data — nuke all content + non-admin users
 router.post("/admin/reset-data", async (req, res): Promise<void> => {
-  const { target } = req.body as { target?: string };
+  const { target, confirmText } = req.body as { target?: string; confirmText?: string };
+
+  if (confirmText !== "DELETE EVERYTHING") {
+    res.status(400).json({ error: 'Confirmation required. Send confirmText: "DELETE EVERYTHING".' });
+    return;
+  }
+
   const VALID = ["questions", "users", "all"];
   if (!target || !VALID.includes(target)) {
     res.status(400).json({ error: "Invalid target. Use: questions, users, all" });

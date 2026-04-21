@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useListQuestions, useGetPlatformStats, useGetRecentActivity, useGetSubjectStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ const SUBJECTS = ["all", ...SUBJECTS_LIST];
 export default function HomePage() {
   usePageTitle("Acasă");
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("all");
   const [inputValue, setInputValue] = useState("");
@@ -52,7 +53,11 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearch(inputValue);
+    if (inputValue.trim()) {
+      navigate(`/questions?search=${encodeURIComponent(inputValue.trim())}`);
+    } else {
+      setSearch(inputValue);
+    }
   };
 
   return (

@@ -290,7 +290,7 @@ export default function AdminPage() {
       const r = await fetch("/api/admin/reset-data", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ target: dangerTarget }),
+        body: JSON.stringify({ target: dangerTarget, confirmText: "DELETE EVERYTHING" }),
       });
       if (!r.ok) throw new Error((await r.json()).error);
       toast({ title: "Resetare completă", description: `Toate datele pentru "${dangerTarget}" au fost șterse.` });

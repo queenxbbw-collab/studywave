@@ -2451,18 +2451,18 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
 
   useEffect(() => {
     if (submitted && user) {
-      const finalScore = questions.filter((q, i) => answers[i] === q.answer).length;
       const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
+      const answersArray = questions.map((_, i) => answers[i] ?? -1);
       setSaving(true);
       fetch("/api/quiz/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ classGrade: gradeKey, score: finalScore, total: questions.length, timeTaken }),
+        body: JSON.stringify({ classGrade: gradeKey, answers: answersArray, timeTaken }),
       })
         .then(async r => {
           const data = await r.json();
           if (r.ok && data.result) {
-            setPastResult({ score: finalScore, total: questions.length, timeTaken });
+            setPastResult({ score: data.result.score, total: data.result.total, timeTaken });
           } else if (r.status === 409 && data.result) {
             setPastResult({ score: data.result.score, total: data.result.total, timeTaken: data.result.timeTaken });
           }

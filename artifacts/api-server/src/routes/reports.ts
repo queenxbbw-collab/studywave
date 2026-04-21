@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { db, reportsTable, usersTable, questionsTable, answersTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { logAdminAction } from "../lib/adminLog";
 
 const router = Router();
+
+const AUTO_HIDE_THRESHOLD = 3;
 
 router.post("/reports", authenticate, async (req, res): Promise<void> => {
   const { targetType, targetId, reason, details } = req.body;
@@ -60,6 +62,26 @@ router.post("/reports", authenticate, async (req, res): Promise<void> => {
       status: "pending",
     })
     .returning();
+
+  // Auto-hide after AUTO_HIDE_THRESHOLD distinct users report the same content
+  if (targetType === "question" || targetType === "answer") {
+    const [countRow] = (await db.execute(sql`
+      SELECT COUNT(DISTINCT reporter_id) as cnt
+      FROM reports
+      WHERE target_type = ${targetType}
+        AND target_id = ${Number(targetId)}
+        AND status != 'dismissed'
+    `)).rows as any[];
+
+    const distinctReporters = parseInt(countRow?.cnt ?? "0");
+    if (distinctReporters >= AUTO_HIDE_THRESHOLD) {
+      if (targetType === "question") {
+        await db.execute(sql`UPDATE questions SET is_hidden = TRUE WHERE id = ${Number(targetId)}`);
+      } else {
+        await db.execute(sql`UPDATE answers SET is_hidden = TRUE WHERE id = ${Number(targetId)}`);
+      }
+    }
+  }
 
   res.status(201).json({ id: report.id, message: "Report submitted successfully" });
 });
@@ -130,6 +152,7 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
   }
 
   let actionPerformed: string | null = null;
+
   if (action === "delete_target" && status === "reviewed") {
     if (updated.targetType === "question") {
       await db.delete(questionsTable).where(eq(questionsTable.id, updated.targetId));
@@ -151,6 +174,15 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
     }
   }
 
+  // If admin dismisses, un-hide the content
+  if (status === "dismissed" && (updated.targetType === "question" || updated.targetType === "answer")) {
+    if (updated.targetType === "question") {
+      await db.execute(sql`UPDATE questions SET is_hidden = FALSE WHERE id = ${updated.targetId}`);
+    } else {
+      await db.execute(sql`UPDATE answers SET is_hidden = FALSE WHERE id = ${updated.targetId}`);
+    }
+  }
+
   await logAdminAction({
     adminId: req.userId!,
     adminUsername: user.username,
@@ -158,10 +190,6 @@ router.patch("/reports/:id", authenticate, async (req, res): Promise<void> => {
     category: "moderation",
     targetType: "report",
     targetId: id,
-    targetLabel: `Report #${id} (${updated.targetType} #${updated.targetId})`,
-    details: actionPerformed
-      ? `Marked report #${id} as "${status}" and ${actionPerformed.replace("_", " ")} (${updated.targetType} #${updated.targetId}, reason: ${updated.reason})`
-      : `Marked report #${id} [${updated.targetType} #${updated.targetId}, reason: ${updated.reason}] as "${status}"`,
   });
 
   res.json({ id: updated.id, status: updated.status, actionPerformed });

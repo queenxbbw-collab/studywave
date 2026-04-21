@@ -5,6 +5,8 @@ import { authenticate } from "../middlewares/authenticate";
 
 const router: IRouter = Router();
 
+const NOTIFICATION_RETENTION_DAYS = 90;
+
 const CATEGORY_MAP: Record<string, string> = {
   new_answer: "activity",
   gold_ribbon: "rewards",
@@ -22,11 +24,24 @@ function getCategory(type: string): string {
   return CATEGORY_MAP[type] ?? "activity";
 }
 
+async function cleanupOldNotifications(userId: number): Promise<void> {
+  try {
+    await db.execute(sql`
+      DELETE FROM notifications
+      WHERE user_id = ${userId}
+        AND is_read = TRUE
+        AND created_at < NOW() - INTERVAL '${sql.raw(String(NOTIFICATION_RETENTION_DAYS))} days'
+    `);
+  } catch {}
+}
+
 router.get("/notifications", authenticate, async (req, res): Promise<void> => {
   const limit = Math.min(parseInt((req.query.limit as string) || "30", 10), 100);
   const category = req.query.category as string | undefined;
 
-  // Fetch all recent notifications for this user (200 max), filter by category in JS
+  // Prune old read notifications in the background (no await needed)
+  cleanupOldNotifications(req.userId!);
+
   const allNotifs = await db.execute(sql`
     SELECT id, type, title, body, question_id, is_read, created_at
     FROM notifications

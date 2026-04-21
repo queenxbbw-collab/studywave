@@ -7,8 +7,26 @@ import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import crypto from "crypto";
 import { createNotification } from "./notifications";
 import { bumpStreak } from "../lib/streak";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  skipSuccessfulRequests: true,
+});
+
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many password reset requests. Please try again in 1 hour." },
+});
 
 function generateReferralCode(username: string): string {
   const hash = crypto.createHash("sha256").update(username + Date.now()).digest("hex");
@@ -28,7 +46,6 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     role: user.role,
     isActive: user.isActive,
     referralCode: user.referralCode,
-    questionBonusPool: user.questionBonusPool,
     currentStreak: u.currentStreak ?? u.current_streak ?? 0,
     longestStreak: u.longestStreak ?? u.longest_streak ?? 0,
     lastActivityDate: u.lastActivityDate ?? u.last_activity_date ?? null,
@@ -39,7 +56,7 @@ function formatUser(user: typeof usersTable.$inferSelect) {
   };
 }
 
-router.post("/auth/register", async (req, res): Promise<void> => {
+router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -108,7 +125,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   res.status(201).json({ user: formatUser(user), token });
 });
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -134,7 +151,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // Update streak (idempotent per UTC day; also bumped on any post/comment activity)
   await bumpStreak(user.id);
 
   const token = signToken(user.id, user.role);
@@ -155,25 +171,22 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
   res.json(formatUser(user));
 });
 
-router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+router.post("/auth/forgot-password", forgotLimiter, async (req, res): Promise<void> => {
   const { email } = req.body;
   if (!email || typeof email !== "string") {
     res.status(400).json({ error: "Email is required" });
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim()));
-  // Always return the same generic response to prevent email enumeration
   const GENERIC = { message: "If that email is registered, a reset link has been sent to your inbox." };
   if (!user) {
     res.json(GENERIC);
     return;
   }
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
   await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${user.id}`);
   await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
-  // NOTE: In production, send this token via email. For now log server-side only.
-  // NEVER expose the token in the HTTP response.
   console.log(`[PASSWORD RESET] user_id=${user.id} email=${user.email} token=${token}`);
   res.json(GENERIC);
 });

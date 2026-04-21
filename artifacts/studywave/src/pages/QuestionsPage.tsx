@@ -24,7 +24,12 @@ const SUBJECTS_WITH_ALL = ["all", ...SUBJECTS_LIST];
 export default function QuestionsPage() {
   usePageTitle("Întrebări");
   const { user } = useAuth();
-  const [inputValue, setInputValue] = useState("");
+
+  const initialSearch = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("search") ?? ""
+    : "";
+
+  const [inputValue, setInputValue] = useState(initialSearch);
   const [subject, setSubject] = useState("all");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);

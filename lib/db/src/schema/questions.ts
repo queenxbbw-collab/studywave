@@ -15,6 +15,7 @@ export const questionsTable = pgTable("questions", {
   views: integer("views").notNull().default(0),
   hasAwardedAnswer: boolean("has_awarded_answer").notNull().default(false),
   isSolved: boolean("is_solved").notNull().default(false),
+  isHidden: boolean("is_hidden").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
