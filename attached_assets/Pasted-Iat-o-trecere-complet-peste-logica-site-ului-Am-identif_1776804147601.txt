@@ -1,0 +1,28 @@
+Iată o trecere completă peste logica site-ului. Am identificat 12 probleme reale (de la critice la minore):
+
+🔴 Critice
+Premium pe viață dacă webhook-ul Stripe pică (payments.ts:162) — la abonare se setează isPremium: true dar nu se setează premiumExpiresAt. Dacă webhook-ul customer.subscription.deleted nu ajunge (rețea, downtime), userul rămâne premium pentru totdeauna.
+
+Farming de puncte prin postare + ștergere — la ștergerea unei întrebări/răspuns, nu se scad punctele primite la creare (+5 / +10). Userii pot posta și șterge la nesfârșit ca să crească punctele.
+
+Punctele pentru Panglica de Aur nu se anulează — dacă răspunsul premiat e șters, cele +50 puncte rămân la autor.
+
+🟡 Logică greșită
+Streak-urile se actualizează DOAR la login (auth.ts:136-144) — dacă userul rămâne logat (token persistent), streak-ul nu mai crește niciodată, deși postează zilnic.
+
+View count se incrementează la fiecare GET (questions.ts:196) — fără throttling pe IP/sesiune și fără excludere a autorului. Ușor de inflatat manual.
+
+Insignele nu se acordă pentru milestone-uri non-puncte (lib/badges.ts) — insignele „Pune 5 întrebări", „10 răspunsuri acceptate" etc. sunt definite dar logica verifică DOAR pragul de puncte, nu numărul real de întrebări/răspunsuri.
+
+Nu există revocare Panglică de Aur — odată acordată, nu poate fi luată înapoi prin UI/API, chiar dacă răspunsul s-a dovedit greșit.
+
+🟢 Inconsecvențe minore
+Calculul „zilei" diferă între rute — questions.ts și answers.ts folosesc UTC, comments.ts folosește o variantă diferită. Poate cauza limite ce „resetează" la ore diferite.
+
+/my-limits returnează hardcoded 999 ca „nelimitat" pentru premium (questions.ts:349) — UI-ul afișează „999 rămase" pentru premium în loc de „nelimitat".
+
+Două rute pentru bookmark — POST /bookmarks și POST /bookmarks/:questionId fac același lucru. Frontend-ul le folosește inconsistent.
+
+Reports nu fac nimic concret — admin marchează pending → reviewed, dar conținutul raportat nu e ascuns automat și userul nu e penalizat.
+
+Paginarea sare doar 7 pagini (QuestionsPage.tsx:204) — la 100 pagini nu poți sări direct la pag 50.
