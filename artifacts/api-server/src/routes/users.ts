@@ -163,7 +163,19 @@ router.patch("/users/settings", authenticate, async (req, res): Promise<void> =>
   }
 
   const { displayName, bio, email, currentPassword, newPassword, website, twitter, github, linkedin } = parsed.data;
-  const bannerColor = typeof (req.body as any).bannerColor === "string" ? (req.body as any).bannerColor : undefined;
+
+  // bannerColor isn't in the generated zod schema yet, so accept it manually but enforce a strict
+  // "#RRGGBB" or "#RGB" hex pattern. Anything else (e.g. javascript:, css escape, long string) is
+  // rejected outright.
+  let bannerColor: string | undefined;
+  const rawBanner = (req.body as any).bannerColor;
+  if (rawBanner !== undefined && rawBanner !== null) {
+    if (typeof rawBanner !== "string" || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(rawBanner)) {
+      res.status(400).json({ error: "bannerColor must be a hex color like #1a2b3c" });
+      return;
+    }
+    bannerColor = rawBanner;
+  }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
   if (!user) {
@@ -237,11 +249,23 @@ router.post("/users/:id/follow", authenticate, async (req, res): Promise<void> =
   }
   const [target] = await db.select().from(usersTable).where(eq(usersTable.id, targetId));
   if (!target) { res.status(404).json({ error: "User not found" }); return; }
-  const [existing] = await db.select().from(userFollowsTable)
-    .where(and(eq(userFollowsTable.followerId, req.userId!), eq(userFollowsTable.followingId, targetId)));
-  if (existing) { res.json({ message: "Already following" }); return; }
-  await db.insert(userFollowsTable).values({ followerId: req.userId!, followingId: targetId });
-  // Notify the person being followed
+
+  // Atomic insert: only insert if no row exists for this (follower, following) pair.
+  // RETURNING tells us whether a row was actually created — used to gate the notification
+  // so a double-click never produces two "new follower" notifications.
+  const insertResult = await db.execute(sql`
+    INSERT INTO user_follows (follower_id, following_id)
+    SELECT ${req.userId!}, ${targetId}
+    WHERE NOT EXISTS (
+      SELECT 1 FROM user_follows
+      WHERE follower_id = ${req.userId!} AND following_id = ${targetId}
+    )
+    RETURNING id
+  `);
+  const inserted = insertResult.rows.length > 0;
+  if (!inserted) { res.json({ message: "Already following" }); return; }
+
+  // Notify the person being followed (only on the real first follow).
   const [follower] = await db.select({ displayName: usersTable.displayName, username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.userId!));
   await createNotification(
     targetId,

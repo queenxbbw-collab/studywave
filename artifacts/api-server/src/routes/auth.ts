@@ -185,6 +185,25 @@ router.post("/auth/forgot-password", forgotLimiter, async (req, res): Promise<vo
     res.json(GENERIC);
     return;
   }
+  // Per-user cooldown: refuse to issue a new token if one was issued in the last 2 minutes.
+  // The global forgotLimiter caps requests per IP; this stops one IP from spamming a single
+  // victim's inbox with reset tokens (or rotating them out from under a legitimate user).
+  const COOLDOWN_MS = 2 * 60 * 1000;
+  const recent = (await db.execute(sql`
+    SELECT created_at FROM password_reset_tokens
+    WHERE user_id = ${user.id}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `)).rows as Array<{ created_at: string | Date }>;
+  if (recent[0]) {
+    const last = new Date(recent[0].created_at).getTime();
+    if (Date.now() - last < COOLDOWN_MS) {
+      // Stay generic — don't leak that the email exists.
+      res.json(GENERIC);
+      return;
+    }
+  }
+
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
   await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${user.id}`);

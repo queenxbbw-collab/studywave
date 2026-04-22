@@ -47,6 +47,35 @@ const NAME_RULES: Record<string, (m: Metrics) => boolean> = {
   "Ambasador":                    m => m.referrals >= 25,
 };
 
+/**
+ * Inverse of checkAndAwardBadges: removes any badges the user owns but no longer
+ * qualifies for. Used after destructive actions (deleting questions/answers, losing
+ * a Gold Ribbon, admins lowering points) so users can't keep a badge they were
+ * effectively refunded out of.
+ */
+export async function revokeUnearnedBadges(userId: number): Promise<void> {
+  const owned = await db.select({ badgeId: userBadgesTable.badgeId })
+    .from(userBadgesTable)
+    .where(eq(userBadgesTable.userId, userId));
+  if (owned.length === 0) return;
+
+  const ownedIds = owned.map(o => o.badgeId);
+  const allBadges = await db.select().from(badgesTable);
+  const ownedBadges = allBadges.filter(b => ownedIds.includes(b.id));
+  if (ownedBadges.length === 0) return;
+
+  const metrics = await getUserMetrics(userId);
+
+  for (const badge of ownedBadges) {
+    const rule = NAME_RULES[badge.name];
+    const stillEarned = rule ? rule(metrics) : metrics.points >= badge.pointsRequired;
+    if (!stillEarned) {
+      await db.delete(userBadgesTable)
+        .where(and(eq(userBadgesTable.userId, userId), eq(userBadgesTable.badgeId, badge.id)));
+    }
+  }
+}
+
 export async function checkAndAwardBadges(userId: number): Promise<void> {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user) return;

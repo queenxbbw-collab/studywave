@@ -357,17 +357,22 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
   const [newAnswersWeek] = await db.select({ count: count() }).from(answersTable)
     .where(sql`${answersTable.createdAt} >= ${oneWeekAgo.toISOString()}`);
 
-  const subjectStats = await db
-    .select({ subject: questionsTable.subject, count: count() })
-    .from(questionsTable)
-    .groupBy(questionsTable.subject)
-    .orderBy(desc(count()))
-    .limit(10);
-
-  const topSubjects = await Promise.all(subjectStats.map(async (s) => {
-    const [solvedCnt] = await db.select({ cnt: count() }).from(questionsTable)
-      .where(sql`${questionsTable.subject} = ${s.subject} AND ${questionsTable.isSolved} = true`);
-    return { subject: s.subject, count: Number(s.count), solvedCount: Number(solvedCnt.cnt) };
+  // Single GROUP BY for total + solved per subject — replaces an N+1 (was one extra
+  // query per subject in a Promise.all).
+  const subjectRows = (await db.execute(sql`
+    SELECT
+      subject,
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE is_solved = true)::int AS solved
+    FROM questions
+    GROUP BY subject
+    ORDER BY total DESC
+    LIMIT 10
+  `)).rows as Array<{ subject: string; total: number; solved: number }>;
+  const topSubjects = subjectRows.map(s => ({
+    subject: s.subject,
+    count: Number(s.total),
+    solvedCount: Number(s.solved),
   }));
 
   res.json({
@@ -421,21 +426,23 @@ router.post("/admin/reset-data", async (req, res): Promise<void> => {
   }
 
   if (target === "users" || target === "all") {
-    const sub = `(SELECT id FROM users WHERE role != 'admin')`;
-    // Delete all data belonging to non-admin users in FK-safe order
-    await db.execute(sql.raw(`DELETE FROM answer_votes WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM question_votes WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM comments WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM bookmarks WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM notifications WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM activity WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM reports WHERE reporter_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM suggestions WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM answers WHERE author_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM questions WHERE author_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM user_follows WHERE follower_id IN ${sub} OR following_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM user_badges WHERE user_id IN ${sub}`));
-    await db.execute(sql.raw(`DELETE FROM password_reset_tokens WHERE user_id IN ${sub}`));
+    // Use parameterised sql template instead of sql.raw — the subquery is constant today,
+    // but the raw-string pattern is fragile and would silently turn into SQL injection
+    // the moment any value gets interpolated.
+    const sub = sql`(SELECT id FROM users WHERE role != 'admin')`;
+    await db.execute(sql`DELETE FROM answer_votes WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM question_votes WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM comments WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM bookmarks WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM notifications WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM activity WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM reports WHERE reporter_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM suggestions WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM answers WHERE author_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM questions WHERE author_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM user_follows WHERE follower_id IN ${sub} OR following_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM user_badges WHERE user_id IN ${sub}`);
+    await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id IN ${sub}`);
     await db.execute(sql`DELETE FROM users WHERE role != 'admin'`);
   }
 

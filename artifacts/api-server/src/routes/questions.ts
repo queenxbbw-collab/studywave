@@ -3,7 +3,7 @@ import { db, usersTable, questionsTable, answersTable, questionVotesTable, activ
 import { eq, count, sql, and, desc, asc, ilike, or, gte } from "drizzle-orm";
 import { authenticate, optionalAuthenticate } from "../middlewares/authenticate";
 import { CreateQuestionBody, UpdateQuestionBody, VoteQuestionBody, ListQuestionsQueryParams } from "@workspace/api-zod";
-import { checkAndAwardBadges } from "../lib/badges";
+import { checkAndAwardBadges, revokeUnearnedBadges } from "../lib/badges";
 import { createNotification } from "./notifications";
 import { getEffectivePremium } from "../lib/premium";
 import { bumpStreak } from "../lib/streak";
@@ -40,7 +40,13 @@ function validateCreateQuestion(body: unknown): { error?: string; data?: { title
     if (imageUrls.length > 5) return { error: "Maximum 5 image URLs allowed" };
     for (const u of imageUrls) {
       if (typeof u !== "string") return { error: "Each image URL must be a string" };
-      try { new URL(u); } catch { return { error: `Invalid URL: ${u}` }; }
+      let parsed: URL;
+      try { parsed = new URL(u); } catch { return { error: `Invalid URL: ${u}` }; }
+      // Reject anything that isn't a real http(s) URL — this blocks javascript:, data:, file:,
+      // vbscript: etc. which would otherwise survive into the rendered page and could XSS.
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { error: `Image URL must use http or https: ${u}` };
+      }
       urls.push(u);
     }
   }
@@ -312,6 +318,14 @@ router.delete("/questions/:id", authenticate, async (req, res): Promise<void> =>
     await db.update(usersTable)
       .set({ points: sql`GREATEST(0, ${usersTable.points} - ${refund})` })
       .where(eq(usersTable.id, a.authorId));
+  }
+
+  // After refunding, re-evaluate badges so users can't keep ones they no longer
+  // qualify for (e.g. "Minte Curioasă" requires 5 questions).
+  await revokeUnearnedBadges(question.authorId);
+  const refundedAuthors = new Set(allAnswers.map(a => a.authorId));
+  for (const authorId of refundedAuthors) {
+    await revokeUnearnedBadges(authorId);
   }
 
   res.sendStatus(204);

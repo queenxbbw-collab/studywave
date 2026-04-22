@@ -3,7 +3,7 @@ import { db, usersTable, questionsTable, answersTable, answerVotesTable, activit
 import { eq, count, sql, and, gte } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
 import { UpdateAnswerBody, VoteAnswerBody } from "@workspace/api-zod";
-import { checkAndAwardBadges } from "../lib/badges";
+import { checkAndAwardBadges, revokeUnearnedBadges } from "../lib/badges";
 import { createNotification, parseMentions } from "./notifications";
 import { getEffectivePremium } from "../lib/premium";
 import { bumpStreak } from "../lib/streak";
@@ -169,6 +169,9 @@ router.delete("/answers/:id", authenticate, async (req, res): Promise<void> => {
       .set({ hasAwardedAnswer: false, isSolved: false })
       .where(eq(questionsTable.id, answer.questionId));
   }
+
+  // Re-evaluate badges after the refund so users can't keep ones they no longer qualify for.
+  await revokeUnearnedBadges(answer.authorId);
 
   res.sendStatus(204);
 });

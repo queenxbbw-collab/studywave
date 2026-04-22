@@ -26,11 +26,13 @@ function getCategory(type: string): string {
 
 async function cleanupOldNotifications(userId: number): Promise<void> {
   try {
+    // Use a parameterised interval (cast a number of days) instead of sql.raw — the value is a
+    // constant today, but stays safe if it ever becomes configurable.
     await db.execute(sql`
       DELETE FROM notifications
       WHERE user_id = ${userId}
         AND is_read = TRUE
-        AND created_at < NOW() - INTERVAL '${sql.raw(String(NOTIFICATION_RETENTION_DAYS))} days'
+        AND created_at < NOW() - (${NOTIFICATION_RETENTION_DAYS}::int * INTERVAL '1 day')
     `);
   } catch {}
 }
@@ -146,20 +148,30 @@ export async function parseMentions(
   }
   if (usernames.size === 0) return;
 
-  for (const username of usernames) {
-    try {
-      const [mentioned] = (await db.execute(sql`
-        SELECT id FROM users WHERE LOWER(username) = ${username} LIMIT 1
-      `)).rows as any[];
-      if (!mentioned || mentioned.id === authorId) continue;
-      await createNotification(
-        mentioned.id,
-        "mention",
-        `${authorName} te-a menționat`,
-        `Ai fost menționat într-o postare: "${content.slice(0, 80)}..."`,
-        questionId
-      );
-    } catch {}
+  // Cap per post to defend against `@a @b @c …` flood that would otherwise
+  // generate one DB write per mention.
+  const MAX_MENTIONS_PER_POST = 10;
+  const list = Array.from(usernames).slice(0, MAX_MENTIONS_PER_POST);
+
+  // Resolve all mentioned usernames in a single query instead of one SELECT per name.
+  let mentionedRows: any[] = [];
+  try {
+    mentionedRows = (await db.execute(sql`
+      SELECT id FROM users WHERE LOWER(username) = ANY(${list}::text[])
+    `)).rows as any[];
+  } catch {
+    return;
+  }
+
+  for (const m of mentionedRows) {
+    if (!m || m.id === authorId) continue;
+    await createNotification(
+      m.id,
+      "mention",
+      `${authorName} te-a menționat`,
+      `Ai fost menționat într-o postare: "${content.slice(0, 80)}..."`,
+      questionId
+    );
   }
 }
 
