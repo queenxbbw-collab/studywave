@@ -63,7 +63,8 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  const { username, email, password, displayName } = parsed.data;
+  const { username, password, displayName } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
   const referralCode: string | undefined = req.body.referralCode;
 
   const [existingEmail] = await db.select().from(usersTable).where(eq(usersTable.email, email));
@@ -132,7 +133,8 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  const { email, password } = parsed.data;
+  const { password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) {

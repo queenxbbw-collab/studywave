@@ -285,6 +285,8 @@ export default function AdminPage() {
     if (!dangerTarget) return;
     const expected = dangerTarget === "all" ? "DELETE ALL" : dangerTarget === "questions" ? "DELETE CONTENT" : "DELETE USERS";
     if (confirmText !== expected) { toast({ title: "Textul de confirmare nu corespunde", variant: "destructive" }); return; }
+    const targetLabel = dangerTarget === "all" ? "TOATE datele platformei" : dangerTarget === "questions" ? "tot conținutul (întrebări, răspunsuri, comentarii)" : "toți utilizatorii non-admin";
+    if (!window.confirm(`Ești absolut sigur? Această acțiune va șterge ${targetLabel} și NU poate fi anulată.`)) return;
     setDangerLoading(true);
     try {
       const r = await fetch("/api/admin/reset-data", {
