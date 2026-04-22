@@ -42,6 +42,12 @@ router.post("/answers", authenticate, async (req, res): Promise<void> => {
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, questionId));
   if (!question) { res.status(404).json({ error: "Question not found" }); return; }
 
+  // Hidden questions are locked: no new answers (mirrors UI behavior at the API layer).
+  if (question.isHidden) {
+    res.status(403).json({ error: "This question is hidden and cannot receive new answers" });
+    return;
+  }
+
   // Block answering own question (prevents self-farming)
   if (question.authorId === req.userId) {
     res.status(403).json({ error: "You cannot answer your own question" });
@@ -120,13 +126,18 @@ router.patch("/answers/:id", authenticate, async (req, res): Promise<void> => {
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
   if (answer.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
-  // Validate min length on edit too
-  if (parsed.data.content && parsed.data.content.length < MIN_ANSWER_LENGTH) {
+  // Strict allow-list — only `content` may ever be edited via this endpoint.
+  if (typeof parsed.data.content !== "string") {
+    res.status(400).json({ error: "No editable fields provided" });
+    return;
+  }
+  const newContent = parsed.data.content.trim();
+  if (newContent.length < MIN_ANSWER_LENGTH) {
     res.status(400).json({ error: `Answer must be at least ${MIN_ANSWER_LENGTH} characters` });
     return;
   }
 
-  const [updated] = await db.update(answersTable).set({ content: parsed.data.content }).where(eq(answersTable.id, id)).returning();
+  const [updated] = await db.update(answersTable).set({ content: newContent }).where(eq(answersTable.id, id)).returning();
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));
 
   res.json({
@@ -173,29 +184,49 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
   const [answer] = await db.select().from(answersTable).where(eq(answersTable.id, id));
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
 
+  // Block votes on hidden answers, or answers belonging to hidden questions.
+  if (answer.isHidden) {
+    res.status(403).json({ error: "This answer is hidden and cannot be voted on" });
+    return;
+  }
+  const [parentQuestion] = await db.select({ isHidden: questionsTable.isHidden }).from(questionsTable).where(eq(questionsTable.id, answer.questionId));
+  if (parentQuestion?.isHidden) {
+    res.status(403).json({ error: "This question is hidden and cannot be voted on" });
+    return;
+  }
+
   // Block voting on own answer
   if (answer.authorId === req.userId) {
     res.status(403).json({ error: "You cannot vote on your own answer" });
     return;
   }
 
-  const [existingVote] = await db.select().from(answerVotesTable).where(and(eq(answerVotesTable.answerId, id), eq(answerVotesTable.userId, req.userId!)));
+  // Same locking + recompute pattern as questions/vote — prevents counter drift under concurrent votes.
+  const existingVote = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM answers WHERE id = ${id} FOR UPDATE`);
 
-  if (existingVote) {
-    if (existingVote.voteType === type) {
-      await db.delete(answerVotesTable).where(eq(answerVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(answersTable).set({ upvotes: sql`GREATEST(0, ${answersTable.upvotes} - 1)` }).where(eq(answersTable.id, id));
-      else await db.update(answersTable).set({ downvotes: sql`GREATEST(0, ${answersTable.downvotes} - 1)` }).where(eq(answersTable.id, id));
+    const [prev] = await tx.select().from(answerVotesTable)
+      .where(and(eq(answerVotesTable.answerId, id), eq(answerVotesTable.userId, req.userId!)));
+
+    if (prev) {
+      if (prev.voteType === type) {
+        await tx.delete(answerVotesTable).where(eq(answerVotesTable.id, prev.id));
+      } else {
+        await tx.update(answerVotesTable).set({ voteType: type }).where(eq(answerVotesTable.id, prev.id));
+      }
     } else {
-      await db.update(answerVotesTable).set({ voteType: type }).where(eq(answerVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(answersTable).set({ upvotes: sql`${answersTable.upvotes} + 1`, downvotes: sql`GREATEST(0, ${answersTable.downvotes} - 1)` }).where(eq(answersTable.id, id));
-      else await db.update(answersTable).set({ downvotes: sql`${answersTable.downvotes} + 1`, upvotes: sql`GREATEST(0, ${answersTable.upvotes} - 1)` }).where(eq(answersTable.id, id));
+      await tx.insert(answerVotesTable).values({ answerId: id, userId: req.userId!, voteType: type });
     }
-  } else {
-    await db.insert(answerVotesTable).values({ answerId: id, userId: req.userId!, voteType: type });
-    if (type === "up") await db.update(answersTable).set({ upvotes: sql`${answersTable.upvotes} + 1` }).where(eq(answersTable.id, id));
-    else await db.update(answersTable).set({ downvotes: sql`${answersTable.downvotes} + 1` }).where(eq(answersTable.id, id));
-  }
+
+    await tx.execute(sql`
+      UPDATE answers SET
+        upvotes = (SELECT COUNT(*) FROM answer_votes WHERE answer_id = ${id} AND vote_type = 'up'),
+        downvotes = (SELECT COUNT(*) FROM answer_votes WHERE answer_id = ${id} AND vote_type = 'down')
+      WHERE id = ${id}
+    `);
+
+    return prev;
+  });
 
   const [updated] = await db.select().from(answersTable).where(eq(answersTable.id, id));
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));

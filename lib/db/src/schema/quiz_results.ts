@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 
 export const quizResultsTable = pgTable("quiz_results", {
@@ -9,6 +9,9 @@ export const quizResultsTable = pgTable("quiz_results", {
   total: integer("total").notNull(),
   timeTaken: integer("time_taken"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // Enforces "one quiz per (user, class)" at the DB layer — defeats double-click race.
+  userClassUnique: uniqueIndex("quiz_results_user_class_unique").on(t.userId, t.classGrade),
+}));
 
 export type QuizResult = typeof quizResultsTable.$inferSelect;

@@ -188,6 +188,12 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
 
   if (!questionRow) { res.status(404).json({ error: "Question not found" }); return; }
 
+  // Hidden questions are only visible to the author and admins.
+  if (questionRow.q.isHidden && req.userRole !== "admin" && req.userId !== questionRow.q.authorId) {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+
   const answers = await db
     .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points, isPremium: usersTable.isPremium } })
     .from(answersTable)
@@ -254,7 +260,18 @@ router.patch("/questions/:id", authenticate, async (req, res): Promise<void> => 
   if (!question) { res.status(404).json({ error: "Question not found" }); return; }
   if (question.authorId !== req.userId && req.userRole !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const [updated] = await db.update(questionsTable).set(parsed.data).where(eq(questionsTable.id, id)).returning();
+  // Strict allow-list: only these user-editable fields can ever be changed via this endpoint.
+  // Prevents mass-assignment (e.g. upvotes, authorId, isHidden) even if the zod schema is loosened later.
+  const updateData: { title?: string; content?: string; subject?: string } = {};
+  if (typeof parsed.data.title === "string") updateData.title = parsed.data.title.trim();
+  if (typeof parsed.data.content === "string") updateData.content = parsed.data.content.trim();
+  if (typeof parsed.data.subject === "string") updateData.subject = parsed.data.subject.trim();
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: "No editable fields provided" });
+    return;
+  }
+
+  const [updated] = await db.update(questionsTable).set(updateData).where(eq(questionsTable.id, id)).returning();
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, updated.authorId));
   const [answerCount] = await db.select({ cnt: count() }).from(answersTable).where(eq(answersTable.questionId, id));
 
@@ -311,29 +328,47 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, id));
   if (!question) { res.status(404).json({ error: "Question not found" }); return; }
 
+  // Block any interaction on hidden questions (admins included for vote integrity).
+  if (question.isHidden) {
+    res.status(403).json({ error: "This question is hidden and cannot be voted on" });
+    return;
+  }
+
   // Block voting on own question
   if (question.authorId === req.userId) {
     res.status(403).json({ error: "You cannot vote on your own question" });
     return;
   }
 
-  const [existingVote] = await db.select().from(questionVotesTable).where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId!)));
+  // Wrap the read-modify-write in a transaction with a row lock on the question to prevent
+  // lost-update / counter drift when two clients vote at (almost) the same time. Counters are
+  // re-derived from the votes table inside the lock, so they can never disagree with reality.
+  const existingVote = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM questions WHERE id = ${id} FOR UPDATE`);
 
-  if (existingVote) {
-    if (existingVote.voteType === type) {
-      await db.delete(questionVotesTable).where(eq(questionVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`GREATEST(0, ${questionsTable.upvotes} - 1)` }).where(eq(questionsTable.id, id));
-      else await db.update(questionsTable).set({ downvotes: sql`GREATEST(0, ${questionsTable.downvotes} - 1)` }).where(eq(questionsTable.id, id));
+    const [prev] = await tx.select().from(questionVotesTable)
+      .where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId!)));
+
+    if (prev) {
+      if (prev.voteType === type) {
+        await tx.delete(questionVotesTable).where(eq(questionVotesTable.id, prev.id));
+      } else {
+        await tx.update(questionVotesTable).set({ voteType: type }).where(eq(questionVotesTable.id, prev.id));
+      }
     } else {
-      await db.update(questionVotesTable).set({ voteType: type }).where(eq(questionVotesTable.id, existingVote.id));
-      if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1`, downvotes: sql`GREATEST(0, ${questionsTable.downvotes} - 1)` }).where(eq(questionsTable.id, id));
-      else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1`, upvotes: sql`GREATEST(0, ${questionsTable.upvotes} - 1)` }).where(eq(questionsTable.id, id));
+      await tx.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: type });
     }
-  } else {
-    await db.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: type });
-    if (type === "up") await db.update(questionsTable).set({ upvotes: sql`${questionsTable.upvotes} + 1` }).where(eq(questionsTable.id, id));
-    else await db.update(questionsTable).set({ downvotes: sql`${questionsTable.downvotes} + 1` }).where(eq(questionsTable.id, id));
-  }
+
+    // Re-derive counters from the source of truth.
+    await tx.execute(sql`
+      UPDATE questions SET
+        upvotes = (SELECT COUNT(*) FROM question_votes WHERE question_id = ${id} AND vote_type = 'up'),
+        downvotes = (SELECT COUNT(*) FROM question_votes WHERE question_id = ${id} AND vote_type = 'down')
+      WHERE id = ${id}
+    `);
+
+    return prev;
+  });
 
   const [updated] = await db.select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
     .from(questionsTable).innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id)).where(eq(questionsTable.id, id));

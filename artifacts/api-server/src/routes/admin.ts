@@ -487,19 +487,28 @@ router.get("/admin/logs", async (req, res): Promise<void> => {
   const VALID_CATEGORIES = ["users", "content", "badges", "moderation", "announcements", "suggestions"];
   const safeCat = (category && VALID_CATEGORIES.includes(category)) ? category : null;
 
-  const allRows = await db.execute(sql`
-    SELECT id, admin_id, admin_username, action, category, target_type, target_id, target_label, details, created_at
-    FROM admin_logs
-    ORDER BY created_at DESC
-    LIMIT 5000
-  `);
+  // Push the filter and pagination into the database. The previous version pulled up to 5000
+  // rows into Node memory and sliced in JS, which would degrade badly as the table grows.
+  const totalRow = safeCat
+    ? await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM admin_logs WHERE category = ${safeCat}`)
+    : await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM admin_logs`);
+  const total = Number((totalRow.rows[0] as any)?.cnt ?? 0);
 
-  const filtered = safeCat
-    ? allRows.rows.filter((l: any) => l.category === safeCat)
-    : allRows.rows;
-
-  const total = filtered.length;
-  const paginated = filtered.slice(offset, offset + limit);
+  const paginatedRows = safeCat
+    ? await db.execute(sql`
+        SELECT id, admin_id, admin_username, action, category, target_type, target_id, target_label, details, created_at
+        FROM admin_logs
+        WHERE category = ${safeCat}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `)
+    : await db.execute(sql`
+        SELECT id, admin_id, admin_username, action, category, target_type, target_id, target_label, details, created_at
+        FROM admin_logs
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+  const paginated = paginatedRows.rows;
 
   res.json({
     logs: paginated.map((l: any) => ({

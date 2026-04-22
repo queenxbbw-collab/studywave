@@ -57,12 +57,28 @@ router.post("/quiz/submit", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  const [result] = await db
-    .insert(quizResultsTable)
-    .values({ userId, classGrade: String(classGrade), score, total, timeTaken: cleanTimeTaken })
-    .returning();
-
-  res.status(201).json({ result });
+  // The DB-level unique index on (user_id, class_grade) is the real safety net here:
+  // even if two requests slip past the SELECT above (double-click / parallel tabs),
+  // the second INSERT will hit code 23505 and we return the already-saved row instead
+  // of creating a duplicate.
+  try {
+    const [result] = await db
+      .insert(quizResultsTable)
+      .values({ userId, classGrade: String(classGrade), score, total, timeTaken: cleanTimeTaken })
+      .returning();
+    res.status(201).json({ result });
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      const [already] = await db
+        .select()
+        .from(quizResultsTable)
+        .where(and(eq(quizResultsTable.userId, userId), eq(quizResultsTable.classGrade, String(classGrade))))
+        .limit(1);
+      res.status(409).json({ error: "Ai dat deja quiz-ul pentru această clasă.", result: already });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.get("/quiz/my-results", authenticate, async (req, res): Promise<void> => {

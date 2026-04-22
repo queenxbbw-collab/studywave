@@ -58,8 +58,17 @@ router.post("/comments", authenticate, async (req, res): Promise<void> => {
   const canComment = await checkCommentLimit(req.userId!);
   if (!canComment) { res.status(429).json({ error: `You've reached the daily limit of ${DAILY_COMMENT_LIMIT} comments. Come back tomorrow!` }); return; }
 
-  const [answer] = (await db.execute(sql`SELECT id FROM answers WHERE id = ${answerId}`)).rows;
+  const [answer] = (await db.execute(sql`
+    SELECT a.id, a.is_hidden AS answer_hidden, q.is_hidden AS question_hidden
+    FROM answers a
+    JOIN questions q ON q.id = a.question_id
+    WHERE a.id = ${answerId}
+  `)).rows as any[];
   if (!answer) { res.status(404).json({ error: "Answer not found" }); return; }
+  if (answer.answer_hidden || answer.question_hidden) {
+    res.status(403).json({ error: "This thread is hidden and cannot receive new comments" });
+    return;
+  }
 
   const result = await db.execute(sql`
     INSERT INTO comments (answer_id, user_id, content) VALUES (${answerId}, ${req.userId}, ${content.trim()})
