@@ -44,8 +44,21 @@ export async function optionalAuthenticate(req: Request, _res: Response, next: N
     const token = authHeader.slice(7);
     const payload = verifyToken(token);
     if (payload) {
-      req.userId = payload.userId;
-      req.userRole = payload.role;
+      // Always read the freshest role/active flag from the DB so that
+      // changes (role demotion, account deactivation) take effect immediately
+      // instead of waiting for the JWT to expire.
+      try {
+        const [user] = await db
+          .select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
+          .from(usersTable)
+          .where(eq(usersTable.id, payload.userId));
+        if (user && user.isActive) {
+          req.userId = user.id;
+          req.userRole = user.role;
+        }
+      } catch {
+        // On DB error, treat the request as anonymous instead of trusting the JWT.
+      }
     }
   }
   next();

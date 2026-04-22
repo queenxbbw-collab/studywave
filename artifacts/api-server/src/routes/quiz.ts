@@ -27,6 +27,21 @@ router.post("/quiz/submit", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
+  // Reject malformed answers (not integers in the expected option range).
+  for (const a of answers) {
+    if (typeof a !== "number" || !Number.isInteger(a) || a < 0 || a > 10) {
+      res.status(400).json({ error: "Invalid answer format." });
+      return;
+    }
+  }
+
+  // Reject impossible time values (negative or absurdly high).
+  const cleanTimeTaken =
+    typeof timeTaken === "number" && Number.isFinite(timeTaken) && timeTaken >= 0 && timeTaken <= 24 * 60 * 60
+      ? Math.floor(timeTaken)
+      : null;
+
+  // Score is computed from the trusted server-side answer key — never trusted from the client.
   const score = answers.reduce((acc: number, a: number, i: number) => {
     return acc + (a === correctAnswers[i] ? 1 : 0);
   }, 0);
@@ -44,7 +59,7 @@ router.post("/quiz/submit", authenticate, async (req, res): Promise<void> => {
 
   const [result] = await db
     .insert(quizResultsTable)
-    .values({ userId, classGrade: String(classGrade), score, total, timeTaken: timeTaken ?? null })
+    .values({ userId, classGrade: String(classGrade), score, total, timeTaken: cleanTimeTaken })
     .returning();
 
   res.status(201).json({ result });

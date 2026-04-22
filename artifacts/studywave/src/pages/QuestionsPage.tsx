@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import QuestionCard from "@/components/QuestionCard";
 import { useAuth } from "@/lib/auth";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Search, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { SUBJECTS_LIST, subjectLabel } from "@/lib/subjects";
 
@@ -25,14 +25,19 @@ export default function QuestionsPage() {
   usePageTitle("Întrebări");
   const { user } = useAuth();
 
-  const initialSearch = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("search") ?? ""
-    : "";
+  const searchString = useSearch();
+  const urlSearchValue = new URLSearchParams(searchString).get("search") ?? "";
 
-  const [inputValue, setInputValue] = useState(initialSearch);
+  const [inputValue, setInputValue] = useState(urlSearchValue);
   const [subject, setSubject] = useState("all");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
+
+  // Keep the input in sync when the URL ?search= changes (e.g. when the
+  // Home page hero search submits while we are already on /questions).
+  useEffect(() => {
+    setInputValue(urlSearchValue);
+  }, [urlSearchValue]);
 
   const debouncedSearch = useDebounce(inputValue, 350);
 

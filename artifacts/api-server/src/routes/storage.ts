@@ -13,11 +13,41 @@ const objectStorageService = new ObjectStorageService();
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_UPLOAD_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
+const ALLOWED_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+
 router.post("/storage/uploads/request-url", authenticate, async (req: Request, res: Response) => {
   const { name, size, contentType } = req.body as Record<string, unknown>;
 
-  if (!name || typeof name !== "string") {
-    res.status(400).json({ error: "Missing or invalid required fields" });
+  if (!name || typeof name !== "string" || name.length > 255) {
+    res.status(400).json({ error: "Invalid file name" });
+    return;
+  }
+
+  if (typeof contentType !== "string" || !ALLOWED_UPLOAD_TYPES.has(contentType.toLowerCase())) {
+    res.status(415).json({ error: "Unsupported file type. Only PNG, JPEG, WEBP and GIF images are allowed." });
+    return;
+  }
+
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    res.status(400).json({ error: "Invalid file extension." });
+    return;
+  }
+
+  if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) {
+    res.status(400).json({ error: "Invalid file size" });
+    return;
+  }
+  if (size > MAX_UPLOAD_BYTES) {
+    res.status(413).json({ error: `File too large. Max ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB.` });
     return;
   }
 
