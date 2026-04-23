@@ -2151,14 +2151,11 @@ function StudyItemModal({ item, cls, open, onClose }: {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className={`${cls.bg} px-6 pt-6 pb-4 border-b border-border/40`}>
           <DialogHeader>
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3 pr-8">
               <div>
                 <p className={`text-xs font-bold uppercase tracking-wider ${cls.color} mb-1`}>{item.title}</p>
                 <DialogTitle className="text-xl font-black text-foreground">{p.title}</DialogTitle>
               </div>
-              <DialogClose className="rounded-lg p-1.5 hover:bg-black/10 transition-colors flex-shrink-0 mt-1">
-                <X className="h-4 w-4" />
-              </DialogClose>
             </div>
             <div className="flex items-center gap-1 mt-3">
               {item.pages.map((_, i) => (
