@@ -2,30 +2,29 @@ import { Router } from "express";
 import { db, usersTable, badgesTable, userBadgesTable, questionsTable, answersTable, userFollowsTable } from "@workspace/db";
 import { eq, count, sql, and } from "drizzle-orm";
 import { authenticate } from "../middlewares/authenticate";
-import { hashPassword, comparePassword } from "../lib/auth";
+import { hashPassword, comparePassword, verifyToken } from "../lib/auth";
 import { UpdateSettingsBody, UploadAvatarBody } from "@workspace/api-zod";
 import { createNotification } from "./notifications";
 
 const router = Router();
 
-// `tryAuthenticate` would be ideal here, but we don't have one — so we manually parse the
-// JWT if present, without failing the request if it's missing. This lets us decide whether
-// to expose private fields (premiumExpiresAt) only to the owner / admins, while keeping
-// the endpoint open to anonymous viewers for everything else.
-import jwt from "jsonwebtoken";
+// Soft authentication: parse the JWT if present, but don't fail the request if it's missing
+// or invalid. Lets us expose private fields (e.g. premiumExpiresAt) only to the owner/admin
+// while still allowing anonymous viewers to read the rest of the public profile.
+//
+// IMPORTANT: this MUST go through `verifyToken` from lib/auth, which uses SESSION_SECRET
+// (the same secret signToken uses). Earlier this read process.env.JWT_SECRET with a
+// "dev-secret" fallback — that was wrong on two counts: a) the rest of the app signs with
+// SESSION_SECRET, so this would never validate a real token, and b) a "dev-secret" fallback
+// would be catastrophic if it ever ran in an env without the right var set.
 async function softAuth(req: any): Promise<void> {
   const auth = req.headers?.authorization as string | undefined;
   if (!auth?.startsWith("Bearer ")) return;
-  try {
-    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET ?? "dev-secret") as any;
-    if (decoded?.userId) {
-      const [u] = await db.select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
-        .from(usersTable).where(eq(usersTable.id, decoded.userId));
-      if (u && u.isActive) { req.userId = u.id; req.userRole = u.role; }
-    }
-  } catch {
-    // Ignore — anonymous view is fine.
-  }
+  const decoded = verifyToken(auth.slice(7));
+  if (!decoded?.userId) return;
+  const [u] = await db.select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
+    .from(usersTable).where(eq(usersTable.id, decoded.userId));
+  if (u && u.isActive) { req.userId = u.id; req.userRole = u.role; }
 }
 
 router.get("/users/:id", async (req, res): Promise<void> => {

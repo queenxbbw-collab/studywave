@@ -26,54 +26,42 @@ router.get("/stats/platform", async (_req, res): Promise<void> => {
 });
 
 router.get("/stats/leaderboard", async (_req, res): Promise<void> => {
-  const users = await db
-    .select({
-      id: usersTable.id,
-      username: usersTable.username,
-      displayName: usersTable.displayName,
-      avatarUrl: usersTable.avatarUrl,
-      points: usersTable.points,
-    })
-    .from(usersTable)
-    .where(sql`${usersTable.isActive} = true`)
-    .orderBy(desc(usersTable.points))
-    .limit(50);
+  // Was previously top-50 users + 2 extra COUNT queries per user = 101 round-trips. Now
+  // a single LEFT JOIN that aggregates per author, so the whole leaderboard renders in
+  // one query.
+  const rows = (await db.execute(sql`
+    SELECT
+      u.id,
+      u.username,
+      u.display_name AS "displayName",
+      u.avatar_url AS "avatarUrl",
+      u.points,
+      COALESCE(SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END), 0)::int AS "answerCount",
+      COALESCE(SUM(CASE WHEN a.is_awarded = TRUE THEN 1 ELSE 0 END), 0)::int AS "awardedAnswerCount"
+    FROM users u
+    LEFT JOIN answers a ON a.author_id = u.id
+    WHERE u.is_active = TRUE
+    GROUP BY u.id
+    ORDER BY u.points DESC
+    LIMIT 50
+  `)).rows as any[];
 
-  const leaderboard = await Promise.all(users.map(async (user, index) => {
-    const [answerCount] = await db.select({ cnt: count() }).from(answersTable).where(eq(answersTable.authorId, user.id));
-    const [awardedCount] = await db.select({ cnt: count() }).from(answersTable).where(sql`${answersTable.authorId} = ${user.id} AND ${answersTable.isAwarded} = true`);
-    return {
-      ...user,
-      answerCount: Number(answerCount.cnt),
-      awardedAnswerCount: Number(awardedCount.cnt),
-      rank: index + 1,
-    };
-  }));
-
-  res.json(leaderboard);
+  res.json(rows.map((r, index) => ({ ...r, rank: index + 1 })));
 });
 
 router.get("/stats/subjects", async (_req, res): Promise<void> => {
-  const subjects = await db
-    .select({
-      subject: questionsTable.subject,
-      count: count(),
-    })
-    .from(questionsTable)
-    .groupBy(questionsTable.subject)
-    .orderBy(desc(count()));
-
-  const subjectStats = await Promise.all(subjects.map(async (s) => {
-    const [solvedCount] = await db.select({ cnt: count() }).from(questionsTable)
-      .where(sql`${questionsTable.subject} = ${s.subject} AND ${questionsTable.isSolved} = true`);
-    return {
-      subject: s.subject,
-      count: Number(s.count),
-      solvedCount: Number(solvedCount.cnt),
-    };
-  }));
-
-  res.json(subjectStats);
+  // Same N+1 fix: was 1 + N queries (subjects list + one COUNT per subject for solved),
+  // now a single GROUP BY with conditional sums.
+  const rows = (await db.execute(sql`
+    SELECT
+      subject,
+      COUNT(*)::int AS "count",
+      COALESCE(SUM(CASE WHEN is_solved = TRUE THEN 1 ELSE 0 END), 0)::int AS "solvedCount"
+    FROM questions
+    GROUP BY subject
+    ORDER BY COUNT(*) DESC
+  `)).rows as any[];
+  res.json(rows);
 });
 
 router.get("/stats/recent-activity", async (_req, res): Promise<void> => {

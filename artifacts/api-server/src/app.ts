@@ -74,10 +74,16 @@ if (process.env.NODE_ENV === "production") {
   app.use("/api", router);
 }
 
-// JSON error handler — must be last, always returns JSON for API errors
+// JSON error handler — must be last, always returns JSON for API errors.
+// Never echo `err.message` to the client in production: it routinely contains internal
+// details (SQL fragments, file paths, library internals) that help an attacker map out
+// our schema and runtime. Full error still goes to the server log via pino.
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err }, "Unhandled error");
-  res.status(500).json({ error: err.message || "Internal server error" });
+  const isProd = process.env.NODE_ENV === "production";
+  res.status(500).json({
+    error: isProd ? "Internal server error" : (err.message || "Internal server error"),
+  });
 });
 
 export default app;

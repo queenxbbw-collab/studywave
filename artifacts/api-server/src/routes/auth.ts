@@ -129,19 +129,24 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
   const email = parsed.data.email.trim().toLowerCase();
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
-  if (!user) {
+
+  // Constant-time-ish login: ALWAYS run a bcrypt compare even if the user doesn't exist,
+  // and ALWAYS return the same generic 401 for any "credentials invalid" reason. Without
+  // this an attacker can probe whether an email is registered just by measuring response
+  // time (the no-user branch returns instantly; the wrong-password branch waits for
+  // bcrypt). Using the user's real hash (when present) or a dummy hash with the same
+  // cost factor keeps the timing roughly constant.
+  const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8WYkzXhx0oXrZSbN1VglY5Nw8lGqzG";
+  const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
+  const passwordOk = await comparePassword(password, hashToCompare);
+
+  if (!user || !passwordOk) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }
 
   if (!user.isActive) {
     res.status(401).json({ error: "Account is disabled" });
-    return;
-  }
-
-  const valid = await comparePassword(password, user.passwordHash);
-  if (!valid) {
-    res.status(401).json({ error: "Invalid email or password" });
     return;
   }
 
