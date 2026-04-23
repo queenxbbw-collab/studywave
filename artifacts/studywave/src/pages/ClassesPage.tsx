@@ -33,6 +33,10 @@ interface QuizQuestion {
   q: string;
   options: string[];
   answer: number;
+  // Set when this question came from the admin-managed DB store. The frontend
+  // doesn't know the correct answer for these — `answer` is left as -1 and the
+  // server scores them using the stored answer key.
+  extraId?: number;
 }
 
 interface Exercise {
@@ -2452,12 +2456,21 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
   useEffect(() => {
     if (submitted && user) {
       const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
-      const answersArray = questions.map((_, i) => answers[i] ?? -1);
+      // Split answers between hardcoded (positional, in `answers`) and admin-added
+      // (identified by id, in `extraAnswers`) so the server can score each set
+      // against its own answer key.
+      const baseAnswers: number[] = [];
+      const extraAnswers: { id: number; answer: number }[] = [];
+      questions.forEach((q, i) => {
+        const a = answers[i] ?? -1;
+        if (q.extraId) extraAnswers.push({ id: q.extraId, answer: a });
+        else baseAnswers.push(a);
+      });
       setSaving(true);
       fetch("/api/quiz/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ classGrade: gradeKey, answers: answersArray, timeTaken }),
+        body: JSON.stringify({ classGrade: gradeKey, answers: baseAnswers, extraAnswers, timeTaken }),
       })
         .then(async r => {
           const data = await r.json();
@@ -2494,8 +2507,12 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
   }
 
   if (submitted) {
-    const finalScore = questions.filter((q, i) => answers[i] === q.answer).length;
-    const pct = Math.round((finalScore / questions.length) * 100);
+    // For admin-added (extra) questions we don't have the answer client-side,
+    // so trust the server-computed score from `pastResult` once it lands.
+    const localScore = questions.filter((q, i) => q.extraId === undefined && answers[i] === q.answer).length;
+    const finalScore = pastResult ? pastResult.score : localScore;
+    const finalTotal = pastResult ? pastResult.total : questions.length;
+    const pct = Math.round((finalScore / finalTotal) * 100);
     return (
       <div className="space-y-4">
         <div className="bg-white rounded-2xl border border-border/60 p-8 text-center shadow-xs space-y-3">
@@ -2598,14 +2615,64 @@ function QuizSection({ questions, cls }: { questions: QuizQuestion[]; cls: Class
   );
 }
 
+interface Extras {
+  lessons: Array<{ id: number; title: string; description: string; topics: string[]; pages: StudyPage[] }>;
+  quiz: Array<{ id: number; question: string; options: string[] }>;
+  worksheets: Array<{ id: number; title: string; description: string; intro: string; exercises: Exercise[]; tip: string | null }>;
+}
+
 export default function ClassesPage() {
   usePageTitle("Materiale pe clase");
   const [selectedGrade, setSelectedGrade] = useState(0);
   const [activeTab, setActiveTab] = useState<Tab>("invatat");
   const [openStudyItem, setOpenStudyItem] = useState<StudyItem | null>(null);
   const [openWorksheet, setOpenWorksheet] = useState<Worksheet | null>(null);
+  const [extrasByGrade, setExtrasByGrade] = useState<Record<number, Extras>>({});
 
-  const cls = CLASSES[selectedGrade];
+  const baseCls = CLASSES[selectedGrade];
+  const extras = extrasByGrade[baseCls.grade];
+
+  useEffect(() => {
+    const grade = baseCls.grade;
+    if (extrasByGrade[grade]) return;
+    fetch(`/api/classes/${grade}/extras`)
+      .then(r => r.ok ? r.json() : { lessons: [], quiz: [], worksheets: [] })
+      .then((data: Extras) => setExtrasByGrade(prev => ({ ...prev, [grade]: data })))
+      .catch(() => setExtrasByGrade(prev => ({ ...prev, [grade]: { lessons: [], quiz: [], worksheets: [] } })));
+  }, [baseCls.grade]);
+
+  // Merge admin-added extras into the hardcoded class so the rest of the page is unchanged.
+  const cls: ClassData = {
+    ...baseCls,
+    studyItems: [
+      ...baseCls.studyItems,
+      ...((extras?.lessons ?? []).map(l => ({
+        title: l.title,
+        description: l.description,
+        topics: l.topics ?? [],
+        pages: l.pages ?? [],
+      }))),
+    ],
+    quiz: [
+      ...baseCls.quiz,
+      ...((extras?.quiz ?? []).map(q => ({
+        q: q.question,
+        options: q.options,
+        answer: -1,
+        extraId: q.id,
+      } as QuizQuestion))),
+    ],
+    worksheets: [
+      ...baseCls.worksheets,
+      ...((extras?.worksheets ?? []).map(w => ({
+        title: w.title,
+        description: w.description,
+        intro: w.intro,
+        exercises: w.exercises ?? [],
+        tip: w.tip ?? undefined,
+      }))),
+    ],
+  };
 
   const tabs: { id: Tab; label: string; icon: typeof BookOpen }[] = [
     { id: "invatat", label: "De învățat", icon: BookOpen },

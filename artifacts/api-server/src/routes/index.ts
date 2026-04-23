@@ -17,6 +17,7 @@ import adminRouter from "./admin";
 import paymentsRouter from "./payments";
 import verificationRouter from "./verification";
 import quizRouter from "./quiz";
+import classContentRouter from "./classContent";
 
 const router: IRouter = Router();
 
@@ -37,6 +38,7 @@ router.use(suggestionsRouter);
 router.use(paymentsRouter);
 router.use(verificationRouter);
 router.use(quizRouter);
+router.use(classContentRouter);
 router.use(adminRouter);
 
 export default router;

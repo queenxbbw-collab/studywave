@@ -105,3 +105,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Class Content CMS (April 2026)
+
+Admin can add/edit/delete custom lessons (învățat), quiz questions, and worksheets (fișe) per grade (1-12) on top of the hardcoded baseline content in `ClassesPage.tsx`. The hardcoded content remains the immutable baseline — only added "extras" are editable.
+
+- DB tables: `class_lessons`, `class_quiz_questions`, `class_worksheets` (`lib/db/src/schema/classContent.ts`)
+- Public: `GET /api/classes/:grade/extras` (no answer field for quiz)
+- Admin: `GET /api/admin/classes/:grade`, full CRUD on `/api/admin/classes/{lessons,quiz,worksheets}[/:id]`
+- Admin UI: "Conținut Clase" tab in `AdminPage.tsx` → `components/admin/ClassContentTab.tsx`
+- Quiz scoring: `routes/quiz.ts` accepts `extraAnswers: [{id, answer}]` and looks up correct answers server-side

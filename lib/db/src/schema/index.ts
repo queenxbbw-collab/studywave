@@ -12,3 +12,4 @@ export * from "./suggestions";
 export * from "./admin_logs";
 export * from "./verification_requests";
 export * from "./quiz_results";
+export * from "./classContent";

@@ -25,6 +25,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { usePageTitle } from "@/hooks/use-page-title";
+import ClassContentTab from "@/components/admin/ClassContentTab";
+import { GraduationCap } from "lucide-react";
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -362,6 +364,7 @@ export default function AdminPage() {
               { value: "suggestions", icon: Lightbulb, label: "Suggestions" },
               { value: "logs", icon: ClipboardList, label: "Audit Log" },
               { value: "verifications", icon: CheckCircle, label: "Verificări" },
+              { value: "classes", icon: GraduationCap, label: "Conținut Clase" },
               { value: "danger", icon: AlertTriangle, label: "Danger Zone" },
             ].map(tab => (
               <TabsTrigger key={tab.value} value={tab.value} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm data-[state=active]:shadow-sm whitespace-nowrap">
@@ -1318,6 +1321,10 @@ export default function AdminPage() {
         </TabsContent>
 
         {/* DANGER ZONE TAB */}
+        <TabsContent value="classes">
+          <ClassContentTab />
+        </TabsContent>
+
         <TabsContent value="danger">
           <div className="space-y-6">
             <div>
