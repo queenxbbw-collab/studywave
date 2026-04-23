@@ -41,6 +41,7 @@ router.get("/stats/leaderboard", async (_req, res): Promise<void> => {
     FROM users u
     LEFT JOIN answers a ON a.author_id = u.id
     WHERE u.is_active = TRUE
+      AND u.role <> 'admin'
     GROUP BY u.id
     ORDER BY u.points DESC
     LIMIT 50
