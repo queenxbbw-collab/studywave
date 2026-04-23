@@ -166,9 +166,8 @@ export default function LoginPage() {
                 Înregistrează-te gratuit
               </Link>
             </p>
-            <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              Ai uitat parola?
-            </Link>
+            {/* "Ai uitat parola?" disabled temporarily — recuperarea parolei va reveni
+                după ce e legată de un serviciu real de email. */}
           </div>
         </div>
       </div>

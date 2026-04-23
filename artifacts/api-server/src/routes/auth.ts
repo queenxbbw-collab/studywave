@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, passwordResetTokensTable } from "@workspace/db";
-import { eq, sql, and, gt, isNull } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
 import { hashPassword, comparePassword, signToken } from "../lib/auth";
 import { authenticate } from "../middlewares/authenticate";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
@@ -18,14 +18,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many attempts. Please try again in 15 minutes." },
   skipSuccessfulRequests: true,
-});
-
-const forgotLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many password reset requests. Please try again in 1 hour." },
 });
 
 function generateReferralCode(username: string): string {
@@ -173,74 +165,17 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
   res.json(formatUser(user));
 });
 
-router.post("/auth/forgot-password", forgotLimiter, async (req, res): Promise<void> => {
-  const { email } = req.body;
-  if (!email || typeof email !== "string") {
-    res.status(400).json({ error: "Email is required" });
-    return;
-  }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim()));
-  const GENERIC = { message: "If that email is registered, a reset link has been sent to your inbox." };
-  if (!user) {
-    res.json(GENERIC);
-    return;
-  }
-  // Per-user cooldown: refuse to issue a new token if one was issued in the last 2 minutes.
-  // The global forgotLimiter caps requests per IP; this stops one IP from spamming a single
-  // victim's inbox with reset tokens (or rotating them out from under a legitimate user).
-  const COOLDOWN_MS = 2 * 60 * 1000;
-  const recent = (await db.execute(sql`
-    SELECT created_at FROM password_reset_tokens
-    WHERE user_id = ${user.id}
-    ORDER BY created_at DESC
-    LIMIT 1
-  `)).rows as Array<{ created_at: string | Date }>;
-  if (recent[0]) {
-    const last = new Date(recent[0].created_at).getTime();
-    if (Date.now() - last < COOLDOWN_MS) {
-      // Stay generic — don't leak that the email exists.
-      res.json(GENERIC);
-      return;
-    }
-  }
-
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-  await db.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${user.id}`);
-  await db.insert(passwordResetTokensTable).values({ userId: user.id, token, expiresAt });
-  console.log(`[PASSWORD RESET] user_id=${user.id} email=${user.email} token=${token}`);
-  res.json(GENERIC);
+// Password reset is disabled until a real email delivery service is wired up.
+// Previously the reset token was logged to the server console, which meant anyone
+// with log access could request a token for any account and take it over. Until we
+// have a proper "send email to the address on file" flow, both endpoints respond
+// 404 so the route is fully closed off — even to scripted/manual requests.
+router.post("/auth/forgot-password", (_req, res): void => {
+  res.status(404).json({ error: "Password reset is currently disabled." });
 });
 
-router.post("/auth/reset-password", async (req, res): Promise<void> => {
-  const { token, newPassword } = req.body;
-  if (!token || !newPassword || typeof token !== "string" || typeof newPassword !== "string") {
-    res.status(400).json({ error: "Token and new password are required" });
-    return;
-  }
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: "Password must be at least 6 characters" });
-    return;
-  }
-  const now = new Date();
-  const [record] = await db
-    .select()
-    .from(passwordResetTokensTable)
-    .where(
-      and(
-        eq(passwordResetTokensTable.token, token),
-        gt(passwordResetTokensTable.expiresAt, now),
-        isNull(passwordResetTokensTable.usedAt)
-      )
-    );
-  if (!record) {
-    res.status(400).json({ error: "Invalid or expired reset token" });
-    return;
-  }
-  const passwordHash = await hashPassword(newPassword);
-  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, record.userId));
-  await db.execute(sql`UPDATE password_reset_tokens SET used_at = now() WHERE id = ${record.id}`);
-  res.json({ message: "Password updated successfully" });
+router.post("/auth/reset-password", (_req, res): void => {
+  res.status(404).json({ error: "Password reset is currently disabled." });
 });
 
 export default router;
