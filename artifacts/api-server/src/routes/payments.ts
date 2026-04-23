@@ -25,6 +25,30 @@ router.get("/payments/packages", (_req: Request, res: Response): void => {
   res.json({ packages: POINT_PACKAGES });
 });
 
+// 3-day Premium free trial — anyone can activate ONCE per lifetime.
+// Race-safe: the WHERE clause requires trial_used=false so concurrent calls
+// can only succeed once. Does NOT touch Stripe — pure in-app entitlement.
+const TRIAL_DAYS = 3;
+router.post("/payments/start-trial", authenticate, async (req: Request, res: Response): Promise<void> => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  if (user.trialUsed) { res.status(409).json({ error: "Ai folosit deja trial-ul gratuit." }); return; }
+  if (user.isPremium) { res.status(409).json({ error: "Ești deja Premium." }); return; }
+
+  const expiresAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  const result = await db.update(usersTable)
+    .set({ isPremium: true, trialUsed: true, premiumExpiresAt: expiresAt })
+    .where(sql`${usersTable.id} = ${req.userId} AND ${usersTable.trialUsed} = false AND ${usersTable.isPremium} = false`)
+    .returning({ id: usersTable.id });
+
+  if (result.length === 0) {
+    res.status(409).json({ error: "Nu poți activa trial-ul acum." });
+    return;
+  }
+
+  res.json({ success: true, isPremium: true, premiumExpiresAt: expiresAt.toISOString(), trialUsed: true });
+});
+
 router.post("/payments/subscribe", authenticate, async (req: Request, res: Response): Promise<void> => {
   const stripe = getStripe();
   if (!stripe) {

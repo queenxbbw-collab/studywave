@@ -44,6 +44,7 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     createdAt: user.createdAt.toISOString(),
     isPremium: user.isPremium ?? false,
     premiumExpiresAt: user.premiumExpiresAt ? user.premiumExpiresAt.toISOString() : null,
+    trialUsed: user.trialUsed ?? false,
     bannerColor: u.bannerColor ?? u.banner_color ?? null,
   };
 }

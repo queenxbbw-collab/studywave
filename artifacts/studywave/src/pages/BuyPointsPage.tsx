@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getBaseUrl } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Star, Crown, Rocket, ChevronLeft, CheckCircle2, Loader2, ShoppingCart, Infinity } from "lucide-react";
+import { Zap, Star, Crown, Rocket, ChevronLeft, CheckCircle2, Loader2, ShoppingCart, Infinity, Gift } from "lucide-react";
 
 interface PointPackage {
   id: string;
@@ -38,6 +38,8 @@ export default function BuyPointsPage() {
   const [packages, setPackages] = useState<PointPackage[]>([]);
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
   const [loadingSubscribe, setLoadingSubscribe] = useState(false);
+  const [loadingTrial, setLoadingTrial] = useState(false);
+  const [trialSuccess, setTrialSuccess] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successPoints, setSuccessPoints] = useState(0);
   const [premiumSuccess, setPremiumSuccess] = useState(false);
@@ -84,6 +86,27 @@ export default function BuyPointsPage() {
       .then(d => setPackages(d.packages || []))
       .catch(() => {});
   }, []);
+
+  const handleStartTrial = async () => {
+    setLoadingTrial(true);
+    try {
+      const res = await fetch(`${getBaseUrl()}/payments/start-trial`, {
+        method: "POST",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || "Nu am putut activa trial-ul", variant: "destructive" });
+        return;
+      }
+      setTrialSuccess(true);
+      await refreshUser();
+    } catch {
+      toast({ title: "Eroare de rețea", variant: "destructive" });
+    } finally {
+      setLoadingTrial(false);
+    }
+  };
 
   const handleSubscribe = async () => {
     setLoadingSubscribe(true);
@@ -137,6 +160,16 @@ export default function BuyPointsPage() {
         <h1 className="text-2xl font-black text-foreground">Planuri și Puncte</h1>
         <p className="text-sm text-muted-foreground mt-1">Actualizează la Premium sau cumpără puncte suplimentare.</p>
       </div>
+
+      {trialSuccess && (
+        <div className="mb-6 flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-2xl p-4">
+          <Gift className="h-6 w-6 text-violet-500 flex-shrink-0" />
+          <div>
+            <p className="font-bold text-violet-700">Trial Premium activat!</p>
+            <p className="text-sm text-violet-600">Ai 3 zile de Premium gratuit. Bucură-te de întrebări nelimitate!</p>
+          </div>
+        </div>
+      )}
 
       {premiumSuccess && (
         <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
@@ -208,10 +241,27 @@ export default function BuyPointsPage() {
               </div>
             ) : (
               <>
+                {!(user as any).trialUsed && (
+                  <Button
+                    onClick={handleStartTrial}
+                    disabled={loadingTrial || loadingSubscribe}
+                    className="w-full bg-white text-amber-600 hover:bg-amber-50 font-bold rounded-xl border-0 shadow-sm h-10 mb-2"
+                  >
+                    {loadingTrial ? (
+                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Se activează...</>
+                    ) : (
+                      <><Gift className="h-4 w-4 mr-2" /> Începe trial gratuit de 3 zile</>
+                    )}
+                  </Button>
+                )}
                 <Button
                   onClick={handleSubscribe}
-                  disabled={loadingSubscribe}
-                  className="w-full bg-white text-amber-600 hover:bg-amber-50 font-bold rounded-xl border-0 shadow-sm h-10"
+                  disabled={loadingSubscribe || loadingTrial}
+                  className={`w-full font-bold rounded-xl border-0 shadow-sm h-10 ${
+                    (user as any).trialUsed
+                      ? "bg-white text-amber-600 hover:bg-amber-50"
+                      : "bg-amber-700/40 text-white hover:bg-amber-700/60 border border-white/30"
+                  }`}
                 >
                   {loadingSubscribe ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Se procesează...</>
@@ -219,7 +269,11 @@ export default function BuyPointsPage() {
                     <><Crown className="h-4 w-4 mr-2" /> Actualizare la Premium</>
                   )}
                 </Button>
-                <p className="text-amber-200 text-xs text-center mt-2">Anulezi oricând. Facturat lunar.</p>
+                <p className="text-amber-200 text-xs text-center mt-2">
+                  {!(user as any).trialUsed
+                    ? "Trial-ul de 3 zile e gratuit, o singură dată per cont. Apoi $4.99/lună, anulezi oricând."
+                    : "Anulezi oricând. Facturat lunar."}
+                </p>
               </>
             )}
           </div>
