@@ -976,6 +976,10 @@ components:
           type: integer
         downvotes:
           type: integer
+        userVote:
+          type: string
+          nullable: true
+          enum: [up, null]
         hasAwardedAnswer:
           type: boolean
         isSolved:

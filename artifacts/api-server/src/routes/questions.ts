@@ -218,6 +218,16 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     return;
   }
 
+  // If the viewer is logged in, look up their own vote so the UI can disable the
+  // up-button after a vote is cast (votes are final, no toggle-off).
+  let userVote: "up" | null = null;
+  if (req.userId) {
+    const [v] = await db.select({ voteType: questionVotesTable.voteType })
+      .from(questionVotesTable)
+      .where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId)));
+    if (v?.voteType === "up") userVote = "up";
+  }
+
   const answers = await db
     .select({ a: answersTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl, points: usersTable.points, isPremium: usersTable.isPremium } })
     .from(answersTable)
@@ -251,6 +261,7 @@ router.get("/questions/:id", optionalAuthenticate, async (req, res): Promise<voi
     authorIsPremium: author.isPremium ?? false,
     upvotes: q.upvotes,
     downvotes: q.downvotes,
+    userVote,
     views: (q as any).views ?? 0,
     hasAwardedAnswer: q.hasAwardedAnswer,
     isSolved: q.isSolved,
@@ -355,7 +366,12 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { type } = parsed.data;
-  if (type !== "up" && type !== "down") { res.status(400).json({ error: "Vote type must be 'up' or 'down'" }); return; }
+  // Questions only support upvotes — downvoting and un-voting are disabled by product
+  // decision so a question's score can never go negative and can't be retracted once cast.
+  if (type !== "up") {
+    res.status(400).json({ error: "Doar voturile pozitive sunt permise pentru întrebări." });
+    return;
+  }
 
   const [question] = await db.select().from(questionsTable).where(eq(questionsTable.id, id));
   if (!question) { res.status(404).json({ error: "Question not found" }); return; }
@@ -381,17 +397,14 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
     const [prev] = await tx.select().from(questionVotesTable)
       .where(and(eq(questionVotesTable.questionId, id), eq(questionVotesTable.userId, req.userId!)));
 
+    // Re-voting is disabled: once a user has voted on a question, the vote is final.
     if (prev) {
-      if (prev.voteType === type) {
-        await tx.delete(questionVotesTable).where(eq(questionVotesTable.id, prev.id));
-      } else {
-        await tx.update(questionVotesTable).set({ voteType: type }).where(eq(questionVotesTable.id, prev.id));
-      }
-    } else {
-      await tx.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: type });
+      return prev;
     }
 
-    // Re-derive counters from the source of truth.
+    await tx.insert(questionVotesTable).values({ questionId: id, userId: req.userId!, voteType: "up" });
+
+    // Re-derive counters from the source of truth (downvotes always 0 going forward).
     await tx.execute(sql`
       UPDATE questions SET
         upvotes = (SELECT COUNT(*) FROM question_votes WHERE question_id = ${id} AND vote_type = 'up'),
@@ -399,8 +412,13 @@ router.post("/questions/:id/vote", authenticate, async (req, res): Promise<void>
       WHERE id = ${id}
     `);
 
-    return prev;
+    return null;
   });
+
+  if (existingVote) {
+    res.status(409).json({ error: "Ai votat deja această întrebare." });
+    return;
+  }
 
   const [updated] = await db.select({ q: questionsTable, author: { username: usersTable.username, displayName: usersTable.displayName, avatarUrl: usersTable.avatarUrl } })
     .from(questionsTable).innerJoin(usersTable, eq(questionsTable.authorId, usersTable.id)).where(eq(questionsTable.id, id));

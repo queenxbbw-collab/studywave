@@ -565,19 +565,22 @@ export default function QuestionDetailPage() {
                 <div className="flex items-center gap-1 bg-white rounded-lg border border-border/60 p-1 shadow-xs">
                   <button
                     onClick={() => handleVoteQuestion("up")}
-                    disabled={isQuestionAuthor}
-                    title={isQuestionAuthor ? "Nu poți vota propria întrebare" : "Vot pozitiv"}
-                    className="p-1.5 rounded-md hover:bg-primary/8 hover:text-primary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
+                    disabled={isQuestionAuthor || question.userVote === "up"}
+                    title={
+                      isQuestionAuthor
+                        ? "Nu poți vota propria întrebare"
+                        : question.userVote === "up"
+                          ? "Ai votat deja această întrebare"
+                          : "Vot pozitiv (final, nu poate fi retras)"
+                    }
+                    className={`p-1.5 rounded-md transition-colors disabled:cursor-not-allowed ${
+                      question.userVote === "up"
+                        ? "bg-primary/10 text-primary disabled:opacity-100"
+                        : "text-muted-foreground hover:bg-primary/8 hover:text-primary disabled:opacity-40"
+                    }`}>
                     <ArrowUp className="h-4 w-4" />
                   </button>
-                  <span className={`px-2 text-sm font-bold ${score > 0 ? "text-primary" : score < 0 ? "text-red-500" : "text-muted-foreground"}`}>{score}</span>
-                  <button
-                    onClick={() => handleVoteQuestion("down")}
-                    disabled={isQuestionAuthor}
-                    title={isQuestionAuthor ? "Nu poți vota propria întrebare" : "Vot negativ"}
-                    className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-500 transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
-                    <ArrowDown className="h-4 w-4" />
-                  </button>
+                  <span className={`px-2 text-sm font-bold ${question.upvotes > 0 ? "text-primary" : "text-muted-foreground"}`}>{question.upvotes}</span>
                 </div>
 
                 {/* Bookmark button */}

@@ -283,6 +283,7 @@ export const GetQuestionResponse = zod.object({
   authorPoints: zod.number(),
   upvotes: zod.number(),
   downvotes: zod.number(),
+  userVote: zod.enum(["up"]).nullish(),
   hasAwardedAnswer: zod.boolean(),
   isSolved: zod.boolean(),
   createdAt: zod.string(),
