@@ -163,13 +163,29 @@ export async function parseMentions(
     return;
   }
 
+  // Per-day cap on mention notifications from one sender to one recipient. Stops a single
+  // user from blasting another user with hundreds of mention notifications by spamming
+  // their daily comment quota (each comment can carry up to MAX_MENTIONS_PER_POST mentions,
+  // so without this cap one user could deliver ~500 notifications per day per target).
+  const MAX_MENTIONS_PER_RECIPIENT_PER_DAY = 5;
   for (const m of mentionedRows) {
     if (!m || m.id === authorId) continue;
+
+    const [row] = (await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM notifications
+      WHERE user_id = ${m.id}
+        AND type = 'mention'
+        AND body LIKE ${`%${authorName}%`}
+        AND created_at >= (NOW() AT TIME ZONE 'UTC')::date
+    `)).rows as any[];
+    if ((row?.cnt ?? 0) >= MAX_MENTIONS_PER_RECIPIENT_PER_DAY) continue;
+
     await createNotification(
       m.id,
       "mention",
       `${authorName} te-a menționat`,
-      `Ai fost menționat într-o postare: "${content.slice(0, 80)}..."`,
+      `Ai fost menționat într-o postare de ${authorName}: "${content.slice(0, 80)}..."`,
       questionId
     );
   }

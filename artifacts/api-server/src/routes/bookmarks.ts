@@ -10,9 +10,13 @@ router.post("/bookmarks", authenticate, async (req, res): Promise<void> => {
   if (!questionId || typeof questionId !== "number") { res.status(400).json({ error: "questionId required" }); return; }
   const [q] = (await db.execute(sql`SELECT id FROM questions WHERE id = ${questionId}`)).rows;
   if (!q) { res.status(404).json({ error: "Question not found" }); return; }
-  try {
-    await db.execute(sql`INSERT INTO bookmarks (user_id, question_id) VALUES (${req.userId}, ${questionId})`);
-  } catch {}
+  // Idempotent: ON CONFLICT DO NOTHING relies on the unique index on (user_id, question_id).
+  // Replaces the previous silent try/catch which masked any unrelated DB error too.
+  await db.execute(sql`
+    INSERT INTO bookmarks (user_id, question_id)
+    VALUES (${req.userId}, ${questionId})
+    ON CONFLICT (user_id, question_id) DO NOTHING
+  `);
   res.json({ bookmarked: true });
 });
 

@@ -72,6 +72,23 @@ router.post("/storage/uploads/request-url", authenticate, async (req: Request, r
  * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
  * These are unconditionally public — no authentication or ACL checks.
  */
+// Headers that browsers (and us) actually want from object storage. We deliberately do NOT
+// forward the upstream Content-Type if it isn't on the image allow-list — otherwise a user
+// who manages to upload an HTML/JS payload (because the signed-URL Content-Type negotiation
+// was bypassed by a misbehaving client) could get the browser to render it as text/html on
+// our origin, turning the upload bucket into stored-XSS surface.
+function writeSafeAssetHeaders(srcHeaders: Headers, res: Response): void {
+  const upstream = (srcHeaders.get("content-type") ?? "").toLowerCase();
+  const safeType = ALLOWED_UPLOAD_TYPES.has(upstream) ? upstream : "application/octet-stream";
+  res.setHeader("Content-Type", safeType);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Disposition", "inline");
+  const len = srcHeaders.get("content-length");
+  if (len) res.setHeader("Content-Length", len);
+  const cache = srcHeaders.get("cache-control");
+  if (cache) res.setHeader("Cache-Control", cache);
+}
+
 router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
   try {
     const raw = req.params.filePath;
@@ -84,7 +101,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
 
     const response = await objectStorageService.downloadObject(file);
     res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    writeSafeAssetHeaders(response.headers, res);
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
@@ -112,7 +129,7 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
 
     const response = await objectStorageService.downloadObject(objectFile);
     res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    writeSafeAssetHeaders(response.headers, res);
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);

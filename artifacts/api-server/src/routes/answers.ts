@@ -205,6 +205,9 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
   }
 
   // Same locking + recompute pattern as questions/vote — prevents counter drift under concurrent votes.
+  // The unique index on answer_votes(answer_id, user_id) is the real safety net: even if two
+  // requests slip past the SELECT below, the second INSERT below hits ON CONFLICT and we
+  // upsert instead of double-inserting (which would have inflated the count).
   const existingVote = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM answers WHERE id = ${id} FOR UPDATE`);
 
@@ -218,7 +221,11 @@ router.post("/answers/:id/vote", authenticate, async (req, res): Promise<void> =
         await tx.update(answerVotesTable).set({ voteType: type }).where(eq(answerVotesTable.id, prev.id));
       }
     } else {
-      await tx.insert(answerVotesTable).values({ answerId: id, userId: req.userId!, voteType: type });
+      await tx.execute(sql`
+        INSERT INTO answer_votes (answer_id, user_id, vote_type)
+        VALUES (${id}, ${req.userId}, ${type})
+        ON CONFLICT (answer_id, user_id) DO UPDATE SET vote_type = EXCLUDED.vote_type
+      `);
     }
 
     await tx.execute(sql`

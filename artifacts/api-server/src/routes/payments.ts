@@ -185,6 +185,21 @@ router.post("/payments/verify-premium", authenticate, async (req: Request, res: 
   }
 });
 
+// Stripe guarantees "at least once" webhook delivery — the same event id can be re-sent
+// minutes or hours later (network blips, manual replay from the dashboard, etc.). Without
+// this guard, every redelivery of `checkout.session.completed` would credit points or
+// re-set premium. We INSERT the event id first; ON CONFLICT means it was already processed
+// and we return false so the caller skips the side-effects.
+async function markEventProcessed(eventId: string, eventType: string): Promise<boolean> {
+  const result = await db.execute(sql`
+    INSERT INTO processed_stripe_events (event_id, event_type)
+    VALUES (${eventId}, ${eventType})
+    ON CONFLICT (event_id) DO NOTHING
+    RETURNING event_id
+  `);
+  return result.rows.length > 0;
+}
+
 export async function handleStripeWebhook(payload: Buffer, signature: string): Promise<void> {
   const stripe = getStripe();
   if (!stripe) return;
@@ -200,6 +215,13 @@ export async function handleStripeWebhook(payload: Buffer, signature: string): P
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err: any) {
     console.error("[Stripe] Webhook signature failed:", err.message);
+    return;
+  }
+
+  // Idempotency gate: skip the rest if we've already handled this event id.
+  const fresh = await markEventProcessed(event.id, event.type);
+  if (!fresh) {
+    console.log(`[Stripe] Skipping duplicate event ${event.id} (${event.type})`);
     return;
   }
 

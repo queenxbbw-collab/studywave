@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -27,7 +27,10 @@ export const answerVotesTable = pgTable("answer_votes", {
   userId: integer("user_id").notNull().references(() => usersTable.id),
   voteType: text("vote_type").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // One vote per (answer, user) — DB-level guard against the SELECT-then-INSERT race.
+  answerUserUnique: uniqueIndex("answer_votes_answer_user_unique").on(t.answerId, t.userId),
+}));
 
 export const activityTable = pgTable("activity", {
   id: serial("id").primaryKey(),

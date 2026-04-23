@@ -1,40 +1,42 @@
-import { db, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 /**
  * Bump a user's daily activity streak. Safe to call from any activity hook
- * (post question, post answer, post comment, login). It is idempotent for
- * the same UTC day — calling multiple times in one day will not inflate it.
+ * (post question, post answer, post comment, login). Idempotent for the
+ * same UTC day — calling multiple times will not inflate it.
+ *
+ * The whole calculation is done in a single atomic UPDATE driven by the
+ * row's own current values, so two concurrent activities (e.g. answer +
+ * comment posted in parallel) cannot both read the same stale state and
+ * race each other into miscounting the streak.
  */
 export async function bumpStreak(userId: number): Promise<void> {
-  const [user] = await db.select({
-    currentStreak: usersTable.currentStreak,
-    longestStreak: usersTable.longestStreak,
-    lastActivityDate: usersTable.lastActivityDate,
-  }).from(usersTable).where(eq(usersTable.id, userId));
-  if (!user) return;
-
-  const today = new Date().toISOString().split("T")[0];
-  const lastDate = user.lastActivityDate
-    ? new Date(user.lastActivityDate as unknown as string).toISOString().split("T")[0]
-    : null;
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-
-  // Already counted today — nothing to do.
-  if (lastDate === today) return;
-
-  let newStreak: number;
-  if (!lastDate || lastDate < yesterday) newStreak = 1;
-  else if (lastDate === yesterday) newStreak = (user.currentStreak ?? 0) + 1;
-  else newStreak = 1;
-
-  const newLongest = Math.max(newStreak, user.longestStreak ?? 0);
-
   await db.execute(sql`
     UPDATE users
-    SET current_streak = ${newStreak},
-        longest_streak = ${newLongest},
-        last_activity_date = ${today}
+    SET
+      current_streak = CASE
+        -- Same UTC day → no change.
+        WHEN last_activity_date = (NOW() AT TIME ZONE 'UTC')::date
+          THEN current_streak
+        -- Yesterday → +1.
+        WHEN last_activity_date = (NOW() AT TIME ZONE 'UTC')::date - INTERVAL '1 day'
+          THEN current_streak + 1
+        -- Anything else (gap or first-ever) → reset to 1.
+        ELSE 1
+      END,
+      longest_streak = GREATEST(
+        longest_streak,
+        CASE
+          WHEN last_activity_date = (NOW() AT TIME ZONE 'UTC')::date
+            THEN current_streak
+          WHEN last_activity_date = (NOW() AT TIME ZONE 'UTC')::date - INTERVAL '1 day'
+            THEN current_streak + 1
+          ELSE 1
+        END
+      ),
+      last_activity_date = (NOW() AT TIME ZONE 'UTC')::date
     WHERE id = ${userId}
+      AND (last_activity_date IS DISTINCT FROM (NOW() AT TIME ZONE 'UTC')::date)
   `);
 }

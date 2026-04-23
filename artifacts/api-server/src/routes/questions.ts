@@ -131,30 +131,48 @@ router.post("/questions", authenticate, async (req, res): Promise<void> => {
   }
   const { imageUrls, ...rest } = validation.data!;
 
-  // --- Daily rate limit ---
-  const todayStart = startOfTodayUTC();
-  const [todayCount] = await db
-    .select({ cnt: count() })
-    .from(questionsTable)
-    .where(and(
-      eq(questionsTable.authorId, req.userId!),
-      gte(questionsTable.createdAt, todayStart),
-    ));
-
   const isPremium = await getEffectivePremium(req.userId!);
 
-  if (!isPremium && Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
+  // --- Daily rate limit (atomic) ---
+  // The previous "SELECT COUNT then INSERT" left a race window where N concurrent requests
+  // all read the same count and all bypassed the cap. We now do COUNT + INSERT inside a
+  // transaction guarded by a per-user advisory lock, so concurrent requests serialize for
+  // the same user (and don't block other users at all).
+  const todayStart = startOfTodayUTC();
+  const inserted = await db.transaction(async (tx) => {
+    if (!isPremium) {
+      // Per-user advisory lock — held until the transaction ends.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`q_daily:${req.userId}`}))`);
+
+      const [todayCount] = await tx
+        .select({ cnt: count() })
+        .from(questionsTable)
+        .where(and(
+          eq(questionsTable.authorId, req.userId!),
+          gte(questionsTable.createdAt, todayStart),
+        ));
+
+      if (Number(todayCount.cnt) >= DAILY_QUESTION_LIMIT) {
+        return null;
+      }
+    }
+
+    const [q] = await tx.insert(questionsTable).values({
+      ...rest,
+      imageUrls: JSON.stringify(imageUrls || []),
+      authorId: req.userId!,
+    }).returning();
+    return q;
+  });
+
+  if (!inserted) {
     res.status(429).json({
       error: `You've reached the daily limit of ${DAILY_QUESTION_LIMIT} questions. Upgrade to Premium for unlimited questions!`,
       code: "DAILY_LIMIT_REACHED",
     });
     return;
   }
-  const [question] = await db.insert(questionsTable).values({
-    ...rest,
-    imageUrls: JSON.stringify(imageUrls || []),
-    authorId: req.userId!,
-  }).returning();
+  const question = inserted;
 
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
 
