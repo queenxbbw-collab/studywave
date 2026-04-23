@@ -26,10 +26,22 @@ router.post("/verification/request", authenticate, async (req, res): Promise<voi
     return;
   }
 
-  const [request] = await db
-    .insert(verificationRequestsTable)
-    .values({ userId, firstName: firstName.trim(), lastName: lastName.trim(), grade: grade.trim(), favoriteFeature: favoriteFeature.trim() })
-    .returning();
+  // Backed by a UNIQUE INDEX on verification_requests(user_id) — if two requests race
+  // past the SELECT above, the second INSERT throws a unique-violation (Postgres 23505)
+  // and we report the same 409 cleanly instead of leaving a duplicate row in the DB.
+  let request;
+  try {
+    [request] = await db
+      .insert(verificationRequestsTable)
+      .values({ userId, firstName: firstName.trim(), lastName: lastName.trim(), grade: grade.trim(), favoriteFeature: favoriteFeature.trim() })
+      .returning();
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      res.status(409).json({ error: "Ai deja o cerere de verificare trimisă." });
+      return;
+    }
+    throw err;
+  }
 
   res.status(201).json({ request });
 });

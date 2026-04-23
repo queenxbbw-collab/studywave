@@ -60,6 +60,10 @@ router.patch("/admin/announcements/:id", authenticate, requireAdmin, async (req,
 
   const existing = await db.execute(sql`SELECT id, title FROM announcements WHERE id = ${id}`);
   const ann = existing.rows[0] as any;
+  if (!ann) {
+    res.status(404).json({ error: "Announcement not found" });
+    return;
+  }
 
   await db.execute(sql`UPDATE announcements SET is_active = ${isActive ?? false} WHERE id = ${id}`);
 
@@ -83,6 +87,10 @@ router.delete("/admin/announcements/:id", authenticate, requireAdmin, async (req
 
   const existing = await db.execute(sql`SELECT id, title FROM announcements WHERE id = ${id}`);
   const ann = existing.rows[0] as any;
+  if (!ann) {
+    res.status(404).json({ error: "Announcement not found" });
+    return;
+  }
 
   await db.execute(sql`DELETE FROM announcements WHERE id = ${id}`);
 

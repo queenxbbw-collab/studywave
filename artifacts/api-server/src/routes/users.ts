@@ -8,7 +8,29 @@ import { createNotification } from "./notifications";
 
 const router = Router();
 
+// `tryAuthenticate` would be ideal here, but we don't have one — so we manually parse the
+// JWT if present, without failing the request if it's missing. This lets us decide whether
+// to expose private fields (premiumExpiresAt) only to the owner / admins, while keeping
+// the endpoint open to anonymous viewers for everything else.
+import jwt from "jsonwebtoken";
+async function softAuth(req: any): Promise<void> {
+  const auth = req.headers?.authorization as string | undefined;
+  if (!auth?.startsWith("Bearer ")) return;
+  try {
+    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET ?? "dev-secret") as any;
+    if (decoded?.userId) {
+      const [u] = await db.select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
+        .from(usersTable).where(eq(usersTable.id, decoded.userId));
+      if (u && u.isActive) { req.userId = u.id; req.userRole = u.role; }
+    }
+  } catch {
+    // Ignore — anonymous view is fine.
+  }
+}
+
 router.get("/users/:id", async (req, res): Promise<void> => {
+  await softAuth(req);
+
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const numericId = parseInt(raw, 10);
   const isNumeric = !isNaN(numericId) && String(numericId) === raw;
@@ -69,7 +91,13 @@ router.get("/users/:id", async (req, res): Promise<void> => {
     followersCount: Number(followersCount.count),
     followingCount: Number(followingCount.count),
     isPremium: user.isPremium ?? false,
-    premiumExpiresAt: user.premiumExpiresAt?.toISOString() ?? null,
+    // Only expose the exact expiry date to the user themselves or to admins. For everyone
+    // else we still surface the boolean `isPremium` (needed for badges/badging) but hide
+    // the date because it's billing/account info.
+    premiumExpiresAt:
+      (req as any).userId === user.id || (req as any).userRole === "admin"
+        ? user.premiumExpiresAt?.toISOString() ?? null
+        : null,
     bannerColor: user.bannerColor,
     isVerified: user.isVerified ?? false,
     badges,

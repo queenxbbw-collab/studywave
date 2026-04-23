@@ -9,6 +9,14 @@ import { handleStripeWebhook } from "./routes/payments";
 
 const app: Express = express();
 
+// We run behind the Replit edge proxy (and any deployment proxy in production), so without
+// this `req.ip` would always be the proxy's address. That breaks every express-rate-limit
+// bucket: instead of one bucket per attacker, you get one shared global bucket — the
+// attacker either trivially DoSes the limit for everyone or sails past it because his
+// requests blend with the rest of the traffic. We trust exactly one hop (the immediate
+// proxy) so that downstream X-Forwarded-For headers from clients can't be spoofed.
+app.set("trust proxy", 1);
+
 // Stripe webhook must be registered BEFORE express.json() to receive raw Buffer
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"];

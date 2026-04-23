@@ -36,6 +36,13 @@
       "when": 1777200000000,
       "tag": "0004_security_v3",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777300000000,
+      "tag": "0005_security_v4",
+      "breakpoints": true
     }
   ]
 }

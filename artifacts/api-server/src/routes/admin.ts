@@ -114,6 +114,32 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
       details: `Edited points for @${existing.username}: ${existing.points} → ${parsed.data.points}`,
     });
   }
+  if (parsed.data.email !== undefined && parsed.data.email !== existing.email) {
+    await logAdminAction({
+      adminId: req.userId!,
+      adminUsername,
+      action: "user.email_change",
+      category: "users",
+      targetType: "user",
+      targetId: id,
+      targetLabel: existing.displayName || existing.username,
+      details: `Changed email for @${existing.username}: ${existing.email} → ${parsed.data.email}`,
+    });
+  }
+  if (parsed.data.isPremium !== undefined && parsed.data.isPremium !== existing.isPremium) {
+    await logAdminAction({
+      adminId: req.userId!,
+      adminUsername,
+      action: parsed.data.isPremium ? "user.grant_premium" : "user.revoke_premium",
+      category: "users",
+      targetType: "user",
+      targetId: id,
+      targetLabel: existing.displayName || existing.username,
+      details: parsed.data.isPremium
+        ? `Granted premium to @${existing.username}`
+        : `Revoked premium from @${existing.username}`,
+    });
+  }
 
   res.json({
     id: updated.id,

@@ -71,6 +71,10 @@ router.patch("/admin/suggestions/:id", authenticate, requireAdmin, async (req, r
 
   const existing = await db.execute(sql`SELECT id, title, status FROM suggestions WHERE id = ${id}`);
   const sug = existing.rows[0] as any;
+  if (!sug) {
+    res.status(404).json({ error: "Suggestion not found" });
+    return;
+  }
 
   await db.execute(sql`UPDATE suggestions SET status = ${validStatus} WHERE id = ${id}`);
 
@@ -94,6 +98,10 @@ router.delete("/admin/suggestions/:id", authenticate, requireAdmin, async (req, 
 
   const existing = await db.execute(sql`SELECT id, title FROM suggestions WHERE id = ${id}`);
   const sug = existing.rows[0] as any;
+  if (!sug) {
+    res.status(404).json({ error: "Suggestion not found" });
+    return;
+  }
 
   await db.execute(sql`DELETE FROM suggestions WHERE id = ${id}`);
 
